@@ -34,10 +34,10 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
 
         try {
             // 1. Upload directly to Vercel Blob (Client Side)
-            const newBlob = await upload(file.name, file, {
+            const uniqueFilename = `${Date.now()}-${file.name}`;
+            const newBlob = await upload(uniqueFilename, file, {
                 access: 'public',
                 handleUploadUrl: '/api/media/upload',
-                addRandomSuffix: true,
             });
 
             // 2. Determine type
