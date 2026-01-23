@@ -83,3 +83,39 @@ export async function DELETE(request: Request) {
         );
     }
 }
+
+export async function POST(request: Request) {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const body = await request.json();
+        const { name, url, type, filename } = body;
+
+        if (!name || !url || !type) {
+            return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+        }
+
+        const mediaItem = await prisma.mediaItem.create({
+            data: {
+                userId: session.user.id,
+                name,
+                url,
+                type,
+                filename: filename || name,
+                duration: 0,
+            },
+        });
+
+        return NextResponse.json(mediaItem);
+    } catch (error) {
+        console.error("Create media error:", error);
+        return NextResponse.json(
+            { error: "Failed to create media record" },
+            { status: 500 }
+        );
+    }
+}
