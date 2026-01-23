@@ -5,7 +5,7 @@ import path from "path";
 
 export async function GET(
     request: Request,
-    context: { params: Promise<{ id: string }> }
+    context: { params: Promise<{ id: string }> } // Force rebuild
 ) {
     try {
         const { id } = await context.params;
