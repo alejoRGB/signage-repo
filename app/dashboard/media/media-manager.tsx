@@ -23,29 +23,46 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         }
     };
 
+    import { upload } from '@vercel/blob/client';
+
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!file) return;
 
         setUploading(true);
-        const formData = new FormData();
-        formData.append("file", file);
 
         try {
-            const res = await fetch("/api/media/upload", {
-                method: "POST",
-                body: formData,
+            // 1. Upload directly to Vercel Blob (Client Side)
+            const newBlob = await upload(file.name, file, {
+                access: 'public',
+                handleUploadUrl: '/api/media/upload',
             });
 
-            if (!res.ok) throw new Error("Upload failed");
+            // 2. Determine type
+            const type = file.type.startsWith("video") ? "video" : "image";
+
+            // 3. Save metadata to our DB
+            const res = await fetch("/api/media", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: file.name,
+                    url: newBlob.url,
+                    type: type,
+                    filename: newBlob.pathname
+                }),
+            });
+
+            if (!res.ok) throw new Error("Failed to save media metadata");
 
             setFile(null);
             // Reset file input value
             const fileInput = document.getElementById("file-upload") as HTMLInputElement;
             if (fileInput) fileInput.value = "";
 
-            router.refresh(); // Refresh server data
+            router.refresh();
         } catch (error) {
+            console.error(error);
             alert("Error uploading file");
         } finally {
             setUploading(false);
