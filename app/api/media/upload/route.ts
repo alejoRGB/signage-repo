@@ -12,8 +12,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const session = await getServerSession(authOptions);
-         if (!session) {
-            throw new Error('Unauthorized');
+        if (!session) {
+          throw new Error('Unauthorized');
         }
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'],
