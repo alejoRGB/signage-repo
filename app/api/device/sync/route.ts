@@ -72,8 +72,10 @@ export async function POST(request: Request) {
             items: device.activePlaylist.items.map((item) => ({
                 id: item.id,
                 type: item.mediaItem.type,
-                filename: item.mediaItem.filename,
-                url: `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
+                filename: item.mediaItem.filename || `file-${item.mediaItem.id}`, // Fallback for null filename
+                url: item.mediaItem.url.startsWith("http")
+                    ? item.mediaItem.url
+                    : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
                 order: item.order,
                 // Include duration for images (videos have their own duration)
                 ...(item.mediaItem.type === "image" && {

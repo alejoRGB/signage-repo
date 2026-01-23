@@ -55,6 +55,18 @@ export async function GET(
             );
         }
 
+        // Check if it's an external URL (Vercel Blob)
+        if (mediaItem.url.startsWith("http")) {
+            return NextResponse.redirect(mediaItem.url);
+        }
+
+        if (!mediaItem.filename) {
+            return NextResponse.json(
+                { error: "File not found (no filename)" },
+                { status: 404 }
+            );
+        }
+
         // Get file path
         const uploadsDir = path.join(process.cwd(), "public", "uploads");
         const filePath = path.join(uploadsDir, mediaItem.filename);
@@ -62,7 +74,7 @@ export async function GET(
         // Check if file exists
         if (!fs.existsSync(filePath)) {
             return NextResponse.json(
-                { error: "File not found on server" },
+                { error: "File not found throughout server" },
                 { status: 404 }
             );
         }
