@@ -65,7 +65,16 @@ export default async function EditPlaylistPage({ params }: Params) {
                 </h1>
             </div>
 
-            <PlaylistEditor playlist={playlist} library={library} />
+            <PlaylistEditor
+                playlist={{
+                    ...playlist,
+                    items: playlist.items.map(item => ({
+                        ...item,
+                        duration: item.mediaItem.duration || 10
+                    }))
+                }}
+                library={library}
+            />
         </div>
     );
 }

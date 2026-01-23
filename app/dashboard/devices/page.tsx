@@ -33,10 +33,13 @@ export default async function DevicesPage() {
         },
     });
 
-    // Transform devices to ensure name is string
+    // Transform devices to ensure name is string and dates are strings
     const formattedDevices = devices.map(d => ({
         ...d,
         name: d.name || "Unknown Device",
+        lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
+        createdAt: d.createdAt.toISOString(),
+        updatedAt: d.updatedAt.toISOString(),
         activePlaylist: d.activePlaylist ? {
             ...d.activePlaylist,
             name: d.activePlaylist.name || "Unnamed Playlist"
