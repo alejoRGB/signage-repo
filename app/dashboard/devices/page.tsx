@@ -33,6 +33,16 @@ export default async function DevicesPage() {
         },
     });
 
+    // Transform devices to ensure name is string
+    const formattedDevices = devices.map(d => ({
+        ...d,
+        name: d.name || "Unknown Device",
+        activePlaylist: d.activePlaylist ? {
+            ...d.activePlaylist,
+            name: d.activePlaylist.name || "Unnamed Playlist"
+        } : null
+    }));
+
     // Fetch playlists for dropdown
     const playlists = await prisma.playlist.findMany({
         where: {
@@ -49,7 +59,7 @@ export default async function DevicesPage() {
 
     return (
         <div className="space-y-6">
-            <DeviceManager devices={devices} playlists={playlists} />
+            <DeviceManager devices={formattedDevices} playlists={playlists} />
         </div>
     );
 }
