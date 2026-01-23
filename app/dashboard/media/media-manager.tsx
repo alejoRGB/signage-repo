@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Trash2, FileVideo, FileImage, ExternalLink } from "lucide-react";
+import { upload } from '@vercel/blob/client';
 
 type MediaItem = {
     id: string;
@@ -23,7 +24,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         }
     };
 
-    import { upload } from '@vercel/blob/client';
+
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
