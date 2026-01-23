@@ -33,6 +33,13 @@ export async function GET(
             );
         }
 
+        if (!device.userId) {
+            return NextResponse.json(
+                { error: "Device is not paired" },
+                { status: 403 }
+            );
+        }
+
         // Find media item and verify it belongs to the same user as the device
         const mediaItem = await prisma.mediaItem.findFirst({
             where: {
