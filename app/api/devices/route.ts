@@ -27,7 +27,28 @@ export async function GET(request: Request) {
         },
     });
 
-    return NextResponse.json(devices);
+    // Calculate dynamic status based on lastSeenAt
+    const devicesWithStatus = devices.map(device => {
+        let status = "offline";
+
+        if (device.lastSeenAt) {
+            const lastSeenTime = new Date(device.lastSeenAt).getTime();
+            const now = Date.now();
+            const fiveMinutesInMs = 5 * 60 * 1000;
+
+            // Device is online if it checked in within the last 5 minutes
+            if (now - lastSeenTime < fiveMinutesInMs) {
+                status = "online";
+            }
+        }
+
+        return {
+            ...device,
+            status
+        };
+    });
+
+    return NextResponse.json(devicesWithStatus);
 }
 
 export async function POST(request: Request) {
