@@ -10,7 +10,7 @@ echo "==================================================="
 # 1. Configuration
 USER_HOME=$(eval echo ~$(whoami))
 INSTALL_DIR="$USER_HOME/signage-player"
-BASE_URL="https://signage-repo-dc5s-1cnhp9yu5-alejos-projects-7a73f1be.vercel.app" # Will update dynamically if needed
+BASE_URL="https://signage-repo-dc5s.vercel.app" # Stable Production URL
 
 echo "Installing to: $INSTALL_DIR"
 
