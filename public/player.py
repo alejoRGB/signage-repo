@@ -57,12 +57,14 @@ class Player:
             cmd = [
                 "mpv",
                 f"--playlist={self.playlist_m3u}",
-                "--loop-playlist",
                 "--fullscreen",
                 "--no-osd-bar",
                 "--image-display-duration=10",
-                "--keep-open=yes",
-                "--force-window=yes" 
+                "--loop-playlist=inf",
+                "--prefetch-playlist=yes",
+                "--force-window=immediate",
+                "--cache=yes",
+                "--gpu-context=auto" 
             ]
             
             self.mpv_process = subprocess.Popen(cmd)
