@@ -17,7 +17,7 @@ echo "Installing to: $INSTALL_DIR"
 # 2. Install System Dependencies
 echo "[1/5] Installing system dependencies..."
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-requests mpv feh git
+sudo apt-get install -y python3 python3-pip python3-requests python3-pil mpv feh git
 
 # 3. Setup Directory
 echo "[2/5] Setting up directories..."
