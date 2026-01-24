@@ -26,9 +26,6 @@ export default async function Home() {
           >
             Get Started
           </Link>
-          <Link href="/about" className="text-sm font-semibold leading-6 text-gray-900">
-            Learn more <span aria-hidden="true">→</span>
-          </Link>
         </div>
       </div>
     </div>
