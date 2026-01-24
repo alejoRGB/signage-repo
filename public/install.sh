@@ -64,10 +64,21 @@ Environment=DISPLAY=:0
 Environment=XAUTHORITY=$USER_HOME/.Xauthority
 ExecStart=/usr/bin/python3 $INSTALL_DIR/player.py
 WorkingDirectory=$INSTALL_DIR
-Restart=always
-RestartSec=10
 User=$CURRENT_USER
 Group=$CURRENT_USER
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Watchdog configuration
+WatchdogSec=120
+
+# Logging
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=graphical.target
