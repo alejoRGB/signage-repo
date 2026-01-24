@@ -59,11 +59,15 @@ class Player:
                 f"--playlist={self.playlist_m3u}",
                 "--fullscreen",
                 "--no-osd-bar",
+                "--no-audio-display",
                 "--image-display-duration=10",
                 "--loop-playlist=inf",
                 "--prefetch-playlist=yes",
                 "--force-window=immediate",
                 "--cache=yes",
+                "--demuxer-max-bytes=150M",
+                "--demuxer-max-back-bytes=50M",
+                "--hr-seek=yes",
                 "--gpu-context=auto" 
             ]
             
