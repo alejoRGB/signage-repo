@@ -60,7 +60,9 @@ class Player:
                 "--loop-playlist",
                 "--fullscreen",
                 "--no-osd-bar",
-                "--image-display-duration=10" 
+                "--image-display-duration=10",
+                "--keep-open=yes",
+                "--force-window=yes" 
             ]
             
             self.mpv_process = subprocess.Popen(cmd)
@@ -147,12 +149,27 @@ class Player:
             # Periodically sync
             if time.time() - last_sync_time > sync_interval:
                 print("[PLAYER] Checking for updates...")
+                
+                # Check actual content change to avoid unnecessary restarts
+                old_playlist_data = ""
+                if os.path.exists(self.sync_manager.playlist_cache):
+                    with open(self.sync_manager.playlist_cache, 'r') as f:
+                        old_playlist_data = f.read()
+
                 if self.sync_manager.sync():
-                    # If sync returns True, something changed (playlist or media)
-                    print("[PLAYER] Content updated! Restarting playback...")
-                    playlist = self.sync_manager.load_cached_playlist()
-                    if playlist and self.generate_m3u(playlist):
-                        self.start_mpv()
+                    # Sync returned success (network ok), now check if CONTENT changed
+                    new_playlist_data = ""
+                    if os.path.exists(self.sync_manager.playlist_cache):
+                        with open(self.sync_manager.playlist_cache, 'r') as f:
+                            new_playlist_data = f.read()
+                    
+                    if old_playlist_data != new_playlist_data:
+                        print("[PLAYER] Content updated! Restarting playback...")
+                        playlist = self.sync_manager.load_cached_playlist()
+                        if playlist and self.generate_m3u(playlist):
+                            self.start_mpv()
+                    else:
+                        print("[PLAYER] No changes detected.")
                 
                 last_sync_time = time.time()
                 
