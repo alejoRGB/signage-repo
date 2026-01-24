@@ -9,6 +9,8 @@ import json
 import subprocess
 import time
 import signal
+import requests
+from datetime import datetime
 from typing import Dict, List, Optional
 from sync import SyncManager
 
@@ -23,6 +25,12 @@ class Player:
         self.playlist_m3u = os.path.join(os.path.dirname(config_path), "playlist.m3u")
         self.mpv_process = None
         self.running = True
+        
+        # Watchdog state
+        self.last_health_check = time.time()
+        self.mpv_restart_count = 0
+        self.last_mpv_check_time = time.time()
+        self.watchdog_log = os.path.join(os.path.dirname(config_path), "watchdog.log")
         
         # Ensure DISPLAY is set
         if "DISPLAY" not in os.environ:
@@ -85,6 +93,95 @@ class Player:
             except subprocess.TimeoutExpired:
                 self.mpv_process.kill()
             self.mpv_process = None
+
+    def is_mpv_running(self) -> bool:
+        """Check if MPV process is running"""
+        if not self.mpv_process:
+            return False
+        return self.mpv_process.poll() is None
+
+    def is_mpv_responsive(self) -> bool:
+        """Check if MPV is responsive (not frozen)"""
+        if not self.is_mpv_running():
+            return False
+        
+        # Check if process is in a good state
+        try:
+            # If poll() returns None, process is still running
+            if self.mpv_process.poll() is None:
+                return True
+        except Exception as e:
+            print(f"[WATCHDOG] Error checking MPV responsiveness: {e}")
+            return False
+        
+        return False
+
+    def check_mpv_health(self) -> bool:
+        """Comprehensive MPV health check"""
+        if not self.is_mpv_running():
+            self.log_watchdog_event("mpv_not_running", "MPV process not found")
+            return False
+        
+        if not self.is_mpv_responsive():
+            self.log_watchdog_event("mpv_unresponsive", "MPV process unresponsive")
+            return False
+        
+        return True
+
+    def log_watchdog_event(self, event_type: str, details: str):
+        """Log watchdog events locally and send to dashboard"""
+        timestamp = datetime.now().isoformat()
+        log_entry = f"[{timestamp}] {event_type}: {details}\n"
+        
+        # Log locally
+        try:
+            with open(self.watchdog_log, 'a') as f:
+                f.write(log_entry)
+        except Exception as e:
+            print(f"[WATCHDOG] Failed to write local log: {e}")
+        
+        # Log to console
+        print(f"[WATCHDOG] {log_entry.strip()}")
+        
+        # Send to dashboard API (non-blocking)
+        try:
+            if self.sync_manager.device_token:
+                requests.post(
+                    f"{self.sync_manager.api_base}/devices/watchdog",
+                    json={
+                        "event_type": event_type,
+                        "details": details,
+                        "timestamp": timestamp,
+                        "restart_count": self.mpv_restart_count
+                    },
+                    headers={"Authorization": f"Bearer {self.sync_manager.device_token}"},
+                    timeout=5
+                )
+        except Exception as e:
+            # Don't fail if API is unreachable
+            print(f"[WATCHDOG] Failed to send event to API: {e}")
+
+    def restart_mpv(self, reason: str = "unknown"):
+        """Kill and restart MPV process"""
+        self.log_watchdog_event("mpv_restart", f"Restarting MPV: {reason}")
+        self.mpv_restart_count += 1
+        
+        # Kill existing process
+        if self.mpv_process:
+            try:
+                self.mpv_process.kill()
+                self.mpv_process.wait(timeout=2)
+            except Exception as e:
+                print(f"[WATCHDOG] Error killing MPV: {e}")
+        
+        self.mpv_process = None
+        time.sleep(1)
+        
+        # Restart with current playlist
+        if os.path.exists(self.playlist_m3u):
+            self.start_mpv()
+        else:
+            print("[WATCHDOG] No playlist available for restart")
 
     def pairing_loop(self):
         """Handle pairing (same as before)"""
@@ -158,10 +255,18 @@ class Player:
 
         # 4. Monitor Loop
         last_sync_time = time.time()
-        sync_interval = 60 # Check every minute
+        last_health_check = time.time()
+        sync_interval = 60  # Check every minute
+        health_check_interval = 30  # Health check every 30 seconds
 
         while self.running:
             time.sleep(5) 
+            
+            # Watchdog: Health check every 30 seconds
+            if time.time() - last_health_check > health_check_interval:
+                if not self.check_mpv_health():
+                    self.restart_mpv("health check failed")
+                last_health_check = time.time()
             
             # Periodically sync
             if time.time() - last_sync_time > sync_interval:
@@ -190,10 +295,10 @@ class Player:
                 
                 last_sync_time = time.time()
                 
-            # Check if MPV crashed
+            # Check if MPV crashed (redundant with health check, but kept for immediate detection)
             if self.mpv_process and self.mpv_process.poll() is not None:
                 print("[PLAYER] MPV exited unexpectedly. Restarting...")
-                self.start_mpv()
+                self.restart_mpv("process exited")
 
 if __name__ == "__main__":
     player = Player()
