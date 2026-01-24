@@ -27,6 +27,7 @@ mkdir -p "$INSTALL_DIR/media"
 echo "[3/5] Downloading player software..."
 # Always download the latest optimized player from the public URL
 wget -q "$BASE_URL/player.py" -O "$INSTALL_DIR/player.py"
+wget -q "$BASE_URL/sync.py" -O "$INSTALL_DIR/sync.py"
 
 # Download Service Script Logic (Embedded here to handle service creation)
 SERVICE_FILE="/etc/systemd/system/signage-player.service"
