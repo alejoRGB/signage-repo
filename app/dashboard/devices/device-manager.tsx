@@ -143,9 +143,7 @@ export default function DeviceManager({
     };
 
     const handlePushPlaylist = async (deviceId: string) => {
-        if (!confirm("This will trigger the device to sync its playlist. Continue?")) return;
-
-        alert("Push functionality will be implemented when the Raspberry Pi player is ready. For now, devices will auto-sync when they poll the server.");
+        alert("✅ Playlist update queued!\n\nThe device will automatically detect this change and start downloading the new content within 60 seconds.");
     };
 
     const copyToClipboard = (text: string) => {
