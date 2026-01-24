@@ -108,7 +108,15 @@ class Player:
         
         if image_path and os.path.exists(image_path):
             try:
-                viewer = subprocess.Popen(["feh", "--fullscreen", image_path])
+                # Use MPV for image display (works on X11 and DRM/Lite)
+                viewer = subprocess.Popen([
+                    "mpv", 
+                    image_path, 
+                    "--fullscreen", 
+                    "--loop-file=inf", 
+                    "--no-osd-bar",
+                    "--force-window=immediate"
+                ])
             except:
                 pass
 
@@ -122,7 +130,10 @@ class Player:
             
         if viewer:
             viewer.terminate()
-            subprocess.run(["pkill", "feh"], check=False)
+            try:
+                viewer.wait(timeout=1)
+            except:
+                viewer.kill()
 
     def run(self):
         print("=" * 50)
