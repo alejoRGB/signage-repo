@@ -22,16 +22,23 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { event_type, details, timestamp, restart_count } = body;
 
-        // Log watchdog event to console (for now)
+        // Store watchdog event in database
+        await prisma.watchdogEvent.create({
+            data: {
+                deviceId: device.id,
+                eventType: event_type,
+                details: details || "",
+                restartCount: restart_count || 0,
+                timestamp: new Date(timestamp),
+            },
+        });
+
         console.log(`[WATCHDOG] Device ${device.name} (${device.id}):`, {
             event_type,
             details,
             timestamp,
             restart_count,
         });
-
-        // TODO: Store in database when WatchdogEvent model is added
-        // For now, just acknowledge receipt
 
         return NextResponse.json({
             success: true,

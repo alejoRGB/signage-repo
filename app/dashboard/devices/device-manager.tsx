@@ -21,6 +21,15 @@ type Playlist = {
     name: string;
 };
 
+type WatchdogEvent = {
+    id: string;
+    eventType: string;
+    details: string;
+    restartCount: number;
+    timestamp: string;
+    createdAt: string;
+};
+
 export default function DeviceManager({
     devices: initialDevices,
     playlists,
@@ -41,6 +50,12 @@ export default function DeviceManager({
     const [loading, setLoading] = useState(false);
     const [newlyCreatedDevice, setNewlyCreatedDevice] = useState<Device | null>(null);
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
+
+    // Watchdog logs state
+    const [showLogsModal, setShowLogsModal] = useState(false);
+    const [selectedDeviceForLogs, setSelectedDeviceForLogs] = useState<Device | null>(null);
+    const [watchdogLogs, setWatchdogLogs] = useState<WatchdogEvent[]>([]);
+    const [logsLoading, setLogsLoading] = useState(false);
 
     const handlePairDevice = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,6 +169,46 @@ export default function DeviceManager({
     const formatDate = (dateString: string | null) => {
         if (!dateString) return "Never";
         return new Date(dateString).toLocaleString();
+    };
+
+    const handleViewLogs = async (device: Device) => {
+        setSelectedDeviceForLogs(device);
+        setShowLogsModal(true);
+        setLogsLoading(true);
+
+        try {
+            const res = await fetch(`/api/devices/${device.id}/logs`);
+            if (res.ok) {
+                const data = await res.json();
+                setWatchdogLogs(data.events || []);
+            } else {
+                console.error("Failed to fetch logs");
+                setWatchdogLogs([]);
+            }
+        } catch (error) {
+            console.error("Error fetching logs:", error);
+            setWatchdogLogs([]);
+        } finally {
+            setLogsLoading(false);
+        }
+    };
+
+    const getEventTypeLabel = (eventType: string) => {
+        const labels: Record<string, string> = {
+            "mpv_restart": "MPV Restarted",
+            "mpv_not_running": "MPV Not Running",
+            "mpv_unresponsive": "MPV Unresponsive",
+        };
+        return labels[eventType] || eventType;
+    };
+
+    const getEventTypeColor = (eventType: string) => {
+        const colors: Record<string, string> = {
+            "mpv_restart": "bg-yellow-100 text-yellow-800",
+            "mpv_not_running": "bg-red-100 text-red-800",
+            "mpv_unresponsive": "bg-orange-100 text-orange-800",
+        };
+        return colors[eventType] || "bg-gray-100 text-gray-800";
     };
 
     return (
@@ -428,6 +483,12 @@ export default function DeviceManager({
                                             </button>
                                         )}
                                         <button
+                                            onClick={() => handleViewLogs(device)}
+                                            className="text-indigo-600 hover:text-indigo-900 font-medium"
+                                        >
+                                            View Logs
+                                        </button>
+                                        <button
                                             onClick={() => handleDelete(device.id)}
                                             className="text-red-600 hover:text-red-900 font-medium"
                                         >
@@ -440,6 +501,83 @@ export default function DeviceManager({
                     </tbody>
                 </table>
             </div>
+
+            {/* Watchdog Logs Modal */}
+            {showLogsModal && selectedDeviceForLogs && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] flex flex-col">
+                        <div className="p-6 border-b border-gray-200">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    Watchdog Logs - {selectedDeviceForLogs.name}
+                                </h3>
+                                <button
+                                    onClick={() => {
+                                        setShowLogsModal(false);
+                                        setSelectedDeviceForLogs(null);
+                                        setWatchdogLogs([]);
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {logsLoading ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    Loading logs...
+                                </div>
+                            ) : watchdogLogs.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    No watchdog events recorded for this device.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {watchdogLogs.map((log) => (
+                                        <div key={log.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(log.eventType)}`}>
+                                                            {getEventTypeLabel(log.eventType)}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {formatDate(log.timestamp)}
+                                                        </span>
+                                                        {log.restartCount > 0 && (
+                                                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                                                Restart #{log.restartCount}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-gray-700">{log.details}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-gray-200">
+                            <button
+                                onClick={() => {
+                                    setShowLogsModal(false);
+                                    setSelectedDeviceForLogs(null);
+                                    setWatchdogLogs([]);
+                                }}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
