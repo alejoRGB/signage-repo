@@ -33,18 +33,35 @@ export default async function DevicesPage() {
         },
     });
 
-    // Transform devices to ensure name is string and dates are strings
-    const formattedDevices = devices.map(d => ({
-        ...d,
-        name: d.name || "Unknown Device",
-        lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
-        createdAt: d.createdAt.toISOString(),
-        updatedAt: d.updatedAt.toISOString(),
-        activePlaylist: d.activePlaylist ? {
-            ...d.activePlaylist,
-            name: d.activePlaylist.name || "Unnamed Playlist"
-        } : null
-    }));
+    // Transform devices to ensure name is string, dates are strings, and calculate status
+    const formattedDevices = devices.map(d => {
+        // Calculate dynamic status based on lastSeenAt
+        let status = "offline";
+
+        if (d.lastSeenAt) {
+            const lastSeenTime = new Date(d.lastSeenAt).getTime();
+            const now = Date.now();
+            const fiveMinutesInMs = 5 * 60 * 1000;
+
+            // Device is online if it checked in within the last 5 minutes
+            if (now - lastSeenTime < fiveMinutesInMs) {
+                status = "online";
+            }
+        }
+
+        return {
+            ...d,
+            name: d.name || "Unknown Device",
+            status,
+            lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
+            createdAt: d.createdAt.toISOString(),
+            updatedAt: d.updatedAt.toISOString(),
+            activePlaylist: d.activePlaylist ? {
+                ...d.activePlaylist,
+                name: d.activePlaylist.name || "Unnamed Playlist"
+            } : null
+        };
+    });
 
     // Fetch playlists for dropdown
     const playlists = await prisma.playlist.findMany({
