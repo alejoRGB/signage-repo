@@ -13,11 +13,10 @@ from typing import Dict, List, Optional
 from sync import SyncManager
 
 class Player:
-    def __init__(self, config_path: str = "/home/pi/signage-player/config.json"):
-        # Fix path for specific user if needed (runtime check)
-        if "/home/pi/" in config_path and not os.path.exists("/home/pi"):
-            user = os.environ.get("USER", "pi")
-            config_path = config_path.replace("/home/pi", f"/home/{user}")
+    def __init__(self):
+        # Dynamically find config based on user home
+        home = os.path.expanduser("~")
+        config_path = os.path.join(home, "signage-player", "config.json")
             
         self.sync_manager = SyncManager(config_path)
         self.media_dir = self.sync_manager.media_dir
