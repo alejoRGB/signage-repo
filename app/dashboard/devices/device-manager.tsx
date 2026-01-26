@@ -220,7 +220,16 @@ export default function DeviceManager({
 
     const formatDate = (dateString: string | null) => {
         if (!dateString) return "Never";
-        return new Date(dateString).toLocaleString();
+        return new Date(dateString).toLocaleString("es-AR", {
+            timeZone: "America/Argentina/Buenos_Aires",
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
     };
 
     const handleViewLogs = async (device: Device) => {
@@ -571,7 +580,10 @@ export default function DeviceManager({
                                                     {log.level}
                                                 </span>
                                                 <span className="shrink-0 text-gray-500 text-xs mt-0.5" suppressHydrationWarning>
-                                                    {new Date(log.timestamp).toLocaleString()}
+                                                    {new Date(log.timestamp).toLocaleString("es-AR", {
+                                                        timeZone: "America/Argentina/Buenos_Aires",
+                                                        hour12: false
+                                                    })}
                                                 </span>
                                                 <div className="text-gray-900 break-all whitespace-pre-wrap">
                                                     {log.message}
