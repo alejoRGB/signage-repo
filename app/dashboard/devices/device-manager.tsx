@@ -78,6 +78,8 @@ export default function DeviceManager({
                 }
             } catch (error) {
                 console.error("Logs auto-refresh failed", error);
+            } finally {
+                setLogsLoading(false);
             }
         };
 
@@ -465,7 +467,7 @@ export default function DeviceManager({
                                             {device.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" suppressHydrationWarning>
                                         {formatDate(device.lastSeenAt)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -552,7 +554,7 @@ export default function DeviceManager({
                                                 <span className={`shrink-0 px-2 py-0.5 text-xs font-bold rounded uppercase ${getLogLevelColor(log.level)}`}>
                                                     {log.level}
                                                 </span>
-                                                <span className="shrink-0 text-gray-500 text-xs mt-0.5">
+                                                <span className="shrink-0 text-gray-500 text-xs mt-0.5" suppressHydrationWarning>
                                                     {new Date(log.timestamp).toLocaleString()}
                                                 </span>
                                                 <div className="text-gray-900 break-all whitespace-pre-wrap">
