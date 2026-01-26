@@ -36,7 +36,7 @@ export default async function AdminPage() {
         createdAt: user.createdAt.toISOString(),
         deviceCount: user.devices.length,
         playlistCount: user.playlists.length,
-        storageUsed: 0 // Placeholder until size field is added
+        storageUsed: user.media.reduce((acc, item) => acc + (item.size || 0), 0)
     }));
 
     return (

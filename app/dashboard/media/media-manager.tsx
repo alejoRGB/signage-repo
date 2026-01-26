@@ -84,7 +84,8 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     filename: newBlob.pathname,
                     width: metadata.width,
                     height: metadata.height,
-                    fps: metadata.fps // Placeholder
+                    fps: metadata.fps, // Placeholder
+                    size: file.size
                 }),
             });
 
