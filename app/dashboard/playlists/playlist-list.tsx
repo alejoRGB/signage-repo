@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, PlaySquare, Trash2, Edit } from "lucide-react";
 import Link from "next/link";
+import ConfirmModal from "@/app/components/confirm-modal";
 
 type Playlist = {
     id: string;
@@ -16,6 +17,8 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
     const router = useRouter();
     const [creating, setCreating] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState("");
+
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,17 +41,18 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
         }
     };
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.preventDefault(); // Prevent link click
-        if (!confirm("Delete playlist?")) return;
+    const confirmDelete = async () => {
+        if (!deleteId) return;
 
         try {
-            await fetch(`/api/playlists/${id}`, {
+            await fetch(`/api/playlists/${deleteId}`, {
                 method: "DELETE",
             });
             router.refresh();
         } catch (error) {
             alert("Error deleting");
+        } finally {
+            setDeleteId(null);
         }
     };
 
@@ -92,6 +96,16 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
                 </div>
             )}
 
+            <ConfirmModal
+                isOpen={!!deleteId}
+                onClose={() => setDeleteId(null)}
+                onConfirm={confirmDelete}
+                title="Delete Playlist"
+                message="Are you sure you want to delete this playlist? This action cannot be undone."
+                confirmText="Delete"
+                isDestructive={true}
+            />
+
             {initialPlaylists.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
                     <PlaySquare className="mx-auto h-12 w-12 text-gray-400" />
@@ -123,7 +137,10 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
                                             </div>
                                         </div>
                                         <button
-                                            onClick={(e) => handleDelete(playlist.id, e)}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setDeleteId(playlist.id);
+                                            }}
                                             className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                                         >
                                             <Trash2 className="h-5 w-5" />
