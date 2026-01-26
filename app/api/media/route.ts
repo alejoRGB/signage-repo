@@ -93,20 +93,25 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { name, url, type, filename } = body;
+        const { name, url, type, filename, width, height, fps } = body;
 
         if (!name || !url || !type) {
-            return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+            return NextResponse.json(
+                { error: "Missing required fields" },
+                { status: 400 }
+            );
         }
 
         const mediaItem = await prisma.mediaItem.create({
             data: {
-                userId: session.user.id,
                 name,
                 url,
                 type,
-                filename: filename || name,
-                duration: 0,
+                filename,
+                width: width ? parseInt(width) : null,
+                height: height ? parseInt(height) : null,
+                fps: fps ? parseFloat(fps) : null,
+                userId: session.user.id,
             },
         });
 

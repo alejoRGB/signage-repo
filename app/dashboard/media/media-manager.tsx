@@ -10,6 +10,9 @@ type MediaItem = {
     name: string;
     type: string;
     url: string;
+    width: number | null;
+    height: number | null;
+    fps: number | null;
     createdAt: Date;
 };
 
@@ -26,6 +29,30 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
 
 
 
+    const extractMetadata = (file: File): Promise<{ width: number; height: number; fps?: number }> => {
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(file);
+            if (file.type.startsWith("image")) {
+                const img = new Image();
+                img.onload = () => {
+                    resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            } else if (file.type.startsWith("video")) {
+                const video = document.createElement("video");
+                video.preload = "metadata";
+                video.onloadedmetadata = () => {
+                    resolve({ width: video.videoWidth, height: video.videoHeight, fps: 30 }); // Defaulting FPS to 30 as placeholder
+                    URL.revokeObjectURL(url);
+                };
+                video.src = url;
+            } else {
+                resolve({ width: 0, height: 0 });
+            }
+        });
+    };
+
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!file) return;
@@ -33,17 +60,20 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         setUploading(true);
 
         try {
-            // 1. Upload directly to Vercel Blob (Client Side)
+            // 1. Extract Metadata
+            const metadata = await extractMetadata(file);
+
+            // 2. Upload directly to Vercel Blob (Client Side)
             const uniqueFilename = `${Date.now()}-${file.name}`;
             const newBlob = await upload(uniqueFilename, file, {
                 access: 'public',
                 handleUploadUrl: '/api/media/upload',
             });
 
-            // 2. Determine type
+            // 3. Determine type
             const type = file.type.startsWith("video") ? "video" : "image";
 
-            // 3. Save metadata to our DB
+            // 4. Save metadata to our DB
             const res = await fetch("/api/media", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -51,7 +81,10 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     name: file.name,
                     url: newBlob.url,
                     type: type,
-                    filename: newBlob.pathname
+                    filename: newBlob.pathname,
+                    width: metadata.width,
+                    height: metadata.height,
+                    fps: metadata.fps // Placeholder
                 }),
             });
 
@@ -151,7 +184,15 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
 
                             <div className="p-4">
                                 <p className="block text-sm font-medium text-gray-900 truncate" title={item.name}>{item.name}</p>
-                                <p className="block text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</p>
+                                <div className="flex justify-between items-center mt-1">
+                                    <p className="block text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</p>
+                                    {item.width && item.height && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                            {item.width}x{item.height}
+                                            {item.fps && <span className="ml-1 text-gray-500">@{item.fps}fps</span>}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
