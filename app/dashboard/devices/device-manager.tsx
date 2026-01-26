@@ -486,27 +486,31 @@ export default function DeviceManager({
                                             ))}
                                         </select>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                                        {device.activePlaylist && (
-                                            <button
-                                                onClick={() => handlePushPlaylist(device.id)}
-                                                className="text-blue-600 hover:text-blue-900 font-medium"
-                                            >
-                                                Push Playlist
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => handleViewLogs(device)}
-                                            className="text-indigo-600 hover:text-indigo-900 font-medium"
-                                        >
-                                            View Logs
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(device.id)}
-                                            className="text-red-600 hover:text-red-900 font-medium"
-                                        >
-                                            Delete
-                                        </button>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <div className="flex items-center justify-end gap-4">
+                                            {device.activePlaylist && (
+                                                <button
+                                                    onClick={() => handlePushPlaylist(device.id)}
+                                                    className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded shadow-sm transition-colors text-sm font-semibold"
+                                                >
+                                                    Push Playlist
+                                                </button>
+                                            )}
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={() => handleViewLogs(device)}
+                                                    className="text-gray-500 hover:text-indigo-600 text-xs transition-colors"
+                                                >
+                                                    View Logs
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(device.id)}
+                                                    className="text-gray-400 hover:text-red-600 text-xs transition-colors"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
