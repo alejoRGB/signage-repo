@@ -8,6 +8,8 @@ export const metadata = {
     title: "Devices | Cloud Signage",
 };
 
+export const dynamic = "force-dynamic"; // Ensure fresh data on every request
+
 export default async function DevicesPage() {
     const session = await getServerSession(authOptions);
 
@@ -41,10 +43,10 @@ export default async function DevicesPage() {
         if (d.lastSeenAt) {
             const lastSeenTime = new Date(d.lastSeenAt).getTime();
             const now = Date.now();
-            const fiveMinutesInMs = 5 * 60 * 1000;
+            const thresholdInMs = 2 * 60 * 1000; // 2 minutes (Player pings every 60s)
 
-            // Device is online if it checked in within the last 5 minutes
-            if (now - lastSeenTime < fiveMinutesInMs) {
+            // Device is online if it checked in within the threshold
+            if (now - lastSeenTime < thresholdInMs) {
                 status = "online";
             }
         }
