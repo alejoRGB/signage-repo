@@ -35,6 +35,11 @@ export default function DeviceManager({
     const [pairingName, setPairingName] = useState("");
     const [pairingStatus, setPairingStatus] = useState<PairingStatus>("idle");
 
+    // Sync state with props when router.refresh() fetches new data
+    useEffect(() => {
+        setDevices(initialDevices);
+    }, [initialDevices]);
+
     // Manual Add Form State
     const [showAddForm, setShowAddForm] = useState(false);
     const [newDeviceName, setNewDeviceName] = useState("");
