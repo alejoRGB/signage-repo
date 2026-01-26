@@ -16,6 +16,8 @@ type MediaItem = {
     createdAt: Date;
 };
 
+import ConfirmModal from "@/app/components/confirm-modal";
+
 export default function MediaManager({ initialMedia }: { initialMedia: MediaItem[] }) {
     const router = useRouter();
     const [uploading, setUploading] = useState(false);
@@ -26,8 +28,6 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             setFile(e.target.files[0]);
         }
     };
-
-
 
     const extractMetadata = (file: File): Promise<{ width: number; height: number; fps?: number }> => {
         return new Promise((resolve) => {
@@ -43,7 +43,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                 const video = document.createElement("video");
                 video.preload = "metadata";
                 video.onloadedmetadata = () => {
-                    resolve({ width: video.videoWidth, height: video.videoHeight, fps: 30 }); // Defaulting FPS to 30 as placeholder
+                    resolve({ width: video.videoWidth, height: video.videoHeight, fps: 30 });
                     URL.revokeObjectURL(url);
                 };
                 video.src = url;
@@ -53,7 +53,10 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         });
     };
 
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
     const handleUpload = async (e: React.FormEvent) => {
+        // ... (existing upload logic remains unchanged, using 'file' state)
         e.preventDefault();
         if (!file) return;
 
@@ -84,7 +87,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     filename: newBlob.pathname,
                     width: metadata.width,
                     height: metadata.height,
-                    fps: metadata.fps, // Placeholder
+                    fps: metadata.fps,
                     size: file.size
                 }),
             });
@@ -105,21 +108,33 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this item?")) return;
+    const confirmDelete = async () => {
+        if (!deleteId) return;
 
         try {
-            await fetch(`/api/media?id=${id}`, {
+            await fetch(`/api/media?id=${deleteId}`, {
                 method: "DELETE",
             });
             router.refresh();
         } catch (error) {
             alert("Error deleting file");
+        } finally {
+            setDeleteId(null);
         }
     };
 
     return (
         <div className="space-y-6">
+            <ConfirmModal
+                isOpen={!!deleteId}
+                onClose={() => setDeleteId(null)}
+                onConfirm={confirmDelete}
+                title="Delete Media"
+                message="Are you sure you want to permanently delete this file? This action cannot be undone."
+                confirmText="Delete"
+                isDestructive={true}
+            />
+
             {/* Upload Section */}
             <div className="bg-white shadow sm:rounded-lg p-6">
                 <h3 className="text-lg font-medium leading-6 text-gray-900">Upload Media</h3>
@@ -200,7 +215,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                                 <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-1 bg-white rounded-full shadow hover:bg-gray-100 text-gray-600">
                                     <ExternalLink className="h-4 w-4" />
                                 </a>
-                                <button onClick={() => handleDelete(item.id)} className="p-1 bg-white rounded-full shadow hover:bg-red-50 text-red-600">
+                                <button onClick={() => setDeleteId(item.id)} className="p-1 bg-white rounded-full shadow hover:bg-red-50 text-red-600">
                                     <Trash2 className="h-4 w-4" />
                                 </button>
                             </div>
