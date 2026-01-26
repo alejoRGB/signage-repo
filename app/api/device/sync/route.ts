@@ -19,6 +19,9 @@ export async function POST(request: Request) {
         const device = await prisma.device.findUnique({
             where: { token: device_token },
             include: {
+                user: {
+                    select: { isActive: true }
+                },
                 activePlaylist: {
                     include: {
                         items: {
@@ -40,6 +43,15 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: "Invalid device token" },
                 { status: 401 }
+            );
+        }
+
+        // Check if user is active
+        if (device.user && !device.user.isActive) {
+            console.warn(`[SYNC API] Blocked sync for device ${device.id} (User Inactive)`);
+            return NextResponse.json(
+                { error: "Account suspended" },
+                { status: 403 }
             );
         }
 
