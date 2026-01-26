@@ -10,6 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@prisma/client": "^5.22.0",
     "@vercel/blob": "^2.0.1",
     "@vercel/postgres": "^0.10.0",
