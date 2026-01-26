@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function PUT(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await getServerSession(authOptions);
 
@@ -15,7 +15,7 @@ export async function PUT(
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const id = params.id;
+    const { id } = await params;
     const body = await request.json();
     const { isActive } = body;
 
