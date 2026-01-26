@@ -24,6 +24,10 @@ export const authOptions: NextAuthOptions = {
                     return null;
                 }
 
+                if (!user.isActive) {
+                    throw new Error("Account is inactive.");
+                }
+
                 const isPasswordValid = await bcrypt.compare(
                     credentials.password,
                     user.password
@@ -37,6 +41,8 @@ export const authOptions: NextAuthOptions = {
                     id: user.id,
                     email: user.email,
                     name: user.name,
+                    role: user.role,
+                    isActive: user.isActive,
                 };
             },
         }),
@@ -51,12 +57,16 @@ export const authOptions: NextAuthOptions = {
         async session({ session, token }) {
             if (token && session.user) {
                 session.user.id = token.id as string;
+                session.user.role = token.role as "USER" | "ADMIN";
+                session.user.isActive = token.isActive as boolean;
             }
             return session;
         },
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
+                token.role = user.role;
+                token.isActive = user.isActive;
             }
             return token;
         },
