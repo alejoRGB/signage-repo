@@ -89,6 +89,18 @@ export default function DeviceManager({
     }, [showLogsModal, selectedDeviceForLogs]);
 
 
+
+    // Toast State
+    const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 3000);
+    };
+
     const handlePairDevice = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!pairingCode.trim() || !pairingName.trim()) return;
@@ -105,6 +117,7 @@ export default function DeviceManager({
                 const device = await res.json();
                 setDevices([device, ...devices]);
                 setPairingStatus("success");
+                showToast("Device paired successfully!", "success");
                 setTimeout(() => {
                     setShowPairModal(false);
                     setPairingStatus("idle");
@@ -113,19 +126,18 @@ export default function DeviceManager({
                 }, 1500);
             } else {
                 const error = await res.json();
-                alert(error.error || "Failed to pair device");
+                showToast(error.error || "Failed to pair device", "error");
                 setPairingStatus("error");
             }
         } catch (error) {
-            alert("Error pairing device");
+            showToast("Error pairing device", "error");
             setPairingStatus("error");
         }
     };
 
     const handleAddDevice = async (e: React.FormEvent) => {
-        // Placeholder for manual add if needed
         e.preventDefault();
-        alert("Please use 'Pair Device' instead.");
+        showToast("Please use 'Pair Device' instead.", "info");
     };
 
     const handleDelete = (id: string) => {
@@ -142,14 +154,14 @@ export default function DeviceManager({
 
             if (res.ok) {
                 setDevices(devices.filter((d) => d.id !== deviceToDelete));
-                alert("Device deleted successfully!");
+                showToast("Device deleted successfully!", "success");
             } else {
                 const data = await res.json();
-                alert(`Failed to delete device: ${data.error || 'Unknown error'}`);
+                showToast(`Failed to delete device: ${data.error || 'Unknown error'}`, "error");
             }
         } catch (error) {
             console.error("Error deleting device:", error);
-            alert("Error deleting device.");
+            showToast("Error deleting device.", "error");
         } finally {
             setDeviceToDelete(null);
         }
@@ -167,14 +179,13 @@ export default function DeviceManager({
 
             if (res.ok) {
                 const updatedDevice = await res.json();
-                // Merge update but preserve calculated status for UI consistency
                 setDevices(
                     devices.map((d) => {
                         if (d.id === deviceId) {
                             return {
                                 ...updatedDevice,
-                                status: d.status, // Keep the calculated status from page load
-                                lastSeenAt: d.lastSeenAt, // Keep lastSeenAt unless we know it changed
+                                status: d.status,
+                                lastSeenAt: d.lastSeenAt,
                                 activePlaylist: updatedDevice.activePlaylist || null,
                                 name: updatedDevice.name || d.name
                             };
@@ -182,24 +193,24 @@ export default function DeviceManager({
                         return d;
                     })
                 );
-                alert("Playlist assigned successfully!");
+                showToast("Playlist assigned successfully!", "success");
             } else {
                 const error = await res.json();
-                alert(`Failed to update playlist: ${error.error || 'Unknown error'}`);
+                showToast(`Failed to update playlist: ${error.error || 'Unknown error'}`, "error");
             }
         } catch (error) {
             console.error("Error updating playlist:", error);
-            alert("Error updating playlist");
+            showToast("Error updating playlist", "error");
         }
     };
 
     const handlePushPlaylist = async (deviceId: string) => {
-        alert("✅ Playlist update queued!\n\nThe device will automatically detect this change and start downloading the new content within 60 seconds.");
+        showToast("Playlist update queued! Device will update shortly.", "success");
     };
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
-        alert("Token copied to clipboard!");
+        showToast("Token copied to clipboard!", "success");
     };
 
     const formatDate = (dateString: string | null) => {
@@ -211,7 +222,6 @@ export default function DeviceManager({
         setSelectedDeviceForLogs(device);
         setShowLogsModal(true);
         setLogsLoading(true);
-        // data check handled by useEffect
     };
 
     const getLogLevelColor = (level: string) => {
@@ -241,7 +251,6 @@ export default function DeviceManager({
                     >
                         <span>🔗</span> Pair Device
                     </button>
-                    {/* Optional: Keep Manual Add for testing validation */}
                     <button
                         onClick={() => setShowAddForm(!showAddForm)}
                         className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
@@ -319,8 +328,6 @@ export default function DeviceManager({
                     </div>
                 </div>
             )}
-
-            {/* Manual Add Device Form (Collapsible) */}
 
             {/* Add Device Form */}
             {showAddForm && (
@@ -586,6 +593,29 @@ export default function DeviceManager({
                     </div>
                 </div>
             )}
+
+            {/* Toast Container */}
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+                {toasts.map(toast => (
+                    <div
+                        key={toast.id}
+                        className={`
+                            pointer-events-auto transform transition-all duration-300 ease-in-out
+                            px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]
+                            ${toast.type === 'success' ? 'bg-white border-l-4 border-green-500 text-gray-800' : ''}
+                            ${toast.type === 'error' ? 'bg-white border-l-4 border-red-500 text-gray-800' : ''}
+                            ${toast.type === 'info' ? 'bg-white border-l-4 border-blue-500 text-gray-800' : ''}
+                        `}
+                    >
+                        <span className="text-lg">
+                            {toast.type === 'success' && '✅'}
+                            {toast.type === 'error' && '❌'}
+                            {toast.type === 'info' && 'ℹ️'}
+                        </span>
+                        <p className="text-sm font-medium">{toast.message}</p>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
