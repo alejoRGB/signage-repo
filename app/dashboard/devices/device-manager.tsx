@@ -581,7 +581,7 @@ export default function DeviceManager({
                                                 </span>
                                                 <span className="shrink-0 text-gray-500 text-xs mt-0.5" suppressHydrationWarning>
                                                     {new Date(log.timestamp).toLocaleString("es-AR", {
-                                                        timeZone: "America/Argentina/Buenos_Aires",
+                                                        timeZone: "UTC",
                                                         hour12: false
                                                     })}
                                                 </span>
