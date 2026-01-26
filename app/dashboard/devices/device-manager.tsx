@@ -60,7 +60,7 @@ export default function DeviceManager({
             } catch (error) {
                 console.error("Auto-refresh failed", error);
             }
-        }, 30000); // 30 seconds
+        }, 10000); // 10 seconds
 
         return () => clearInterval(interval);
     }, [router]);
