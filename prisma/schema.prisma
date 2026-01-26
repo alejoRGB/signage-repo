@@ -66,6 +66,9 @@ model MediaItem {
   url       String   // /uploads/filename.mp4 or https://example.com
   filename  String?  // stored filename on disk (if type != web)
   duration  Int      @default(10) // default duration in seconds (for images/web)
+  width     Int?
+  height    Int?
+  fps       Float?
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])
