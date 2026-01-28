@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { Loader2, Plus, Save } from "lucide-react";
+import { Loader2, Plus, Save, X, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // Types
@@ -141,42 +141,61 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                                         // Find index in main array
                                         const globalIndex = items.indexOf(item);
                                         return (
-                                            <div key={globalIndex} className="bg-white p-3 rounded shadow-sm border text-sm relative group transition-all hover:shadow-md">
+                                            <div key={globalIndex} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative group hover:shadow-md transition-shadow">
+                                                {/* Delete Button */}
                                                 <button
                                                     onClick={() => removeItem(globalIndex)}
-                                                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                    className="absolute -top-2 -right-2 bg-white text-gray-400 p-0.5 rounded-full border shadow-sm hover:text-red-500 hover:border-red-500 opacity-0 group-hover:opacity-100 transition-all z-10"
                                                     title="Remove item"
                                                 >
-                                                    &times;
+                                                    <X className="w-4 h-4" />
                                                 </button>
 
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <input
-                                                            type="time"
-                                                            value={item.startTime}
-                                                            onChange={(e) => updateItem(globalIndex, 'startTime', e.target.value)}
-                                                            className="w-full p-1 border rounded text-xs bg-gray-50 focus:ring-1 focus:ring-indigo-500"
-                                                        />
-                                                        <span className="text-gray-400">-</span>
-                                                        <input
-                                                            type="time"
-                                                            value={item.endTime}
-                                                            onChange={(e) => updateItem(globalIndex, 'endTime', e.target.value)}
-                                                            className="w-full p-1 border rounded text-xs bg-gray-50 focus:ring-1 focus:ring-indigo-500"
-                                                        />
+                                                <div className="flex flex-col gap-3">
+                                                    {/* Time Inputs Row */}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="relative flex-1">
+                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-gray-400">
+                                                                <Clock className="w-3 h-3" />
+                                                            </div>
+                                                            <input
+                                                                type="time"
+                                                                value={item.startTime}
+                                                                onChange={(e) => updateItem(globalIndex, 'startTime', e.target.value)}
+                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                            />
+                                                        </div>
+                                                        <span className="text-gray-400 text-xs">-</span>
+                                                        <div className="relative flex-1">
+                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-gray-400">
+                                                                <Clock className="w-3 h-3" />
+                                                            </div>
+                                                            <input
+                                                                type="time"
+                                                                value={item.endTime}
+                                                                onChange={(e) => updateItem(globalIndex, 'endTime', e.target.value)}
+                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                            />
+                                                        </div>
                                                     </div>
 
-                                                    <select
-                                                        value={item.playlistId}
-                                                        onChange={(e) => updateItem(globalIndex, 'playlistId', e.target.value)}
-                                                        className="w-full text-xs p-1.5 border rounded bg-white focus:ring-1 focus:ring-indigo-500"
-                                                    >
-                                                        <option value="">Select Playlist</option>
-                                                        {playlists.map((p: any) => (
-                                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                                        ))}
-                                                    </select>
+                                                    {/* Playlist Selector */}
+                                                    <div className="relative">
+                                                        <select
+                                                            value={item.playlistId}
+                                                            onChange={(e) => updateItem(globalIndex, 'playlistId', e.target.value)}
+                                                            className="w-full text-xs p-2 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 outline-none appearance-none"
+                                                        >
+                                                            <option value="">Select Playlist...</option>
+                                                            {playlists.map((p: any) => (
+                                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        {/* Custom Arrow because appearance-none removes it */}
+                                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                                            <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
