@@ -9,6 +9,7 @@ import PairDeviceModal from "@/components/devices/pair-device-modal";
 import ManualAddDeviceForm from "@/components/devices/manual-add-device-form";
 import DeviceLogsModal from "@/components/devices/device-logs-modal";
 import ConfirmModal from "@/components/confirm-modal";
+import EditDeviceModal from "@/components/devices/edit-device-modal";
 
 export default function DeviceManager({
     devices: initialDevices,
@@ -24,6 +25,7 @@ export default function DeviceManager({
     const [showPairModal, setShowPairModal] = useState(false);
     const [showAddForm, setShowAddForm] = useState(false);
     const [selectedDeviceForLogs, setSelectedDeviceForLogs] = useState<Device | null>(null);
+    const [deviceToEdit, setDeviceToEdit] = useState<Device | null>(null); // New state
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
 
     // Sync state with props when router.refresh() fetches new data
@@ -60,6 +62,11 @@ export default function DeviceManager({
         setDevices([newDevice, ...devices]);
     };
 
+    const handleDeviceUpdated = (updatedDevice: Device) => {
+        setDevices(devices.map(d => d.id === updatedDevice.id ? { ...d, ...updatedDevice } : d));
+        router.refresh();
+    };
+
     const handlePlaylistChange = async (deviceId: string, playlistId: string) => {
         try {
             const res = await fetch(`/api/devices/${deviceId}`, {
@@ -72,20 +79,7 @@ export default function DeviceManager({
 
             if (res.ok) {
                 const updatedDevice = await res.json();
-                setDevices(
-                    devices.map((d) => {
-                        if (d.id === deviceId) {
-                            return {
-                                ...updatedDevice,
-                                status: d.status, // Preserve status from client-side list if needed, or use server's
-                                lastSeenAt: d.lastSeenAt,
-                                activePlaylist: updatedDevice.activePlaylist || null,
-                                name: updatedDevice.name || d.name
-                            };
-                        }
-                        return d;
-                    })
-                );
+                handleDeviceUpdated(updatedDevice);
                 showToast("Playlist assigned successfully!", "success");
             } else {
                 const error = await res.json();
@@ -167,6 +161,15 @@ export default function DeviceManager({
                 showToast={showToast}
             />
 
+            <EditDeviceModal
+                isOpen={!!deviceToEdit}
+                device={deviceToEdit}
+                playlists={playlists}
+                onClose={() => setDeviceToEdit(null)}
+                onDeviceUpdated={handleDeviceUpdated}
+                showToast={showToast}
+            />
+
             <DeviceLogsModal
                 isOpen={!!selectedDeviceForLogs}
                 device={selectedDeviceForLogs}
@@ -188,6 +191,7 @@ export default function DeviceManager({
                 playlists={playlists}
                 onPlaylistChange={handlePlaylistChange}
                 onPushPlaylist={handlePushPlaylist}
+                onEdit={setDeviceToEdit} // Pass setter as handler
                 onViewLogs={setSelectedDeviceForLogs}
                 onDelete={handleDeleteClick}
             />

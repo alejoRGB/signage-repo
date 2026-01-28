@@ -88,6 +88,7 @@ export default function DeviceListTable({
                                     <DeviceActions
                                         device={device}
                                         onPushPlaylist={onPushPlaylist}
+                                        onEdit={onEdit}
                                         onViewLogs={onViewLogs}
                                         onDelete={onDelete}
                                     />
