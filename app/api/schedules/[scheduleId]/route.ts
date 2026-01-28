@@ -5,17 +5,19 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET(
     req: Request,
-    { params }: { params: { scheduleId: string } }
+    { params }: { params: Promise<{ scheduleId: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    const { scheduleId } = await params;
+
     try {
         const schedule = await prisma.schedule.findUnique({
             where: {
-                id: params.scheduleId,
+                id: scheduleId,
                 userId: session.user.id,
             },
             include: {
@@ -40,17 +42,19 @@ export async function GET(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: { scheduleId: string } }
+    { params }: { params: Promise<{ scheduleId: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    const { scheduleId } = await params;
+
     try {
         const schedule = await prisma.schedule.delete({
             where: {
-                id: params.scheduleId,
+                id: scheduleId,
                 userId: session.user.id,
             },
         });
@@ -64,12 +68,14 @@ export async function DELETE(
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { scheduleId: string } }
+    { params }: { params: Promise<{ scheduleId: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
+
+    const { scheduleId } = await params;
 
     try {
         const json = await req.json();
@@ -78,7 +84,7 @@ export async function PATCH(
         // Transaction to update
         const schedule = await prisma.schedule.update({
             where: {
-                id: params.scheduleId,
+                id: scheduleId,
                 userId: session.user.id,
             },
             data: {
