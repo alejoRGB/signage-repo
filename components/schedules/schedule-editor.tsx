@@ -66,6 +66,16 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
         setIsDirty(true);
     };
 
+    const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 3000);
+    };
+
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -77,9 +87,13 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
             if (res.ok) {
                 mutate(`/api/schedules/${scheduleId}`);
                 setIsDirty(false);
+                showToast("Schedule saved successfully!", "success");
+            } else {
+                showToast("Failed to save schedule.", "error");
             }
         } catch (e) {
             console.error(e);
+            showToast("Error saving schedule.", "error");
         } finally {
             setSaving(false);
         }
@@ -122,46 +136,48 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                             <div key={dayIndex} className="bg-gray-50 rounded-lg p-3 min-h-[300px] border border-gray-200 flex flex-col">
                                 <h3 className="font-semibold text-center mb-4 text-gray-700 border-b pb-2">{dayName}</h3>
 
-                                <div className="space-y-2 flex-1">
+                                <div className="space-y-3 flex-1">
                                     {dayItems.map((item) => {
                                         // Find index in main array
                                         const globalIndex = items.indexOf(item);
                                         return (
-                                            <div key={globalIndex} className="bg-white p-2 rounded shadow-sm border text-sm relative group">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <div className="flex gap-1 items-center">
+                                            <div key={globalIndex} className="bg-white p-3 rounded shadow-sm border text-sm relative group transition-all hover:shadow-md">
+                                                <button
+                                                    onClick={() => removeItem(globalIndex)}
+                                                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                    title="Remove item"
+                                                >
+                                                    &times;
+                                                </button>
+
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center justify-between gap-1">
                                                         <input
                                                             type="time"
                                                             value={item.startTime}
                                                             onChange={(e) => updateItem(globalIndex, 'startTime', e.target.value)}
-                                                            className="w-16 p-0.5 border rounded text-xs"
+                                                            className="w-full p-1 border rounded text-xs bg-gray-50 focus:ring-1 focus:ring-indigo-500"
                                                         />
-                                                        <span>-</span>
+                                                        <span className="text-gray-400">-</span>
                                                         <input
                                                             type="time"
                                                             value={item.endTime}
                                                             onChange={(e) => updateItem(globalIndex, 'endTime', e.target.value)}
-                                                            className="w-16 p-0.5 border rounded text-xs"
+                                                            className="w-full p-1 border rounded text-xs bg-gray-50 focus:ring-1 focus:ring-indigo-500"
                                                         />
                                                     </div>
-                                                    <button
-                                                        onClick={() => removeItem(globalIndex)}
-                                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100"
-                                                    >
-                                                        &times;
-                                                    </button>
-                                                </div>
 
-                                                <select
-                                                    value={item.playlistId}
-                                                    onChange={(e) => updateItem(globalIndex, 'playlistId', e.target.value)}
-                                                    className="w-full text-xs p-1 border rounded"
-                                                >
-                                                    <option value="">Select Playlist</option>
-                                                    {playlists.map((p: any) => (
-                                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                                    ))}
-                                                </select>
+                                                    <select
+                                                        value={item.playlistId}
+                                                        onChange={(e) => updateItem(globalIndex, 'playlistId', e.target.value)}
+                                                        className="w-full text-xs p-1.5 border rounded bg-white focus:ring-1 focus:ring-indigo-500"
+                                                    >
+                                                        <option value="">Select Playlist</option>
+                                                        {playlists.map((p: any) => (
+                                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -169,14 +185,37 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
 
                                 <button
                                     onClick={() => addItem(dayIndex)}
-                                    className="mt-3 text-xs w-full py-2 border border-dashed border-gray-300 text-gray-500 rounded hover:bg-white hover:text-indigo-600 transition-colors"
+                                    className="mt-3 text-xs w-full py-2 border border-dashed border-gray-300 text-gray-500 rounded hover:bg-white hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
                                 >
-                                    + Add Item
+                                    <Plus className="w-3 h-3" /> Add Item
                                 </button>
                             </div>
                         );
                     })}
                 </div>
+            </div>
+
+            {/* Toast Container */}
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+                {toasts.map(toast => (
+                    <div
+                        key={toast.id}
+                        className={`
+                            pointer-events-auto transform transition-all duration-300 ease-in-out
+                            px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]
+                            ${toast.type === 'success' ? 'bg-white border-l-4 border-green-500 text-gray-800' : ''}
+                            ${toast.type === 'error' ? 'bg-white border-l-4 border-red-500 text-gray-800' : ''}
+                            ${toast.type === 'info' ? 'bg-white border-l-4 border-blue-500 text-gray-800' : ''}
+                        `}
+                    >
+                        <span className="text-lg">
+                            {toast.type === 'success' && '✅'}
+                            {toast.type === 'error' && '❌'}
+                            {toast.type === 'info' && 'ℹ️'}
+                        </span>
+                        <p className="text-sm font-medium">{toast.message}</p>
+                    </div>
+                ))}
             </div>
         </div>
     );
