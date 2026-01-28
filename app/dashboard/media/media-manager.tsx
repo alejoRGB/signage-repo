@@ -16,7 +16,7 @@ type MediaItem = {
     createdAt: Date;
 };
 
-import ConfirmModal from "@/app/components/confirm-modal";
+import ConfirmModal from "@/components/confirm-modal";
 
 export default function MediaManager({ initialMedia }: { initialMedia: MediaItem[] }) {
     const router = useRouter();

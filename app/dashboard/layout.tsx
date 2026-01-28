@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Monitor, Image as ImageIcon, ListVideo, LogOut } from "lucide-react";
+import { LayoutDashboard, Monitor, Image as ImageIcon, ListVideo, LogOut, Calendar } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
 const navigation = [
@@ -10,6 +10,7 @@ const navigation = [
     { name: "Devices", href: "/dashboard/devices", icon: Monitor },
     { name: "Media", href: "/dashboard/media", icon: ImageIcon },
     { name: "Playlists", href: "/dashboard/playlists", icon: ListVideo },
+    { name: "Schedules", href: "/dashboard/schedules", icon: Calendar },
 ];
 
 function classNames(...classes: string[]) {
