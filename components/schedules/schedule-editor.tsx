@@ -124,8 +124,8 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
             </div>
 
             {/* Grid / List Editor */}
-            <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            <div className="flex-1 overflow-x-auto p-6 bg-gray-100/50">
+                <div className="flex gap-4 min-w-max pb-4">
                     {DAYS.map((dayName, dayIndex) => {
                         // 0=Sunday (in Data), lets follow standard US for now or user locale. 
                         // Implementation detail: Javascript Date.getDay() 0=Sunday.
@@ -133,7 +133,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                         const dayItems = items.filter(i => i.dayOfWeek === dayIndex).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
                         return (
-                            <div key={dayIndex} className="bg-gray-50 rounded-lg p-3 min-h-[300px] border border-gray-200 flex flex-col">
+                            <div key={dayIndex} className="bg-gray-50 rounded-xl p-4 w-[280px] min-h-[400px] border border-gray-200 flex flex-col shadow-sm">
                                 <h3 className="font-semibold text-center mb-4 text-gray-700 border-b pb-2">{dayName}</h3>
 
                                 <div className="space-y-3 flex-1">
