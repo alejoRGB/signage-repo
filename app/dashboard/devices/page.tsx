@@ -54,7 +54,8 @@ export default async function DevicesPage() {
         return {
             ...d,
             name: d.name || "Unknown Device",
-            status,
+            status: d.status,
+            connectivityStatus: status,
             lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
             createdAt: d.createdAt.toISOString(),
             updatedAt: d.updatedAt.toISOString(),

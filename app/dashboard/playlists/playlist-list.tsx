@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, PlaySquare, Trash2, Edit } from "lucide-react";
 import Link from "next/link";
-import ConfirmModal from "@/app/components/confirm-modal";
+import ConfirmModal from "@/components/confirm-modal";
 
 type Playlist = {
     id: string;

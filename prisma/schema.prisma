@@ -25,6 +25,7 @@ model User {
   devices   Device[]
   media     MediaItem[]
   playlists Playlist[]
+  schedules Schedule[]
 }
 
 enum Role {
@@ -52,6 +53,39 @@ model Device {
   updatedAt   DateTime @updatedAt
   
   logs        DeviceLog[]
+  scheduleId        String?
+  schedule          Schedule? @relation(fields: [scheduleId], references: [id])
+
+  defaultPlaylistId String?
+  defaultPlaylist   Playlist? @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  name      String
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  items     ScheduleItem[]
+  devices   Device[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ScheduleItem {
+  id         String   @id @default(cuid())
+  
+  dayOfWeek  Int      // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime  String   // "08:00"
+  endTime    String   // "12:00"
+  
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 }
 
 model DeviceLog {
@@ -64,8 +98,6 @@ model DeviceLog {
   
   @@index([deviceId])
 }
-
-
 
 model MediaItem {
   id        String   @id @default(cuid())
@@ -96,7 +128,9 @@ model Playlist {
   user      User     @relation(fields: [userId], references: [id])
 
   items     PlaylistItem[]
-  devices   Device[]
+  devices   Device[] // Relation to activePlaylist
+  defaultForDevices Device[] @relation("DefaultPlaylist")
+  scheduleItems ScheduleItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

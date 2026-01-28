@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
         return {
             ...device,
-            status
+            connectivityStatus: status
         };
     });
 
