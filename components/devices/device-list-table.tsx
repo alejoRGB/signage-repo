@@ -10,6 +10,7 @@ type DeviceListTableProps = {
     playlists: Playlist[];
     onPlaylistChange: (deviceId: string, playlistId: string) => void;
     onPushPlaylist: (deviceId: string) => void;
+    onEdit: (device: Device) => void;
     onViewLogs: (device: Device) => void;
     onDelete: (id: string) => void;
 };
@@ -19,6 +20,7 @@ export default function DeviceListTable({
     playlists,
     onPlaylistChange,
     onPushPlaylist,
+    onEdit,
     onViewLogs,
     onDelete
 }: DeviceListTableProps) {
