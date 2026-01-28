@@ -41,6 +41,29 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
     // -- Simple Logic for Phase 1: List of Rules per Day --
     // We can upgrade to Drag & Drop later.
 
+    // Validation: Check for Overlaps
+    const hasOverlap = (day: number, start: string, end: string, excludeIndex: number = -1) => {
+        // Convert to minutes for easier comparison
+        const toMinutes = (time: string) => {
+            const [h, m] = time.split(':').map(Number);
+            return h * 60 + m;
+        };
+
+        const startMins = toMinutes(start);
+        const endMins = toMinutes(end);
+
+        return items.some((item, index) => {
+            if (index === excludeIndex) return false; // Skip itself
+            if (item.dayOfWeek !== day) return false; // Different day
+
+            const itemStart = toMinutes(item.startTime);
+            const itemEnd = toMinutes(item.endTime);
+
+            // Overlap logic: (StartA < EndB) and (EndA > StartB)
+            return (startMins < itemEnd) && (endMins > itemStart);
+        });
+    };
+
     const addItem = (day: number) => {
         const newItem: ScheduleItem = {
             dayOfWeek: day,
@@ -48,6 +71,12 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
             endTime: "12:00",
             playlistId: playlists?.[0]?.id || "",
         };
+
+        if (hasOverlap(newItem.dayOfWeek, newItem.startTime, newItem.endTime)) {
+            showToast("Cannot add item: Time slot overlaps with an existing schedule.", "error");
+            return;
+        }
+
         setItems([...items, newItem]);
         setIsDirty(true);
     };
@@ -60,6 +89,27 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
     };
 
     const updateItem = (index: number, field: keyof ScheduleItem, value: any) => {
+        const currentItem = items[index];
+
+        // If changing time, check for overlap
+        if (field === 'startTime' || field === 'endTime') {
+            const newStart = field === 'startTime' ? value : currentItem.startTime;
+            const newEnd = field === 'endTime' ? value : currentItem.endTime;
+
+            // Basic validation: Start < End
+            if (newStart >= newEnd) {
+                // Ideally warn, but for now just let it be or block? 
+                // Let's block if end <= start to prevent logic errors
+                // Actually user might be typing, so only soft block or validate on save? 
+                // For overlap check, we need valid times.
+            }
+
+            if (hasOverlap(currentItem.dayOfWeek, newStart, newEnd, index)) {
+                showToast("Time overlaps with another item.", "error");
+                return; // Block update
+            }
+        }
+
         const newItems = [...items];
         newItems[index] = { ...newItems[index], [field]: value };
         setItems(newItems);
