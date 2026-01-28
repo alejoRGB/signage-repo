@@ -6,6 +6,8 @@ export type Device = {
     status: string;
     lastSeenAt: string | null;
     activePlaylist: { id: string; name: string } | null;
+    defaultPlaylistId?: string | null;
+    scheduleId?: string | null;
     connectivityStatus?: string;
     createdAt: string;
 };
