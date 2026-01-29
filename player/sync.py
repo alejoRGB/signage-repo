@@ -12,8 +12,6 @@ class SyncManager:
              # Default fallback
              home = os.path.expanduser("~")
              self.config_path = os.path.join(home, "signage-player", "config.json")
-             if not os.path.exists(os.path.dirname(self.config_path)):
-                 self.config_path = os.path.join(home, "masal", "signage-player", "config.json")
 
         self.config = self._load_config(self.config_path)
         self.server_url = self.config.get("server_url")
