@@ -84,7 +84,31 @@ class SyncManager:
         try:
             from PIL import Image, ImageDraw, ImageFont
             
-            # ... drawing logic ...
+            # Create black background
+            width = 1920
+            height = 1080
+            img = Image.new('RGB', (width, height), color='black')
+            draw = ImageDraw.Draw(img)
+            
+            # Load font (try standard paths, fallback to default)
+            try:
+                # Big font for code
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 200)
+                # Small font for instructions
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 60)
+            except IOError:
+                font = ImageFont.load_default()
+                font_small = ImageFont.load_default()
+            
+            # Draw Text
+            text = f"{code}"
+            instructions = "enter this code in dashboard"
+            
+            # Center text (approximate if using default font, better if truetype)
+            # Recent PIllow versions use getbbox usually
+            
+            draw.text((width/2, height/2), text, font=font, anchor="mm", fill="white")
+            draw.text((width/2, height/2 + 200), instructions, font=font_small, anchor="mm", fill="gray")
             
             # Save
             filepath = os.path.join(self.media_dir, "pairing.png")
