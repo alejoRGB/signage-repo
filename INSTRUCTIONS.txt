@@ -1,0 +1,184 @@
+================================================================================
+                    DIGITAL SIGNAGE SYSTEM - SETUP GUIDE
+================================================================================
+
+This guide will walk you through setting up a complete cloud-based digital 
+signage system with a web dashboard and Raspberry Pi players.
+
+================================================================================
+PART 1: DASHBOARD (Already Deployed)
+================================================================================
+
+Your dashboard is live at: https://signage-repo-dc5s.vercel.app
+
+LOGIN CREDENTIALS:
+- Create an account at: https://signage-repo-dc5s.vercel.app/register
+- Then login at: https://signage-repo-dc5s.vercel.app/login
+
+DASHBOARD FEATURES:
+1. Media Library - Upload images and videos (up to 5GB per file)
+2. Playlist Manager - Create ordered playlists of your media
+3. Device Manager - Pair and monitor your Raspberry Pi screens
+4. Auto-Sync - Devices check for updates every 60 seconds
+
+================================================================================
+PART 2: SETTING UP A NEW RASPBERRY PI SCREEN
+================================================================================
+
+HARDWARE REQUIREMENTS:
+- Raspberry Pi (any model with HDMI output)
+- MicroSD card (8GB minimum)
+- TV/Monitor with HDMI input
+- Internet connection (WiFi or Ethernet)
+- Power supply for the Pi
+
+STEP 1: PREPARE THE SD CARD
+----------------------------
+1. Download "Raspberry Pi OS Lite (64-bit)" from:
+   https://www.raspberrypi.com/software/
+
+2. Flash it to your SD card using Raspberry Pi Imager
+
+3. IMPORTANT: Before ejecting, enable SSH and WiFi:
+   - In Imager, click the gear icon (⚙️) for advanced options
+   - Enable SSH
+   - Configure WiFi credentials
+   - Set username/password (default: pi/raspberry)
+
+STEP 2: BOOT THE RASPBERRY PI
+------------------------------
+1. Insert the SD card into the Raspberry Pi
+2. Connect the Pi to your TV via HDMI
+3. Power on the Pi
+4. Wait for it to boot (you'll see text scrolling on screen)
+5. Find the Pi's IP address:
+   - Check your router's connected devices, OR
+   - Use a keyboard and login, then run: hostname -I
+
+STEP 3: INSTALL THE PLAYER SOFTWARE
+------------------------------------
+1. SSH into your Pi from your computer:
+   ssh pi@<IP_ADDRESS>
+   (Replace <IP_ADDRESS> with the actual IP)
+
+2. Run the one-line installer:
+   curl -L https://signage-repo-dc5s.vercel.app/install.sh | bash
+
+3. Wait for installation to complete (~2-3 minutes)
+   The installer will:
+   - Install system dependencies (Python, MPV, etc.)
+   - Download the player software
+   - Configure auto-start on boot
+
+STEP 4: PAIR THE DEVICE
+------------------------
+1. After installation completes, look at your TV screen
+2. You should see a 6-digit PAIRING CODE displayed
+   (Wait up to 30 seconds for it to appear)
+
+3. On your computer, go to the Dashboard:
+   https://signage-repo-dc5s.vercel.app/dashboard/devices
+
+4. Click "Pair Device"
+
+5. Enter the 6-digit code from the TV screen
+
+6. Give your device a name (e.g., "Lobby Screen")
+
+7. Click "Pair Device"
+
+8. The screen will automatically sync and start playing!
+
+STEP 5: ASSIGN CONTENT
+-----------------------
+1. Go to Dashboard > Media
+2. Upload your images and videos
+3. Go to Dashboard > Playlists
+4. Create a new playlist and add your media items
+5. Go to Dashboard > Devices
+6. Select your playlist from the dropdown next to your device
+7. The screen will update within 60 seconds!
+
+================================================================================
+PART 3: MANAGING YOUR SCREENS
+================================================================================
+
+UPLOADING MEDIA:
+- Supported formats: JPEG, PNG, GIF (images) | MP4, WebM (videos)
+- Max file size: 5GB
+- Files are stored in the cloud (Vercel Blob Storage)
+
+CREATING PLAYLISTS:
+- Drag and drop to reorder items
+- Set display duration for images (default: 10 seconds)
+- Videos play to completion automatically
+- Playlists loop continuously
+
+MONITORING DEVICES:
+- "Last Seen" shows when the device last checked in
+- "Status" shows online/offline
+- Devices sync every 60 seconds automatically
+
+TROUBLESHOOTING:
+- If a device goes offline, check its power and internet
+- To restart the player: sudo systemctl restart signage-player
+- To view logs: journalctl -u signage-player -f
+- To stop the player: sudo systemctl stop signage-player
+
+================================================================================
+PART 4: ADVANCED CONFIGURATION
+================================================================================
+
+CHANGING SYNC INTERVAL:
+Edit ~/signage-player/player.py on the Pi and change:
+sync_interval = 60  # Change to desired seconds
+
+CHANGING IMAGE DISPLAY TIME:
+The default is 10 seconds. To change it, edit player.py and modify:
+"--image-display-duration=10"
+
+MANUAL CONFIGURATION (If Pairing Fails):
+1. On Dashboard, click "Manual Add" to create a device
+2. Copy the Device Token shown
+3. On the Pi, edit: nano ~/signage-player/config.json
+4. Paste the token in the "device_token" field
+5. Save (Ctrl+X, Y, Enter)
+6. Restart: sudo systemctl restart signage-player
+
+UNINSTALLING:
+sudo systemctl stop signage-player
+sudo systemctl disable signage-player
+sudo rm /etc/systemd/system/signage-player.service
+rm -rf ~/signage-player
+
+================================================================================
+PART 5: KNOWN LIMITATIONS
+================================================================================
+
+- Mixed content (image → video) may have a brief (~1 second) black transition
+  This is a hardware limitation of the Raspberry Pi's video decoder
+  
+- Very large video files (>2GB) may take time to download on first sync
+  The player will show the previous content while downloading
+
+- The player requires internet to sync new content, but will continue
+  playing cached content if the connection is lost
+
+================================================================================
+SUPPORT & UPDATES
+================================================================================
+
+CHECKING FOR UPDATES:
+The player software is updated via the web. To get the latest version:
+cd ~/signage-player
+wget https://signage-repo-dc5s.vercel.app/player.py -O player.py
+wget https://signage-repo-dc5s.vercel.app/sync.py -O sync.py
+sudo systemctl restart signage-player
+
+SYSTEM REQUIREMENTS:
+- Dashboard: Any modern web browser
+- Player: Raspberry Pi OS Lite (64-bit) or Desktop version
+
+================================================================================
+                              END OF GUIDE
+================================================================================
