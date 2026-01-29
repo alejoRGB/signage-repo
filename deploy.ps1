@@ -1,6 +1,8 @@
+param (
+    [string]$PiUser = "masal",
+    [string]$PiHost = "192.168.100.6"
+)
 
-$PiUser = "masal"
-$PiHost = "192.168.100.6"
 $RemotePath = "~/signage-player"
 $LocalPath = "c:\Users\masal\.gemini\antigravity\scratch\digital-signage\player"
 
