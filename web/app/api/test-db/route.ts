@@ -7,10 +7,14 @@ export async function POST(request: Request) {
         // Attempt to count users to check read access
         const count = await prisma.user.count();
 
+        // Attempt to count devices
+        const deviceCount = await prisma.device.count();
+
         return NextResponse.json({
             success: true,
             message: "DB Read Successful",
-            userCount: count
+            userCount: count,
+            deviceCount
         });
     } catch (error: any) {
         console.error("[TEST-DB] Error:", error);
