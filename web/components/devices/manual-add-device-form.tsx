@@ -15,8 +15,32 @@ export default function ManualAddDeviceForm({ isOpen, onClose, showToast }: Manu
 
     const handleAddDevice = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Current implementation in main file was disabled
-        showToast("Please use 'Pair Device' instead.", "info");
+        if (!newDeviceName.trim()) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch("/api/devices", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newDeviceName }),
+            });
+
+            if (res.ok) {
+                const device = await res.json();
+                setNewlyCreatedDevice(device);
+                setNewDeviceName("");
+                showToast("Device created! Save the token immediately.", "success");
+                // Note: We don't close the modal yet so the user can copy the token
+            } else {
+                const error = await res.json();
+                showToast(error.error || "Failed to create device", "error");
+            }
+        } catch (error) {
+            console.error("Error creating device:", error);
+            showToast("Error creating device", "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const copyToClipboard = (text: string) => {
