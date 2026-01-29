@@ -1,0 +1,148 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  role      Role     @default(USER)
+  isActive  Boolean  @default(true)
+
+  devices   Device[]
+  media     MediaItem[]
+  playlists Playlist[]
+  schedules Schedule[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Device {
+  id          String   @id @default(cuid())
+  name        String?  // Can be null until paired
+  token       String   @unique @default(cuid()) // Used for API authentication
+  status      String   @default("unpaired") // online, offline, unpaired
+  lastSeenAt  DateTime?
+  
+  userId      String?  // Optional until paired
+  user        User?    @relation(fields: [userId], references: [id])
+
+  activePlaylistId String?
+  activePlaylist   Playlist? @relation(fields: [activePlaylistId], references: [id])
+
+  pairingCode String?  @unique
+  pairingCodeExpiresAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  logs        DeviceLog[]
+  scheduleId        String?
+  schedule          Schedule? @relation(fields: [scheduleId], references: [id])
+
+  defaultPlaylistId String?
+  defaultPlaylist   Playlist? @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  name      String
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  items     ScheduleItem[]
+  devices   Device[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ScheduleItem {
+  id         String   @id @default(cuid())
+  
+  dayOfWeek  Int      // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime  String   // "08:00"
+  endTime    String   // "12:00"
+  
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+}
+
+model DeviceLog {
+  id        String   @id @default(cuid())
+  level     String   // info, error, warning
+  message   String
+  deviceId  String
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@index([deviceId])
+}
+
+model MediaItem {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // video, image, web
+  url       String   // /uploads/filename.mp4 or https://example.com
+  filename  String?  // stored filename on disk (if type != web)
+  duration  Int      @default(10) // default duration in seconds (for images/web)
+  width     Int?
+  height    Int?
+  fps       Float?
+  size      Int      @default(0) // Size in bytes
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  playlistItems PlaylistItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Playlist {
+  id        String   @id @default(cuid())
+  name      String
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  items     PlaylistItem[]
+  devices   Device[] // Relation to activePlaylist
+  defaultForDevices Device[] @relation("DefaultPlaylist")
+  scheduleItems ScheduleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlaylistItem {
+  id         String @id @default(cuid())
+  order      Int
+  
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  mediaItemId String
+  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+}
