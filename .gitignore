@@ -1,2 +1,4 @@
+.env
+player/config.json
 .vercel
 .env*.local
