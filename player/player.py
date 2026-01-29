@@ -126,10 +126,14 @@ class Player:
         logging.info("[PLAYER] Device unpaired. Starting pairing process...")
         
         # Reuse sync manager logic
-        reg_data = self.sync_manager.register()
-        if not reg_data:
+        while self.running:
+            reg_data = self.sync_manager.register()
+            if reg_data:
+                break
             logging.warning("[PLAYER] Registration failed. Retrying in 10s...")
             time.sleep(10)
+        
+        if not self.running:
             return
 
         code = reg_data['pairing_code']
