@@ -57,7 +57,19 @@ class SyncManager:
             logging.error(f"[SYNC] Registration connection error: {e}")
             return None
 
-    # ... poll_status ...
+    def poll_status(self, token: str) -> Optional[str]:
+        """Check if device has been paired"""
+        try:
+            url = f"{self.server_url}/api/device/status?token={token}"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("status") # "paired" or "unpaired"
+            else:
+                return None
+        except Exception:
+            return None
 
     def save_config(self, new_token: str):
         """Update config with new token"""
