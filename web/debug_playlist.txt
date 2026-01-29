@@ -1,0 +1,516 @@
+
+[2026-01-23T02:34:32.301Z] PUT /api/playlists/cmkq7yi5b0005n2yx4qi9j1ex
+Payload: {
+  "name": "dfgh",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    }
+  ]
+}
+ERROR: 
+Invalid `tx.playlistItem.createMany()` invocation in
+C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:314:43
+
+  311         order: index
+  312     }));
+  313 if (createData.length > 0) {
+→ 314     await tx.playlistItem.createMany({
+            data: [
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 0
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 1
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 2
+              }
+            ]
+          })
+
+Unknown argument `duration`. Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `tx.playlistItem.createMany()` invocation in
+C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:314:43
+
+  311         order: index
+  312     }));
+  313 if (createData.length > 0) {
+→ 314     await tx.playlistItem.createMany({
+            data: [
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 0
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 1
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 2
+              }
+            ]
+          })
+
+Unknown argument `duration`. Available options are marked with ?.
+    at wn (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at $n.handleRequestError (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6958)
+    at $n.handleAndLogRequestError (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:314:21
+    at async Proxy._transactionWithCallback (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:130:8000)
+    at async PUT (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:286:9)
+    at async AppRouteRouteModule.do (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37866)
+    at async AppRouteRouteModule.handle (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45156)
+    at async responseGenerator (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16028:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187713)
+    at async handleResponse (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16091:32)
+    at async Module.handler (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16144:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1422:9)
+    at async DevServer.renderPageComponent (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1474:24)
+    at async DevServer.renderToResponseImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1524:32)
+    at async DevServer.pipeImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1018:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\next-server.js:395:17)
+    at async DevServer.handleRequestImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:909:17)
+    at async C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\dev\next-dev-server.js:387:20
+    at async Span.traceAsyncFn (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\dev\next-dev-server.js:383:24)
+    at async invokeRender (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:248:21)
+    at async handleRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:447:24)
+    at async requestHandlerImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:496:13)
+    at async Server.requestListener (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\start-server.js:226:13)
+
+[2026-01-23T02:36:22.666Z] PUT /api/playlists/cmkq7yi5b0005n2yx4qi9j1ex
+Params ID: cmkq7yi5b0005n2yx4qi9j1ex
+Payload: {
+  "name": "dfgh",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    }
+  ]
+}
+ERROR: 
+Invalid `tx.playlistItem.createMany()` invocation in
+C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:313:43
+
+  310         order: index
+  311     }));
+  312 if (createData.length > 0) {
+→ 313     await tx.playlistItem.createMany({
+            data: [
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 0
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 1
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 2
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 3
+              }
+            ]
+          })
+
+Unknown argument `duration`. Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `tx.playlistItem.createMany()` invocation in
+C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:313:43
+
+  310         order: index
+  311     }));
+  312 if (createData.length > 0) {
+→ 313     await tx.playlistItem.createMany({
+            data: [
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 0
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 1
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 2
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 3
+              }
+            ]
+          })
+
+Unknown argument `duration`. Available options are marked with ?.
+    at wn (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at $n.handleRequestError (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6958)
+    at $n.handleAndLogRequestError (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:313:21
+    at async Proxy._transactionWithCallback (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:130:8000)
+    at async PUT (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:285:9)
+    at async AppRouteRouteModule.do (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37866)
+    at async AppRouteRouteModule.handle (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45156)
+    at async responseGenerator (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16028:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187713)
+    at async handleResponse (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16091:32)
+    at async Module.handler (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16144:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1422:9)
+    at async DevServer.renderPageComponent (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1474:24)
+    at async DevServer.renderToResponseImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1524:32)
+    at async DevServer.pipeImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1018:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\next-server.js:395:17)
+    at async DevServer.handleRequestImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:909:17)
+    at async C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\dev\next-dev-server.js:387:20
+    at async Span.traceAsyncFn (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\dev\next-dev-server.js:383:24)
+    at async invokeRender (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:248:21)
+    at async handleRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:447:24)
+    at async requestHandlerImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:496:13)
+    at async Server.requestListener (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\start-server.js:226:13)
+
+[2026-01-23T02:36:27.746Z] PUT /api/playlists/cmkq7yi5b0005n2yx4qi9j1ex
+Params ID: cmkq7yi5b0005n2yx4qi9j1ex
+Payload: {
+  "name": "dfgh",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    }
+  ]
+}
+ERROR: 
+Invalid `tx.playlistItem.createMany()` invocation in
+C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:313:43
+
+  310         order: index
+  311     }));
+  312 if (createData.length > 0) {
+→ 313     await tx.playlistItem.createMany({
+            data: [
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 0
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 1
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 2
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 3
+              }
+            ]
+          })
+
+Unknown argument `duration`. Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `tx.playlistItem.createMany()` invocation in
+C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:313:43
+
+  310         order: index
+  311     }));
+  312 if (createData.length > 0) {
+→ 313     await tx.playlistItem.createMany({
+            data: [
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 0
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 1
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 2
+              },
+              {
+                playlistId: "cmkq7yi5b0005n2yx4qi9j1ex",
+                mediaItemId: "cmkq6lxmj00093qcvahy1xr8u",
+                duration: 10,
+                order: 3
+              }
+            ]
+          })
+
+Unknown argument `duration`. Available options are marked with ?.
+    at wn (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at $n.handleRequestError (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6958)
+    at $n.handleAndLogRequestError (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:313:21
+    at async Proxy._transactionWithCallback (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\@prisma\client\runtime\library.js:130:8000)
+    at async PUT (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\[root-of-the-server]__7002fa95._.js:285:9)
+    at async AppRouteRouteModule.do (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37866)
+    at async AppRouteRouteModule.handle (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45156)
+    at async responseGenerator (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16028:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187713)
+    at async handleResponse (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16091:32)
+    at async Module.handler (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\.next\dev\server\chunks\b4337_next_6f393871._.js:16144:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1422:9)
+    at async DevServer.renderPageComponent (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1474:24)
+    at async DevServer.renderToResponseImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1524:32)
+    at async DevServer.pipeImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:1018:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\next-server.js:395:17)
+    at async DevServer.handleRequestImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\base-server.js:909:17)
+    at async C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\dev\next-dev-server.js:387:20
+    at async Span.traceAsyncFn (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\dev\next-dev-server.js:383:24)
+    at async invokeRender (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:248:21)
+    at async handleRequest (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:447:24)
+    at async requestHandlerImpl (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\router-server.js:496:13)
+    at async Server.requestListener (C:\Users\masal\.gemini\antigravity\scratch\digital-signage\dashboard\node_modules\next\dist\server\lib\start-server.js:226:13)
+
+[2026-01-23T02:37:38.515Z] PUT /api/playlists/cmkq7yi5b0005n2yx4qi9j1ex
+Params ID: cmkq7yi5b0005n2yx4qi9j1ex
+Payload: {
+  "name": "dfgh",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    }
+  ]
+}
+
+[2026-01-23T02:37:41.936Z] PUT /api/playlists/cmkq7yi5b0005n2yx4qi9j1ex
+Params ID: cmkq7yi5b0005n2yx4qi9j1ex
+Payload: {
+  "name": "dfgh",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u"
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u"
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u"
+    }
+  ]
+}
+
+[2026-01-23T02:37:44.827Z] PUT /api/playlists/cmkq7yi5b0005n2yx4qi9j1ex
+Params ID: cmkq7yi5b0005n2yx4qi9j1ex
+Payload: {
+  "name": "dfgh",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u"
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u"
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u"
+    },
+    {
+      "mediaItemId": "cmkq7vv4v0003n2yxx9xeampx",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq7vv4v0003n2yxx9xeampx",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq7vv4v0003n2yxx9xeampx",
+      "duration": 10
+    }
+  ]
+}
+
+[2026-01-23T02:37:49.307Z] PUT /api/playlists/cmkq7mg0z0001n2yxoxjbj1ri
+Params ID: cmkq7mg0z0001n2yxoxjbj1ri
+Payload: {
+  "name": "Final Test List 2",
+  "items": [
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkq6lxmj00093qcvahy1xr8u",
+      "duration": 10
+    }
+  ]
+}
+
+[2026-01-23T03:32:37.129Z] PUT /api/playlists/cmkqbrudl001tn2yx3yfdg8dk
+Params ID: cmkqbrudl001tn2yx3yfdg8dk
+Payload: {
+  "name": "1st",
+  "items": [
+    {
+      "mediaItemId": "cmkqbrn5k001rn2yx2v4b46hd",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkqbrf32001pn2yxyys910vb",
+      "duration": 10
+    }
+  ]
+}
+
+[2026-01-23T14:39:54.351Z] PUT /api/playlists/cmkqbrudl001tn2yx3yfdg8dk
+Params ID: cmkqbrudl001tn2yx3yfdg8dk
+Payload: {
+  "name": "1st",
+  "items": [
+    {
+      "mediaItemId": "cmkqbrn5k001rn2yx2v4b46hd"
+    },
+    {
+      "mediaItemId": "cmkqbrf32001pn2yxyys910vb"
+    }
+  ]
+}
+
+[2026-01-23T15:03:50.007Z] PUT /api/playlists/cmkr0gs4u0009zq7m1i9o25q5
+Params ID: cmkr0gs4u0009zq7m1i9o25q5
+Payload: {
+  "name": "playlist1",
+  "items": [
+    {
+      "mediaItemId": "cmkr0gl7c0007zq7mppcihs7o",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkr0gcga0005zq7mpipp6rh4",
+      "duration": 10
+    }
+  ]
+}
+
+[2026-01-23T17:03:48.354Z] PUT /api/playlists/cmkr0gs4u0009zq7m1i9o25q5
+Params ID: cmkr0gs4u0009zq7m1i9o25q5
+Payload: {
+  "name": "playlist1",
+  "items": [
+    {
+      "mediaItemId": "cmkr0gl7c0007zq7mppcihs7o"
+    },
+    {
+      "mediaItemId": "cmkr0gcga0005zq7mpipp6rh4"
+    },
+    {
+      "mediaItemId": "cmkr4r0c20003f2bdkc6x8w3z",
+      "duration": 10
+    },
+    {
+      "mediaItemId": "cmkr4r0c20003f2bdkc6x8w3z",
+      "duration": 10
+    }
+  ]
+}

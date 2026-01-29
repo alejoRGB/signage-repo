@@ -1,0 +1,219 @@
+import logging
+import json
+import os
+import requests
+from typing import Dict, List, Optional, Any
+
+class SyncManager:
+    def __init__(self, config_path=None):
+        if config_path:
+             self.config_path = config_path
+        else:
+             # Default fallback
+             home = os.path.expanduser("~")
+             self.config_path = os.path.join(home, "signage-player", "config.json")
+             if not os.path.exists(os.path.dirname(self.config_path)):
+                 self.config_path = os.path.join(home, "masal", "signage-player", "config.json")
+
+        self.config = self._load_config(self.config_path)
+        self.server_url = self.config.get("server_url")
+        self.device_token = self.config.get("device_token")
+        
+        self.media_dir = os.path.join(os.path.dirname(self.config_path), "media")
+        self.playlist_cache = os.path.join(os.path.dirname(self.config_path), "playlist.json")
+        
+        if not os.path.exists(self.media_dir):
+            os.makedirs(self.media_dir)
+    
+    def _load_config(self, config_path: str) -> Dict:
+        """Load configuration from JSON file"""
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logging.error(f"Config file not found at {config_path}")
+            print("Please create config.json with server_url and device_token")
+            # We exit here, so print is fine as fallback
+            exit(1)
+        except json.JSONDecodeError as e:
+            logging.error(f"Invalid JSON in config file: {e}")
+            exit(1)
+    
+    def register(self) -> Optional[Dict]:
+        """Register device and get pairing code"""
+        try:
+            url = f"{self.server_url}/api/device/register"
+            logging.info(f"[SYNC] Registering device at {url}...")
+            response = requests.post(url, json={}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logging.info(f"[SYNC] Registration successful. Code: {data['pairing_code']}")
+                return data
+            else:
+                logging.error(f"[SYNC] Registration error: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logging.error(f"[SYNC] Registration connection error: {e}")
+            return None
+
+    # ... poll_status ...
+
+    def save_config(self, new_token: str):
+        """Update config with new token"""
+        self.config["device_token"] = new_token
+        with open("/home/pi/signage-player/config.json", 'w') as f:
+            json.dump(self.config, f, indent=2)
+        self.device_token = new_token
+        logging.info("[SYNC] Device token saved to config.json")
+
+    def generate_pairing_image(self, code: str) -> str:
+        """Generate an image with the pairing code using PIL"""
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            
+            # ... drawing logic ...
+            
+            # Save
+            filepath = os.path.join(self.media_dir, "pairing.png")
+            img.save(filepath)
+            return filepath
+            
+        except ImportError:
+            logging.warning("[SYNC] PIL not installed. Cannot generate pairing image.")
+            return None
+        except Exception as e:
+            logging.error(f"[SYNC] Error generating pairing image: {e}")
+            return None
+
+    def fetch_sync_data(self) -> Optional[Dict]:
+        """Fetch sync data (schedule, default, etc) from server"""
+        if not self.device_token:
+            logging.warning("[SYNC] No device token. Cannot fetch playlist.")
+            return None
+            
+        try:
+            url = f"{self.server_url}/api/device/sync"
+            payload = {"device_token": self.device_token}
+            
+            logging.debug(f"[SYNC] Fetching sync data from {url}")
+            response = requests.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logging.debug(f"[SYNC] Device: {data.get('device_name')}")
+                return data
+            elif response.status_code == 401:
+                logging.error("[SYNC] Unauthorized: Invalid token. Device might have been deleted.")
+                return None
+            else:
+                logging.error(f"[SYNC] Error: {response.status_code} - {response.text}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            logging.error(f"[SYNC] Connection error: {e}")
+            return None
+    
+    def download_media(self, item: Dict) -> bool:
+        """Download a media file if not already present"""
+        filename = item['filename']
+        url = item['url']
+        filepath = os.path.join(self.media_dir, filename)
+        
+        # Check if file already exists
+        if os.path.exists(filepath):
+            return True
+        
+        try:
+            logging.info(f"[DOWNLOAD] Downloading {filename}...")
+            response = requests.get(url, stream=True, timeout=30)
+            
+            if response.status_code == 200:
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                logging.info(f"[DOWNLOAD] ✓ {filename} downloaded")
+                return True
+            else:
+                logging.error(f"[DOWNLOAD] ✗ Failed to download {filename}: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logging.error(f"[DOWNLOAD] ✗ Error downloading {filename}: {e}")
+            return False
+    
+    def sync(self) -> bool:
+        """Sync schedule and download new media"""
+        data = self.fetch_sync_data()
+        
+        if not data:
+            return False
+        
+        # Collect all items to download
+        all_items = []
+        
+        # 1. Default Playlist
+        if data.get('default_playlist'):
+             all_items.extend(data['default_playlist']['items'])
+             
+        # 2. Schedule Items
+        if data.get('schedule'):
+            for item in data['schedule']['items']:
+                if item.get('playlist'):
+                    all_items.extend(item['playlist']['items'])
+        
+        # 3. Legacy Playlist (Fallback)
+        if data.get('playlist'):
+            all_items.extend(data['playlist']['items'])
+
+        # Download all unique media files
+        success = True
+        downloaded_filenames = set()
+        
+        for item in all_items:
+            # Avoid duplicates
+            if item['filename'] in downloaded_filenames:
+                continue
+                
+            if not self.download_media(item):
+                success = False
+            
+            downloaded_filenames.add(item['filename'])
+        
+        # Save full data to cache
+        try:
+            with open(self.playlist_cache, 'w') as f:
+                json.dump(data, f, indent=2)
+            logging.debug(f"[SYNC] Data cached to {self.playlist_cache}")
+        except Exception as e:
+            logging.error(f"[SYNC] Error saving cache: {e}")
+            success = False
+        
+        # TODO: Clean up old media files
+        
+        return success
+    
+    def load_cached_playlist(self) -> Optional[Dict]:
+        """Load playlist from local cache"""
+        try:
+            with open(self.playlist_cache, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logging.warning("[SYNC] No cached playlist found")
+            return None
+        except json.JSONDecodeError as e:
+            logging.error(f"[SYNC] Error reading cached playlist: {e}")
+            return None
+
+
+if __name__ == "__main__":
+    # Test sync
+    logging.basicConfig(level=logging.INFO)
+    sync = SyncManager()
+    
+    print("=" * 50)
+    print("Digital Signage Player - Sync Test")
+    print("=" * 50)
+    
+    sync.sync()
+
