@@ -74,10 +74,13 @@ class SyncManager:
     def save_config(self, new_token: str):
         """Update config with new token"""
         self.config["device_token"] = new_token
-        with open("/home/pi/signage-player/config.json", 'w') as f:
-            json.dump(self.config, f, indent=2)
-        self.device_token = new_token
-        logging.info("[SYNC] Device token saved to config.json")
+        try:
+            with open(self.config_path, 'w') as f:
+                json.dump(self.config, f, indent=2)
+            self.device_token = new_token
+            logging.info(f"[SYNC] Device token saved to {self.config_path}")
+        except Exception as e:
+            logging.error(f"[SYNC] Failed to save config: {e}")
 
     def generate_pairing_image(self, code: str) -> str:
         """Generate an image with the pairing code using PIL"""
