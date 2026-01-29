@@ -137,10 +137,14 @@ export async function POST(request: Request) {
         };
 
         return NextResponse.json(responsePayload);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Sync API error:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            {
+                error: "Internal server error",
+                details: error?.message || String(error),
+                stack: error?.stack
+            },
             { status: 500 }
         );
     }
