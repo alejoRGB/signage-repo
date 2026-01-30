@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
 
                 return {
                     id: user.id,
-                    username: user.username,
+                    username: user.username || "", // Handle null username
                     email: user.email,
                     name: user.name,
                     role: user.role,
