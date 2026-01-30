@@ -25,17 +25,17 @@ function LoginForm() {
         setError("");
 
         const formData = new FormData(e.currentTarget);
-        const email = formData.get("email") as string;
+        const username = formData.get("username") as string;
         const password = formData.get("password") as string;
 
         const res = await signIn("credentials", {
             redirect: false,
-            email,
+            username,
             password,
         });
 
         if (res?.error) {
-            setError("Invalid email or password");
+            setError("Invalid username or password");
             setLoading(false);
         } else {
             router.push("/dashboard");
@@ -63,17 +63,17 @@ function LoginForm() {
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="-space-y-px rounded-md shadow-sm">
                         <div>
-                            <label htmlFor="email-address" className="sr-only">
-                                Email address
+                            <label htmlFor="username" className="sr-only">
+                                Username
                             </label>
                             <input
-                                id="email-address"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
+                                id="username"
+                                name="username"
+                                type="text"
+                                autoComplete="username"
                                 required
                                 className="relative block w-full rounded-t-md border-0 py-2.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                                placeholder="Email address"
+                                placeholder="Username"
                             />
                         </div>
                         <div>
