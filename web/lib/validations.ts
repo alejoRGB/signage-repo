@@ -1,8 +1,8 @@
 import { z } from "zod";
-// import DOMPurify from "isomorphic-dompurify";
+import xss from "xss";
 
 // Helper to sanitize strings
-const sanitize = (value: string) => value; // DOMPurify.sanitize(value);
+const sanitize = (value: string) => xss(value);
 
 // Auth Schemas
 export const RegisterSchema = z.object({
