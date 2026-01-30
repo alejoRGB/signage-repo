@@ -7,15 +7,12 @@ import { authOptions } from "@/lib/auth";
 // GET /api/schedules - List all schedules
 // GET /api/schedules - List all schedules
 export async function GET() {
-    try {
-        console.log("[SCHEDULES_GET] Starting request");
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            console.log("[SCHEDULES_GET] Unauthorized");
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
 
-        console.log("[SCHEDULES_GET] Fetching schedules for user:", session.user.id);
+    try {
         const schedules = await prisma.schedule.findMany({
             where: {
                 userId: session.user.id,
@@ -30,17 +27,10 @@ export async function GET() {
             },
         });
 
-        console.log("[SCHEDULES_GET] Success, count:", schedules.length);
         return NextResponse.json(schedules);
     } catch (error) {
-        console.error("[SCHEDULES_GET] Critical Error:", error);
-        return new NextResponse(JSON.stringify({
-            error: String(error),
-            stack: error instanceof Error ? error.stack : undefined
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        console.error("[SCHEDULES_GET]", error);
+        return new NextResponse("Internal Error", { status: 500 });
     }
 }
 
