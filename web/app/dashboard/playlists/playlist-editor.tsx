@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, ArrowUp, ArrowDown, Plus, Clock } from "lucide-react";
+import { useToast } from "@/components/ui/toast-context";
 
 type MediaItem = {
     id: string;
@@ -33,19 +34,11 @@ export default function PlaylistEditor({
     library: MediaItem[];
 }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [items, setItems] = useState<PlaylistItem[]>(playlist.items);
     const [name, setName] = useState(playlist.name);
     const [saving, setSaving] = useState(false);
 
-    const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
-
-    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-        const id = Date.now();
-        setToasts(prev => [...prev, { id, message, type }]);
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
-        }, 3000);
-    };
 
     const handleAddItem = (media: MediaItem) => {
         const newItem: PlaylistItem = {
@@ -217,28 +210,8 @@ export default function PlaylistEditor({
                     )}
                 </div>
             </div>
-            {/* Toast Container */}
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-                {toasts.map(toast => (
-                    <div
-                        key={toast.id}
-                        className={`
-                            pointer-events-auto transform transition-all duration-300 ease-in-out
-                            px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]
-                            ${toast.type === 'success' ? 'bg-white border-l-4 border-green-500 text-gray-800' : ''}
-                            ${toast.type === 'error' ? 'bg-white border-l-4 border-red-500 text-gray-800' : ''}
-                            ${toast.type === 'info' ? 'bg-white border-l-4 border-blue-500 text-gray-800' : ''}
-                        `}
-                    >
-                        <span className="text-lg">
-                            {toast.type === 'success' && '✅'}
-                            {toast.type === 'error' && '❌'}
-                            {toast.type === 'info' && 'ℹ️'}
-                        </span>
-                        <p className="text-sm font-medium">{toast.message}</p>
-                    </div>
-                ))}
-            </div>
+            {/* Toast Container removed */}
+
         </div >
     );
 }

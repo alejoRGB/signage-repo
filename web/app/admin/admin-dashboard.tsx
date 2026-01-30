@@ -11,6 +11,7 @@ import {
     CheckCircle,
     AlertCircle
 } from "lucide-react";
+import { useToast } from "@/components/ui/toast-context";
 
 type UserStats = {
     id: string;
@@ -26,6 +27,7 @@ type UserStats = {
 
 export default function AdminDashboard({ users }: { users: UserStats[] }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [loadingId, setLoadingId] = useState<string | null>(null);
 
     // Calculate Platform Stats
@@ -54,12 +56,12 @@ export default function AdminDashboard({ users }: { users: UserStats[] }) {
 
             if (!res.ok) {
                 const err = await res.json();
-                alert(err.error || "Failed to update user");
+                showToast(err.error || "Failed to update user", "error");
             } else {
                 router.refresh();
             }
         } catch (error) {
-            alert("An error occurred");
+            showToast("An error occurred", "error");
         } finally {
             setLoadingId(null);
         }
