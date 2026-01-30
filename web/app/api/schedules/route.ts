@@ -29,7 +29,10 @@ export async function GET() {
         return NextResponse.json(schedules);
     } catch (error) {
         console.error("[SCHEDULES_GET]", error);
-        return new NextResponse("Internal Error", { status: 500 });
+        return new NextResponse(JSON.stringify({ error: String(error) }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 }
 
