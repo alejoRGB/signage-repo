@@ -1,10 +1,10 @@
-"use client";
-
+import { NextPage } from "next";
 import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Loader2, Plus, Save, X, Clock, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CopyScheduleModal from "./copy-schedule-modal";
+import { useToast } from "@/components/ui/toast-context";
 
 // Types
 import { ScheduleItem } from "@/types/schedule";
@@ -18,6 +18,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
     const { data: schedule, error } = useSWR(`/api/schedules/${scheduleId}`, fetcher);
     const { data: playlists } = useSWR("/api/playlists", fetcher);
     const { mutate } = useSWRConfig();
+    const { showToast } = useToast();
 
     const [name, setName] = useState("");
     const [items, setItems] = useState<ScheduleItem[]>([]);
@@ -110,15 +111,8 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
         setIsDirty(true);
     };
 
-    const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
+    // Toast logic removed, using useToast hook now
 
-    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-        const id = Date.now();
-        setToasts(prev => [...prev, { id, message, type }]);
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
-        }, 3000);
-    };
 
     // Copy Schedule Logic
     const [copyModalOpen, setCopyModalOpen] = useState(false);
@@ -309,28 +303,8 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                 sourceDayIndex={sourceDay}
             />
 
-            {/* Toast Container */}
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-                {toasts.map(toast => (
-                    <div
-                        key={toast.id}
-                        className={`
-                            pointer-events-auto transform transition-all duration-300 ease-in-out
-                            px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]
-                            ${toast.type === 'success' ? 'bg-white border-l-4 border-green-500 text-gray-800' : ''}
-                            ${toast.type === 'error' ? 'bg-white border-l-4 border-red-500 text-gray-800' : ''}
-                            ${toast.type === 'info' ? 'bg-white border-l-4 border-blue-500 text-gray-800' : ''}
-                        `}
-                    >
-                        <span className="text-lg">
-                            {toast.type === 'success' && '✅'}
-                            {toast.type === 'error' && '❌'}
-                            {toast.type === 'info' && 'ℹ️'}
-                        </span>
-                        <p className="text-sm font-medium">{toast.message}</p>
-                    </div>
-                ))}
-            </div>
+            {/* Toast Container removed (provided globally) */}
+
         </div>
     );
 }

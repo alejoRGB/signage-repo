@@ -10,6 +10,7 @@ import ManualAddDeviceForm from "@/components/devices/manual-add-device-form";
 import DeviceLogsModal from "@/components/devices/device-logs-modal";
 import ConfirmModal from "@/components/confirm-modal";
 import EditDeviceModal from "@/components/devices/edit-device-modal";
+import { useToast } from "@/components/ui/toast-context";
 
 export default function DeviceManager({
     devices: initialDevices,
@@ -19,6 +20,7 @@ export default function DeviceManager({
     playlists: Playlist[];
 }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [devices, setDevices] = useState<Device[]>(initialDevices);
 
     // Modals State
@@ -46,16 +48,7 @@ export default function DeviceManager({
         return () => clearInterval(interval);
     }, [router]);
 
-    // Toast State
-    const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
-
-    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-        const id = Date.now();
-        setToasts(prev => [...prev, { id, message, type }]);
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
-        }, 3000);
-    };
+    // Toast Logic replaced by useToast hook
 
     // Handlers
     const handleDevicePaired = (newDevice: Device) => {
@@ -196,28 +189,8 @@ export default function DeviceManager({
                 onDelete={handleDeleteClick}
             />
 
-            {/* Toast Container */}
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-                {toasts.map(toast => (
-                    <div
-                        key={toast.id}
-                        className={`
-                            pointer-events-auto transform transition-all duration-300 ease-in-out
-                            px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]
-                            ${toast.type === 'success' ? 'bg-white border-l-4 border-green-500 text-gray-800' : ''}
-                            ${toast.type === 'error' ? 'bg-white border-l-4 border-red-500 text-gray-800' : ''}
-                            ${toast.type === 'info' ? 'bg-white border-l-4 border-blue-500 text-gray-800' : ''}
-                        `}
-                    >
-                        <span className="text-lg">
-                            {toast.type === 'success' && '✅'}
-                            {toast.type === 'error' && '❌'}
-                            {toast.type === 'info' && 'ℹ️'}
-                        </span>
-                        <p className="text-sm font-medium">{toast.message}</p>
-                    </div>
-                ))}
-            </div>
+            {/* Toast Container removed */}
+
         </div>
     );
 }

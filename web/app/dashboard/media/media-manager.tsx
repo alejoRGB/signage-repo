@@ -17,9 +17,11 @@ type MediaItem = {
 };
 
 import ConfirmModal from "@/components/confirm-modal";
+import { useToast } from "@/components/ui/toast-context";
 
 export default function MediaManager({ initialMedia }: { initialMedia: MediaItem[] }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [uploading, setUploading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
 
@@ -102,7 +104,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             router.refresh();
         } catch (error) {
             console.error(error);
-            alert("Error uploading file");
+            showToast("Error uploading file", "error");
         } finally {
             setUploading(false);
         }
@@ -117,7 +119,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             });
             router.refresh();
         } catch (error) {
-            alert("Error deleting file");
+            showToast("Error deleting file", "error");
         } finally {
             setDeleteId(null);
         }
