@@ -2,17 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+import { RegisterSchema } from "@/lib/validations";
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email, password, name, username } = body;
 
-        if (!email || !password || !username) {
+        // Validate input
+        const result = RegisterSchema.safeParse(body);
+        if (!result.success) {
             return NextResponse.json(
-                { message: "Username, email, and password are required" },
+                { message: result.error.issues[0].message },
                 { status: 400 }
             );
         }
+
+        const { email, password, name, username } = result.data;
 
         const existingUser = await prisma.user.findFirst({
             where: {
