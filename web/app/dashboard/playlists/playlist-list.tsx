@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, PlaySquare, Trash2, Edit } from "lucide-react";
 import Link from "next/link";
 import ConfirmModal from "@/components/confirm-modal";
+import { useToast } from "@/components/ui/toast-context";
 
 type Playlist = {
     id: string;
@@ -15,6 +16,7 @@ type Playlist = {
 
 export default function PlaylistList({ initialPlaylists }: { initialPlaylists: Playlist[] }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [creating, setCreating] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState("");
 
@@ -37,7 +39,7 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
             setCreating(false);
             router.refresh();
         } catch (error) {
-            alert("Error creating playlist");
+            showToast("Error creating playlist", "error");
         }
     };
 
@@ -50,7 +52,7 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
             });
             router.refresh();
         } catch (error) {
-            alert("Error deleting");
+            showToast("Error deleting playlist", "error");
         } finally {
             setDeleteId(null);
         }
