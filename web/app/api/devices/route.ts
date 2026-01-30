@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CreateDeviceSchema } from "@/lib/validations";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -60,14 +61,16 @@ export async function POST(request: Request) {
 
     try {
         const json = await request.json();
-        const { name } = json;
 
-        if (!name || typeof name !== "string") {
+        const result = CreateDeviceSchema.safeParse(json);
+        if (!result.success) {
             return NextResponse.json(
-                { error: "Device name is required" },
+                { error: result.error.issues[0].message },
                 { status: 400 }
             );
         }
+
+        const { name } = result.data;
 
         const device = await prisma.device.create({
             data: {

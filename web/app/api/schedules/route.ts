@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CreateScheduleSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -41,11 +42,14 @@ export async function POST(req: Request) {
 
     try {
         const json = await req.json();
-        const { name } = json;
 
-        if (!name) {
-            return new NextResponse("Name is required", { status: 400 });
+        // Validation
+        const result = CreateScheduleSchema.safeParse(json);
+        if (!result.success) {
+            return new NextResponse(result.error.issues[0].message, { status: 400 });
         }
+
+        const { name } = result.data;
 
         const schedule = await prisma.schedule.create({
             data: {
