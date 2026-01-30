@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { Loader2, Plus, Save, X, Clock } from "lucide-react";
+import { Loader2, Plus, Save, X, Clock, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
+import CopyScheduleModal from "./copy-schedule-modal";
 
 // Types
 import { ScheduleItem } from "@/types/schedule";
@@ -119,6 +120,41 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
         }, 3000);
     };
 
+    // Copy Schedule Logic
+    const [copyModalOpen, setCopyModalOpen] = useState(false);
+    const [sourceDay, setSourceDay] = useState<number>(0);
+
+    const openCopyModal = (dayIndex: number) => {
+        setSourceDay(dayIndex);
+        setCopyModalOpen(true);
+    };
+
+    const handleCopySchedule = (targetDayIndex: number) => {
+        // 1. Get source items
+        const sourceItems = items.filter(i => i.dayOfWeek === sourceDay);
+
+        if (sourceItems.length === 0) {
+            showToast("Source day has no items to copy.", "error");
+            return;
+        }
+
+        // 2. Remove existing items from target day (Replace All strategy)
+        const cleanItems = items.filter(i => i.dayOfWeek !== targetDayIndex);
+
+        // 3. Create new items for target day
+        // We must strip IDs to ensure they are created as new items
+        const newItems = sourceItems.map(item => ({
+            dayOfWeek: targetDayIndex,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            playlistId: item.playlistId
+        }));
+
+        setItems([...cleanItems, ...newItems]);
+        setIsDirty(true);
+        showToast(`Copied schedule from ${DAYS[sourceDay]} to ${DAYS[targetDayIndex]}`, "success");
+    };
+
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -177,7 +213,16 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
 
                         return (
                             <div key={dayIndex} className="bg-gray-50 rounded-xl p-4 w-[280px] min-h-[400px] border border-gray-200 flex flex-col shadow-sm">
-                                <h3 className="font-semibold text-center mb-4 text-gray-700 border-b pb-2">{dayName}</h3>
+                                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                                    <h3 className="font-semibold text-gray-700">{dayName}</h3>
+                                    <button
+                                        onClick={() => openCopyModal(dayIndex)}
+                                        title="Copy this day's schedule"
+                                        className="text-gray-400 hover:text-indigo-600 transition-colors"
+                                    >
+                                        <Copy className="w-4 h-4" />
+                                    </button>
+                                </div>
 
                                 <div className="space-y-3 flex-1">
                                     {dayItems.map((item) => {
@@ -256,6 +301,13 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                     })}
                 </div>
             </div>
+
+            <CopyScheduleModal
+                isOpen={copyModalOpen}
+                onClose={() => setCopyModalOpen(false)}
+                onCopy={handleCopySchedule}
+                sourceDayIndex={sourceDay}
+            />
 
             {/* Toast Container */}
             <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
