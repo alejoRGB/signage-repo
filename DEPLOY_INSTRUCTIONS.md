@@ -27,7 +27,7 @@ You can do this directly on the Pi or via SSH (`ssh masal@<PI_IP>`).
 2.  **Install Dependencies:**
     Copy and run this single command to install everything needed:
     ```bash
-    sudo apt install -y python3 python3-pip python3-requests python3-pil mpv feh git
+    sudo apt install -y python3 python3-pip python3-requests python3-pil mpv feh git unclutter
     ```
 
 3.  **Prepare Directory:**
