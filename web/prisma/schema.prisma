@@ -111,6 +111,7 @@ model MediaItem {
   height    Int?
   fps       Float?
   size      Int      @default(0) // Size in bytes
+  cacheForOffline Boolean @default(false)
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])
