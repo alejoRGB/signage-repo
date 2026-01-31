@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
               "media-src 'self' blob: data: https:;",
               "connect-src 'self' https: wss://vercel.live;",
               "font-src 'self' data:;",
-              "frame-src 'self';"
+              "frame-src 'self' https://vercel.live;"
             ].join(' '),
           },
         ],
