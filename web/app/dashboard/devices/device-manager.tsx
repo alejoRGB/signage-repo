@@ -67,6 +67,7 @@ export default function DeviceManager({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     activePlaylistId: playlistId || null,
+                    defaultPlaylistId: playlistId || null,
                 }),
             });
 
