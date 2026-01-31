@@ -10,6 +10,7 @@ type MediaItem = {
     name: string;
     type: string;
     url: string;
+    duration: number;
 };
 
 type PlaylistItem = {
@@ -43,7 +44,7 @@ export default function PlaylistEditor({
     const handleAddItem = (media: MediaItem) => {
         const newItem: PlaylistItem = {
             mediaItemId: media.id, // Match DB field
-            duration: 10, // Default duration
+            duration: media.duration || 10, // Use media duration
             order: items.length,
             mediaItem: media,
         };
