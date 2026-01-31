@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Trash2, FileVideo, FileImage, ExternalLink } from "lucide-react";
+import { Upload, Trash2, FileVideo, FileImage, ExternalLink, Globe } from "lucide-react";
 import { upload } from '@vercel/blob/client';
+import AddWebsiteModal from "@/components/media/add-website-modal";
+import ConfirmModal from "@/components/confirm-modal";
+import { useToast } from "@/components/ui/toast-context";
 
 type MediaItem = {
     id: string;
@@ -16,14 +19,13 @@ type MediaItem = {
     createdAt: Date;
 };
 
-import ConfirmModal from "@/components/confirm-modal";
-import { useToast } from "@/components/ui/toast-context";
-
 export default function MediaManager({ initialMedia }: { initialMedia: MediaItem[] }) {
     const router = useRouter();
     const { showToast } = useToast();
     const [uploading, setUploading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
+    const [isAddWebsiteOpen, setIsAddWebsiteOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -55,10 +57,38 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         });
     };
 
-    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const handleAddWebsite = async (data: { name: string; url: string; duration: number; cacheForOffline: boolean }) => {
+        try {
+            const res = await fetch("/api/media", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: data.name,
+                    url: data.url,
+                    type: "web",
+                    filename: null,
+                    width: null,
+                    height: null,
+                    fps: null,
+                    size: 0,
+                    duration: data.duration,
+                    cacheForOffline: data.cacheForOffline
+                }),
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to add website");
+            }
+
+            showToast("Website added successfully", "success");
+            router.refresh();
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to add website", "error");
+        }
+    };
 
     const handleUpload = async (e: React.FormEvent) => {
-        // ... (existing upload logic remains unchanged, using 'file' state)
         e.preventDefault();
         if (!file) return;
 
@@ -137,12 +167,33 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                 isDestructive={true}
             />
 
+            <AddWebsiteModal
+                isOpen={isAddWebsiteOpen}
+                onClose={() => setIsAddWebsiteOpen(false)}
+                onAdd={handleAddWebsite}
+            />
+
             {/* Upload Section */}
             <div className="bg-white shadow sm:rounded-lg p-6">
-                <h3 className="text-lg font-medium leading-6 text-gray-900">Upload Media</h3>
-                <div className="mt-2 max-w-xl text-sm text-gray-500">
-                    <p>Upload images (JPEG, PNG) or videos (MP4) to display on your signs.</p>
+                <div className="sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <h3 className="text-lg font-medium leading-6 text-gray-900">Upload Media</h3>
+                        <div className="mt-2 max-w-xl text-sm text-gray-500">
+                            <p>Upload images/videos or add dashboard URLs.</p>
+                        </div>
+                    </div>
+                    <div className="mt-4 sm:mt-0 sm:flex-shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setIsAddWebsiteOpen(true)}
+                            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        >
+                            <Globe className="mr-2 h-4 w-4 text-indigo-500" />
+                            Add Website
+                        </button>
+                    </div>
                 </div>
+
                 <form onSubmit={handleUpload} className="mt-5 sm:flex sm:items-center">
                     <div className="w-full sm:max-w-xs">
                         <label htmlFor="file-upload" className="sr-only">
@@ -179,7 +230,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                 <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                     <FileImage className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No media</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by uploading a file.</p>
+                    <p className="mt-1 text-sm text-gray-500">Get started by uploading a file or adding a website.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -194,8 +245,11 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                                 ) : item.type === 'image' ? (
                                     <img src={item.url} alt={item.name} className="object-cover w-full h-full" />
                                 ) : (
-                                    <div className="flex items-center justify-center w-full h-full bg-gray-100">
-                                        <span className="text-gray-500 text-xs">Web</span>
+                                    <div className="flex flex-col items-center justify-center w-full h-full bg-indigo-50">
+                                        <Globe className="h-12 w-12 text-indigo-400 mb-2" />
+                                        <div className="px-4 text-center">
+                                            <span className="text-indigo-900 text-xs font-medium block truncate max-w-[150px]">{item.url}</span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -204,12 +258,17 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                                 <p className="block text-sm font-medium text-gray-900 truncate" title={item.name}>{item.name}</p>
                                 <div className="flex justify-between items-center mt-1">
                                     <p className="block text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</p>
-                                    {item.width && item.height && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                            {item.width}x{item.height}
-                                            {item.fps && <span className="ml-1 text-gray-500">@{item.fps}fps</span>}
-                                        </span>
-                                    )}
+                                    <div className="flex items-center gap-1">
+                                        {item.width && item.height ? (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                                {item.width}x{item.height}
+                                            </span>
+                                        ) : item.type === 'web' ? (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                WEB
+                                            </span>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
 
