@@ -16,6 +16,7 @@ export async function POST(request: Request) {
         }
 
         console.log("[SYNC API] Looking for device with token:", device_token);
+        console.log("[SYNC API] Force update check - Duration logic active");
 
         // Find device by token
         const device = await prisma.device.findUnique({
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
                         ? item.mediaItem.url
                         : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
                     order: item.order,
-                    duration: item.mediaItem.duration || 15,
+                    duration: item.mediaItem.duration || 10,
                 })),
             };
         };

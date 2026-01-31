@@ -12,7 +12,7 @@ $TargetDir = "~/signage-player"
 Write-Host "Deploying to $User@$PlayerIp..." -ForegroundColor Cyan
 
 # Copy files
-scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh "$User@$PlayerIp`:$TargetDir"
+scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py "$User@$PlayerIp`:$TargetDir"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Files transferred successfully." -ForegroundColor Green
