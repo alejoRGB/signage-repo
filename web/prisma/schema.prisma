@@ -141,7 +141,6 @@ model Playlist {
 model PlaylistItem {
   id         String @id @default(cuid())
   order      Int
-  duration   Int?     // Override default duration from MediaItem
   
   playlistId String
   playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
