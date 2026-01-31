@@ -157,6 +157,10 @@ class SyncManager:
         url = item['url']
         filepath = os.path.join(self.media_dir, filename)
         
+        # Skip downloading for web content
+        if item.get('type') == 'web':
+            return True
+
         # Check if file already exists
         if os.path.exists(filepath):
             return True

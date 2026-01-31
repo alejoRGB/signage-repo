@@ -120,123 +120,180 @@ class Player:
         except OSError:
             return False
 
-    def play_mixed_content_loop(self, items: List[Dict]):
+    def play_mixed_content_loop(self, items: List[Dict], playlist_id: str):
         """
         Manages playback item-by-item to support Web/Mixed content.
         This blocks the main loop, so we need to be careful to check for schedule updates occasionally.
         """
-        logging.info(f"[MIXED_PLAYER] Starting mixed content loop with {len(items)} items")
+        logging.info(f"[MIXED_PLAYER] Starting mixed content loop with {len(items)} items. Playlist ID: {playlist_id}")
         
         idx = 0
-        while self.running:
-            item = items[idx]
-            media = item.get('mediaItem', {})
-            m_type = media.get('type')
-            duration = media.get('duration', 10) # Default 10s if missing
-            
-            logging.info(f"[MIXED_PLAYER] Playing item {idx}: {media.get('name')} ({m_type})")
-            
-            if m_type == 'web':
-                url = media.get('url')
-                cache_offline = media.get('cacheForOffline', False)
-                is_online = self.check_internet()
-                
-                should_play = is_online or cache_offline
-                
-                if not should_play:
-                    logging.warning(f"[MIXED_PLAYER] Skipping web item (Offline & No Cache Mode): {url}")
-                else:
-                    # 1. Stop MPV if running
-                    self.stop_mpv()
-                    
-                    # 2. Launch Chromium
-                    # --kiosk: Fullscreen
-                    # --app: No address bar
-                    # --incognito: Don't save history (optional, maybe we want cache?)
-                    # If cacheForOffline is true, we want cache! So NO incognito.
-                    try:
-                        cmd = [
-                            "chromium-browser",
-                            "--kiosk",
-                            f"--app={url}",
-                            "--noerrdialogs",
-                            "--disable-infobars",
-                            "--check-for-update-interval=31536000"
-                        ]
-                        
-                        # Add user-data-dir to ensure persistence if needed, or rely on default
-                        # cmd.append("--user-data-dir=/home/pi/.config/chromium-signage")
-                        
-                        browser = subprocess.Popen(cmd)
-                        time.sleep(duration)
-                        browser.terminate()
-                        browser.wait()
-                    except Exception as e:
-                        logging.error(f"[MIXED_PLAYER] Browser failed: {e}")
-            
-            else:
-                # Optimized Video/Image logic:
-                # If next item is also video/image, we could theoretically build a mini-playlist for MPV?
-                # For now, simplest approach: Just play this one file in MPV
-                
-                filename = media.get('filename')
-                if filename:
-                    local_path = os.path.join(self.media_dir, filename)
-                    # We can use MPV to play single file
-                    # But we want seamless.
-                    # If MPV is already running, we can IPC 'loadfile'?
-                    
-                    if not self.mpv_process:
-                         # Start MPV paused or something?
-                         # Actually, for mixed loop, it's easier to just start/stop MPV per item 
-                         # UNLESS we have a run of 5 images.
-                         # Let's simple-implementation it first: Start MPV for this item.
-                         pass
-                    
-                    # Using 'feh' for images might be faster than MPV startup?
-                    # But MPV handles video too.
-                    
-                    # TODO: Enhance this to be seamless.
-                    # For MVP: Just sleep for duration if image, or video length if video.
-                    # But we need to actually SHOW it.
-                    
-                    # Hack: Generate a 1-item playlist and play it
-                    try:
-                        cmd = [
-                            "mpv",
-                            local_path,
-                            "--fullscreen",
-                            "--no-osd-bar",
-                            f"--image-display-duration={duration}" if m_type == 'image' else "",
-                            "--no-terminal"
-                        ]
-                        # Remove empty args
-                        cmd = [c for c in cmd if c]
-                        
-                        proc = subprocess.Popen(cmd)
-                        
-                        # Wait for it to finish?
-                        # If image, MPV closes after duration? No, only if we pass duration.
-                        # If video, it closes at end.
-                        proc.wait() 
-                    except Exception as e:
-                         logging.error(f"[MIXED_PLAYER] Media failed: {e}")
+        browser_process = None
+        current_browser_url = None
+        
+        # Sync control for mixed loop
+        last_sync_time = time.time()
+        sync_interval = 60
 
-            # Next Item
-            idx = (idx + 1) % len(items)
-            
-            # TODO: We need a way to breaks out of this loop if Schedule changes!
-            # We can check schedule every loop iteration?
-            # Or make this function non-blocking (generator?)
-            # For now, let's break if we've done a full loop? 
-            # OR better: Check 'self.sync_manager.load_cached_playlist()' and compare IDs.
-            
-            # Quick check for playlist change
-            data = self.sync_manager.load_cached_playlist()
-            new_target = self.get_current_target_playlist(data)
-            if new_target and new_target.get('id') != items[0].get('playlistId'): # Approximate check
-                 logging.info("[MIXED_PLAYER] Schedule changed. Breaking loop.")
-                 break
+        try:
+            while self.running:
+                item = items[idx]
+                media = item
+                m_type = media.get('type')
+                duration = media.get('duration', 10) 
+                
+                logging.info(f"[MIXED_PLAYER] Playing item {idx}: {media.get('name')} ({m_type})")
+                
+                if m_type == 'web':
+                    url = media.get('url')
+                    cache_offline = media.get('cacheForOffline', False)
+                    is_online = self.check_internet()
+                    should_play = is_online or cache_offline
+                    
+                    if not should_play:
+                        logging.warning(f"[MIXED_PLAYER] Skipping web item (Offline & No Cache Mode): {url}")
+                        # If we skip, we should probably close the browser if it was open on this URL?
+                        # Or just hold previous? Let's close to be safe.
+                        if browser_process:
+                            try:
+                                browser_process.terminate()
+                                browser_process.wait(timeout=1)
+                            except:
+                                pass
+                            browser_process = None
+                            current_browser_url = None
+
+                    else:
+                        self.stop_mpv()
+                        
+                        # Decide: Reuse or Start New?
+                        reuse = False
+                        if browser_process and current_browser_url == url:
+                            if browser_process.poll() is None:
+                                reuse = True
+                                logging.info(f"[MIXED_PLAYER] Reusing existing browser for {url}")
+                            else:
+                                logging.warning("[MIXED_PLAYER] Browser process died. Restarting.")
+                        
+                        if not reuse:
+                            # 1. Stop existing
+                            if browser_process:
+                                try:
+                                    browser_process.terminate()
+                                    browser_process.wait(timeout=2)
+                                except:
+                                    pass
+                            
+                            # 2. Find Executable (Optimized: check once or cached?)
+                            # For safety, let's just do the check quickly
+                            import shutil
+                            browsers = ["chromium-browser", "chromium", "chromium-browser-v7", "google-chrome"]
+                            browser_exec = None
+                            for b in browsers:
+                                if shutil.which(b):
+                                    browser_exec = b
+                                    break
+                            
+                            if not browser_exec:
+                                logging.error("[MIXED_PLAYER] Chromium not found!")
+                            else:
+                                cmd = [
+                                    browser_exec,
+                                    "--kiosk",
+                                    f"--app={url}",
+                                    "--noerrdialogs",
+                                    "--disable-infobars",
+                                    "--check-for-update-interval=31536000",
+                                    "--no-sandbox",
+                                    "--disable-setuid-sandbox",
+                                    "--disable-gpu",
+                                    "--disable-software-rasterizer",
+                                    "--disable-dev-shm-usage",
+                                    "--user-data-dir=/home/masal/.config/chromium-signage-temp"
+                                ]
+                                try:
+                                    browser_process = subprocess.Popen(cmd)
+                                    current_browser_url = url
+                                except Exception as e:
+                                    logging.error(f"[MIXED_PLAYER] Failed to launch browser: {e}")
+                                    browser_process = None
+                        
+                        # Wait for Duration (monitoring crash)
+                        if browser_process:
+                             start_time = time.time()
+                             while time.time() - start_time < duration:
+                                 if browser_process.poll() is not None:
+                                     logging.error(f"[MIXED_PLAYER] Browser crashed early with code {browser_process.returncode}")
+                                     browser_process = None # Mark dead
+                                     current_browser_url = None
+                                     break
+                                 time.sleep(0.5)
+
+                
+                else:
+                    # Video/Image - Close Browser
+                    if browser_process:
+                        try:
+                            browser_process.terminate()
+                            browser_process.wait(timeout=2)
+                        except:
+                            pass
+                        browser_process = None
+                        current_browser_url = None
+
+                    # Play MPV logic (Simplified for clarity)
+                    filename = media.get('filename')
+                    if filename:
+                        local_path = os.path.join(self.media_dir, filename)
+                        try:
+                            cmd = [
+                                "mpv",
+                                local_path,
+                                "--fullscreen",
+                                "--no-osd-bar",
+                                f"--image-display-duration={duration}" if m_type == 'image' else "",
+                                "--no-terminal"
+                            ]
+                            cmd = [c for c in cmd if c]
+                            proc = subprocess.Popen(cmd)
+                            proc.wait() 
+                        except Exception as e:
+                             logging.error(f"[MIXED_PLAYER] Media failed: {e}")
+
+                # Next Item
+                idx = (idx + 1) % len(items)
+                
+                # HEARTBEAT CHECK
+                if time.time() - last_sync_time > sync_interval:
+                    logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync)...")
+                    self.sync_manager.sync() # This updates lastSeenAt on server
+                    last_sync_time = time.time()
+                
+                # Check for playlist change
+                data = self.sync_manager.load_cached_playlist()
+                new_target = self.get_current_target_playlist(data)
+                
+                if not new_target:
+                     logging.info("[MIXED_PLAYER] No target playlist. Breaking.")
+                     break
+                     
+                new_id = new_target.get('id')
+                if new_id != playlist_id: 
+                     logging.info(f"[MIXED_PLAYER] Schedule changed ({playlist_id} -> {new_id}). Breaking loop.")
+                     break
+        
+        finally:
+            # Cleanup on exit
+            if browser_process:
+                logging.info("[MIXED_PLAYER] Cleaning up browser process...")
+                try:
+                    browser_process.terminate()
+                    browser_process.wait(timeout=2)
+                except:
+                    try:
+                        browser_process.kill()
+                    except:
+                        pass
 
 
     def stop_mpv(self):
@@ -371,7 +428,7 @@ class Player:
                          
                          # Check if mixed content (Web vs Video)
                          items = target_playlist.get('items', [])
-                         has_web = any(item.get('mediaItem', {}).get('type') == 'web' for item in items)
+                         has_web = any(item.get('type') == 'web' for item in items)
                          
                          if has_web:
                              # mixed mode logic would go here, for now we just handle switching
@@ -380,7 +437,7 @@ class Player:
                              # We need a new "Play Loop" that iterates items one by one.
                              logging.info("[PLAYER] Mixed content detected. Switching to Item-by-Item Controller.")
                              self.stop_mpv()
-                             self.play_mixed_content_loop(items)
+                             self.play_mixed_content_loop(items, target_id)
                              current_playlist_id = target_id
                              continue
                          
