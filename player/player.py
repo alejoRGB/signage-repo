@@ -110,6 +110,135 @@ class Player:
         except Exception as e:
             logging.error(f"[PLAYER] Failed to start MPV: {e}")
 
+    def check_internet(self):
+        """Simple check to see if we are online"""
+        import socket
+        try:
+            # Connect to Google DNS
+            socket.create_connection(("8.8.8.8", 53), timeout=3)
+            return True
+        except OSError:
+            return False
+
+    def play_mixed_content_loop(self, items: List[Dict]):
+        """
+        Manages playback item-by-item to support Web/Mixed content.
+        This blocks the main loop, so we need to be careful to check for schedule updates occasionally.
+        """
+        logging.info(f"[MIXED_PLAYER] Starting mixed content loop with {len(items)} items")
+        
+        idx = 0
+        while self.running:
+            item = items[idx]
+            media = item.get('mediaItem', {})
+            m_type = media.get('type')
+            duration = media.get('duration', 10) # Default 10s if missing
+            
+            logging.info(f"[MIXED_PLAYER] Playing item {idx}: {media.get('name')} ({m_type})")
+            
+            if m_type == 'web':
+                url = media.get('url')
+                cache_offline = media.get('cacheForOffline', False)
+                is_online = self.check_internet()
+                
+                should_play = is_online or cache_offline
+                
+                if not should_play:
+                    logging.warning(f"[MIXED_PLAYER] Skipping web item (Offline & No Cache Mode): {url}")
+                else:
+                    # 1. Stop MPV if running
+                    self.stop_mpv()
+                    
+                    # 2. Launch Chromium
+                    # --kiosk: Fullscreen
+                    # --app: No address bar
+                    # --incognito: Don't save history (optional, maybe we want cache?)
+                    # If cacheForOffline is true, we want cache! So NO incognito.
+                    try:
+                        cmd = [
+                            "chromium-browser",
+                            "--kiosk",
+                            f"--app={url}",
+                            "--noerrdialogs",
+                            "--disable-infobars",
+                            "--check-for-update-interval=31536000"
+                        ]
+                        
+                        # Add user-data-dir to ensure persistence if needed, or rely on default
+                        # cmd.append("--user-data-dir=/home/pi/.config/chromium-signage")
+                        
+                        browser = subprocess.Popen(cmd)
+                        time.sleep(duration)
+                        browser.terminate()
+                        browser.wait()
+                    except Exception as e:
+                        logging.error(f"[MIXED_PLAYER] Browser failed: {e}")
+            
+            else:
+                # Optimized Video/Image logic:
+                # If next item is also video/image, we could theoretically build a mini-playlist for MPV?
+                # For now, simplest approach: Just play this one file in MPV
+                
+                filename = media.get('filename')
+                if filename:
+                    local_path = os.path.join(self.media_dir, filename)
+                    # We can use MPV to play single file
+                    # But we want seamless.
+                    # If MPV is already running, we can IPC 'loadfile'?
+                    
+                    if not self.mpv_process:
+                         # Start MPV paused or something?
+                         # Actually, for mixed loop, it's easier to just start/stop MPV per item 
+                         # UNLESS we have a run of 5 images.
+                         # Let's simple-implementation it first: Start MPV for this item.
+                         pass
+                    
+                    # Using 'feh' for images might be faster than MPV startup?
+                    # But MPV handles video too.
+                    
+                    # TODO: Enhance this to be seamless.
+                    # For MVP: Just sleep for duration if image, or video length if video.
+                    # But we need to actually SHOW it.
+                    
+                    # Hack: Generate a 1-item playlist and play it
+                    try:
+                        cmd = [
+                            "mpv",
+                            local_path,
+                            "--fullscreen",
+                            "--no-osd-bar",
+                            f"--image-display-duration={duration}" if m_type == 'image' else "",
+                            "--no-terminal"
+                        ]
+                        # Remove empty args
+                        cmd = [c for c in cmd if c]
+                        
+                        proc = subprocess.Popen(cmd)
+                        
+                        # Wait for it to finish?
+                        # If image, MPV closes after duration? No, only if we pass duration.
+                        # If video, it closes at end.
+                        proc.wait() 
+                    except Exception as e:
+                         logging.error(f"[MIXED_PLAYER] Media failed: {e}")
+
+            # Next Item
+            idx = (idx + 1) % len(items)
+            
+            # TODO: We need a way to breaks out of this loop if Schedule changes!
+            # We can check schedule every loop iteration?
+            # Or make this function non-blocking (generator?)
+            # For now, let's break if we've done a full loop? 
+            # OR better: Check 'self.sync_manager.load_cached_playlist()' and compare IDs.
+            
+            # Quick check for playlist change
+            data = self.sync_manager.load_cached_playlist()
+            new_target = self.get_current_target_playlist(data)
+            if new_target and new_target.get('id') != items[0].get('playlistId'): # Approximate check
+                 logging.info("[MIXED_PLAYER] Schedule changed. Breaking loop.")
+                 break
+
+
     def stop_mpv(self):
         """Stop the running MPV process"""
         if self.mpv_process:
@@ -240,6 +369,21 @@ class Player:
                      if target_id != current_playlist_id:
                          logging.info(f"[PLAYER] Playlist changed! New: {target_playlist.get('name')} ({target_id})")
                          
+                         # Check if mixed content (Web vs Video)
+                         items = target_playlist.get('items', [])
+                         has_web = any(item.get('mediaItem', {}).get('type') == 'web' for item in items)
+                         
+                         if has_web:
+                             # mixed mode logic would go here, for now we just handle switching
+                             # But wait, the original logic assumes MPV for everything. 
+                             # If we have web items, we can't just throw them at MPV.
+                             # We need a new "Play Loop" that iterates items one by one.
+                             logging.info("[PLAYER] Mixed content detected. Switching to Item-by-Item Controller.")
+                             self.stop_mpv()
+                             self.play_mixed_content_loop(items)
+                             current_playlist_id = target_id
+                             continue
+                         
                          if self.generate_m3u(target_playlist):
                              # 1. Try Seamless IPC Switch first
                              ipc_success = False
@@ -260,9 +404,6 @@ class Player:
                 
                 elif self.mpv_process:
                     # No playlist should be playing (e.g. gaps in schedule and no default)
-                    # For now, maybe stop MPV? Or show black?
-                    # Requirement said: "reproducir una playlist por default".
-                    # If we are here, it means NO default playlist exists either.
                     logging.info("[PLAYER] No target playlist. Stopping playback.")
                     self.stop_mpv()
                     current_playlist_id = None
