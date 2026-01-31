@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { name, url, type, filename, width, height, fps, size } = body;
+        const { name, url, type, filename, width, height, fps, size, duration, cacheForOffline } = body;
 
         if (!name || !url || !type) {
             return NextResponse.json(
@@ -112,6 +112,8 @@ export async function POST(request: Request) {
                 height: height ? parseInt(height) : null,
                 fps: fps ? parseFloat(fps) : null,
                 size: size ? parseInt(size) : 0,
+                duration: duration ? parseInt(duration) : 10,
+                cacheForOffline: cacheForOffline || false,
                 userId: session.user.id,
             },
         });
