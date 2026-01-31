@@ -33,6 +33,7 @@ export async function PUT(
                 name: body.name,
                 activePlaylistId: body.activePlaylistId,
                 defaultPlaylistId: body.defaultPlaylistId,
+                scheduleId: body.scheduleId,
             },
         });
 

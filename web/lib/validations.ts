@@ -52,4 +52,5 @@ export const UpdateDeviceSchema = z.object({
     status: z.enum(["online", "offline", "unpaired"]).optional(),
     activePlaylistId: z.string().optional().nullable().transform((val) => val ? sanitize(val) : val),
     defaultPlaylistId: z.string().optional().nullable().transform((val) => val ? sanitize(val) : val),
+    scheduleId: z.string().optional().nullable().transform((val) => val ? sanitize(val) : val),
 });
