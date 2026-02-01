@@ -13,6 +13,9 @@ jest.mock("@/lib/prisma", () => ({
             findUnique: jest.fn(),
             delete: jest.fn(),
         },
+        playlistItem: {
+            deleteMany: jest.fn(),
+        },
     },
 }));
 
@@ -65,6 +68,7 @@ describe("DELETE /api/media", () => {
         const req = new Request("http://localhost/api/media?id=media1");
         const res = await DELETE(req);
 
+        expect(prisma.playlistItem.deleteMany).toHaveBeenCalledWith({ where: { mediaItemId: "media1" } });
         expect(prisma.mediaItem.delete).toHaveBeenCalledWith({ where: { id: "media1" } });
         expect(del).toHaveBeenCalledWith("https://public.blob.vercel-storage.com/file.mp4");
         expect(res.status).toBe(200);
