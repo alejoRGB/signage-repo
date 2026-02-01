@@ -234,6 +234,18 @@ class Player:
                                      self.sync_manager.sync()
                                      last_sync_time = time.time()
                                      
+                                     # HOT-SWAP CHECK
+                                     data = self.sync_manager.load_cached_playlist()
+                                     new_target = self.get_current_target_playlist(data)
+                                     new_id = new_target.get('id') if new_target else None
+                                     
+                                     if new_id != playlist_id:
+                                         logging.info(f"[MIXED_PLAYER] Detected playlist change ({playlist_id} -> {new_id}) during playback. Hot-swapping...")
+                                         browser_process.terminate()
+                                         browser_process = None
+                                         current_browser_url = None
+                                         break # Break inner wait loop
+                                     
                                  time.sleep(0.5)
 
                 
