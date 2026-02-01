@@ -10,7 +10,7 @@ Write-Host "--- Digital Signage Player Deployment ---" -ForegroundColor Cyan
 Write-Host "Target: ${PiUser}@${PiHost}:${RemotePath}" -ForegroundColor Gray
 
 # 1. Check if files exist locally
-$Files = @("player.py", "sync.py", "logger_service.py", "config.json", "setup_service.sh", "setup_timezone.sh")
+$Files = @("player.py", "sync.py", "logger_service.py", "setup_service.sh", "setup_timezone.sh", "setup_wallpaper.py")
 foreach ($File in $Files) {
     if (-not (Test-Path "$LocalPath\$File")) {
         Write-Error "File not found: $LocalPath\$File"
@@ -25,7 +25,7 @@ Invoke-Expression $FixCmd
 
 # 2. Upload Files (SCP)
 Write-Host "`n[1/3] Uploading files..." -ForegroundColor Yellow
-$ScpCmd = "scp $LocalPath\player.py $LocalPath\sync.py $LocalPath\logger_service.py $LocalPath\config.json $LocalPath\setup_service.sh $LocalPath\setup_timezone.sh ${PiUser}@${PiHost}:${RemotePath}/"
+$ScpCmd = "scp $LocalPath\player.py $LocalPath\sync.py $LocalPath\logger_service.py $LocalPath\setup_service.sh $LocalPath\setup_timezone.sh $LocalPath\setup_wallpaper.py ${PiUser}@${PiHost}:${RemotePath}/"
 Write-Host "Command: $ScpCmd"
 Invoke-Expression $ScpCmd
 
