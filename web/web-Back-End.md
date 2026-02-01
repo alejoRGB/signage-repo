@@ -33,7 +33,9 @@ Este agente es responsable de la lógica de negocio, la seguridad, la base de da
 
 ## Reglas y Límites
 -   **Interfaz:** Tu "cliente" principal es el `Coordinator`, quien te traerá requerimientos del Front-End o del Player.
--   **Testing:** Probar manualmente los endpoints (usando `curl`, Postman o scripts simples) antes de entregar.
+-   **Testing:** 
+    -   **Automático:** Ejecutar `npm run test:api` (Jest) y asegurar que pase.
+    -   **Manual:** Probar endpoints con curl/Postman.
 -   **Deploy:** Verificar en Vercel (o logs de build) que los cambios de API/Prisma se han desplegado y migrado correctamente.
 
 ## Flujo de Trabajo Típico
