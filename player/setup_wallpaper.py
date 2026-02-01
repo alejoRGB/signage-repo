@@ -36,29 +36,50 @@ def set_wallpaper():
             with open(config_path, 'r') as f:
                 lines = f.readlines()
             
-            new_lines = []
-            changed = False
+            # Parse existing config
+            config_dict = {}
             for line in lines:
-                if "show_trash=" in line:
-                    new_lines.append("show_trash=0\n")
-                    changed = True
-                elif "show_mounts=" in line:
-                    new_lines.append("show_mounts=0\n")
-                    changed = True
-                elif "show_documents=" in line:
-                    new_lines.append("show_documents=0\n")
-                    changed = True
-                else:
-                    new_lines.append(line)
+                if "=" in line:
+                    key, val = line.strip().split("=", 1)
+                    config_dict[key] = val
+
+            # Force specific values
+            updates = {
+                "show_trash": "0",
+                "show_mounts": "0",
+                "show_documents": "0",
+                "wallpaper_mode": "stretch" # Ensure stretch
+            }
             
-            if changed:
-                with open(config_path, 'w') as f:
-                    f.writelines(new_lines)
-                print("[WALLPAPER] Config updated. Reloading pcmanfm...")
-                # Reload pcmanfm to apply config changes
-                subprocess.run(["pcmanfm", "--reconfigure"], env=env, check=False)
-            else:
-                print("[WALLPAPER] Icons already hidden or config clean.")
+            # Reconstruct file content
+            new_lines = []
+            # Keep header/comments
+            header_kept = False
+            for line in lines:
+                if line.strip().startswith("[") or line.strip().startswith("#"):
+                    new_lines.append(line)
+                    header_kept = True
+                elif "=" in line:
+                    key = line.split("=")[0].strip()
+                    if key in updates:
+                        continue # Skip, we will add later
+                    else:
+                        new_lines.append(line) # Keep other settings
+            
+            # Ensure header if missing (rare)
+            if not header_kept:
+                new_lines.insert(0, "[*]\n")
+
+            # Append forced updates
+            for key, val in updates.items():
+                new_lines.append(f"{key}={val}\n")
+
+            with open(config_path, 'w') as f:
+                f.writelines(new_lines)
+                
+            print("[WALLPAPER] Config updated (forced). Reloading pcmanfm...")
+            # Reload pcmanfm to apply config changes
+            subprocess.run(["pcmanfm", "--reconfigure"], env=env, check=False)
         except Exception as e:
             print(f"[WALLPAPER] Failed to update config: {e}")
     else:
