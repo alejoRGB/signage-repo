@@ -227,6 +227,13 @@ class Player:
                                      browser_process = None # Mark dead
                                      current_browser_url = None
                                      break
+                                 
+                                 # HEARTBEAT CHECK (Inside Duration Loop)
+                                 if time.time() - last_sync_time > sync_interval:
+                                     logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync) during playback...")
+                                     self.sync_manager.sync()
+                                     last_sync_time = time.time()
+                                     
                                  time.sleep(0.5)
 
                 
