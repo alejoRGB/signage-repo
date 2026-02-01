@@ -1,25 +1,27 @@
-#!/usr/bin/env python3
-"""
-Digital Signage Player - Sync Module
-Handles authentication and playlist synchronization with the server
-"""
-
+import logging
 import json
 import os
 import requests
-import hashlib
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional, Any
 
 class SyncManager:
-    def __init__(self, config_path: str = "/home/pi/signage-player/config.json"):
-        self.config = self._load_config(config_path)
-        self.server_url = self.config["server_url"]
-        self.device_token = self.config["device_token"]
-        self.media_dir = self.config.get("media_dir", "/home/pi/signage-player/media")
-        self.playlist_cache = os.path.join(os.path.dirname(config_path), "playlist.json")
+    def __init__(self, config_path=None):
+        if config_path:
+             self.config_path = config_path
+        else:
+             # Default fallback
+             home = os.path.expanduser("~")
+             self.config_path = os.path.join(home, "signage-player", "config.json")
+
+        self.config = self._load_config(self.config_path)
+        self.server_url = self.config.get("server_url")
+        self.device_token = self.config.get("device_token")
         
-        # Ensure media directory exists
-        os.makedirs(self.media_dir, exist_ok=True)
+        self.media_dir = os.path.join(os.path.dirname(self.config_path), "media")
+        self.playlist_cache = os.path.join(os.path.dirname(self.config_path), "playlist.json")
+        
+        if not os.path.exists(self.media_dir):
+            os.makedirs(self.media_dir)
     
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from JSON file"""
@@ -27,99 +29,87 @@ class SyncManager:
             with open(config_path, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"ERROR: Config file not found at {config_path}")
+            logging.error(f"Config file not found at {config_path}")
             print("Please create config.json with server_url and device_token")
+            # We exit here, so print is fine as fallback
             exit(1)
         except json.JSONDecodeError as e:
-            print(f"ERROR: Invalid JSON in config file: {e}")
+            logging.error(f"Invalid JSON in config file: {e}")
             exit(1)
     
     def register(self) -> Optional[Dict]:
         """Register device and get pairing code"""
         try:
             url = f"{self.server_url}/api/device/register"
-            print(f"[SYNC] Registering device at {url}...")
+            logging.info(f"[SYNC] Registering device at {url}...")
             response = requests.post(url, json={}, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
-                print(f"[SYNC] Registration successful. Code: {data['pairing_code']}")
+                logging.info(f"[SYNC] Registration successful. Code: {data['pairing_code']}")
                 return data
             else:
-                print(f"[SYNC] Registration error: {response.status_code} - {response.text}")
+                logging.error(f"[SYNC] Registration error: {response.status_code} - {response.text}")
                 return None
         except Exception as e:
-            print(f"[SYNC] Registration connection error: {e}")
+            logging.error(f"[SYNC] Registration connection error: {e}")
             return None
 
     def poll_status(self, token: str) -> Optional[str]:
-        """Check if device is paired"""
+        """Check if device has been paired"""
         try:
             url = f"{self.server_url}/api/device/status?token={token}"
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=5)
             
             if response.status_code == 200:
                 data = response.json()
-                return data.get("status")
-            return None
+                return data.get("status") # "paired" or "unpaired"
+            else:
+                return None
         except Exception:
             return None
 
     def save_config(self, new_token: str):
         """Update config with new token"""
         self.config["device_token"] = new_token
-        with open("/home/pi/signage-player/config.json", 'w') as f:
-            json.dump(self.config, f, indent=2)
-        self.device_token = new_token
-        print("[SYNC] Device token saved to config.json")
+        try:
+            with open(self.config_path, 'w') as f:
+                json.dump(self.config, f, indent=2)
+            self.device_token = new_token
+            logging.info(f"[SYNC] Device token saved to {self.config_path}")
+        except Exception as e:
+            logging.error(f"[SYNC] Failed to save config: {e}")
 
     def generate_pairing_image(self, code: str) -> str:
         """Generate an image with the pairing code using PIL"""
         try:
             from PIL import Image, ImageDraw, ImageFont
             
-            # Create black image 1920x1080
-            width, height = 1920, 1080
+            # Create black background
+            width = 1920
+            height = 1080
             img = Image.new('RGB', (width, height), color='black')
-            d = ImageDraw.Draw(img)
+            draw = ImageDraw.Draw(img)
             
-            # Try to load a font, fallback to default
+            # Load font (try standard paths, fallback to default)
             try:
-                # Common locations for fonts on Linux
-                font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-                if not os.path.exists(font_path):
-                    font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-                font = ImageFont.truetype(font_path, 100)
-                small_font = ImageFont.truetype(font_path, 40)
-            except:
+                # Big font for code
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 200)
+                # Small font for instructions
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 60)
+            except IOError:
                 font = ImageFont.load_default()
-                small_font = ImageFont.load_default()
+                font_small = ImageFont.load_default()
             
             # Draw Text
-            text = f"Pairing Code: {code}"
+            text = f"{code}"
+            instructions = "enter this code in dashboard"
             
-            # Calculate text size (rough approximation if getbbox fails)
-            try:
-                text_bbox = d.textbbox((0, 0), text, font=font)
-                text_w = text_bbox[2] - text_bbox[0]
-                text_h = text_bbox[3] - text_bbox[1]
-            except:
-                text_w, text_h = 400, 100
-                
-            x = (width - text_w) / 2
-            y = (height - text_h) / 2
+            # Center text (approximate if using default font, better if truetype)
+            # Recent PIllow versions use getbbox usually
             
-            d.text((x, y), text, fill=(255, 255, 255), font=font)
-            
-            # Subtitle
-            sub = f"Go to Dashboard > Devices > Pair Device"
-            try:
-                sub_bbox = d.textbbox((0, 0), sub, font=small_font)
-                sub_w = sub_bbox[2] - sub_bbox[0]
-            except:
-                sub_w = 300
-            
-            d.text(((width - sub_w) / 2, y + 150), sub, fill=(200, 200, 200), font=small_font)
+            draw.text((width/2, height/2), text, font=font, anchor="mm", fill="white")
+            draw.text((width/2, height/2 + 200), instructions, font=font_small, anchor="mm", fill="gray")
             
             # Save
             filepath = os.path.join(self.media_dir, "pairing.png")
@@ -127,45 +117,38 @@ class SyncManager:
             return filepath
             
         except ImportError:
-            print("[SYNC] PIL not installed. Cannot generate pairing image.")
+            logging.warning("[SYNC] PIL not installed. Cannot generate pairing image.")
             return None
         except Exception as e:
-            print(f"[SYNC] Error generating pairing image: {e}")
+            logging.error(f"[SYNC] Error generating pairing image: {e}")
             return None
 
-    def fetch_playlist(self) -> Optional[Dict]:
-        """Fetch playlist from server"""
+    def fetch_sync_data(self) -> Optional[Dict]:
+        """Fetch sync data (schedule, default, etc) from server"""
         if not self.device_token:
-            print("[SYNC] No device token. Cannot fetch playlist.")
+            logging.warning("[SYNC] No device token. Cannot fetch playlist.")
             return None
             
         try:
             url = f"{self.server_url}/api/device/sync"
             payload = {"device_token": self.device_token}
             
-            print(f"[SYNC] Fetching playlist from {url}")
+            logging.debug(f"[SYNC] Fetching sync data from {url}")
             response = requests.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
-                print(f"[SYNC] Device: {data.get('device_name')}")
-                
-                if data.get('playlist'):
-                    print(f"[SYNC] Playlist: {data['playlist']['name']} ({len(data['playlist']['items'])} items)")
-                    return data['playlist']
-                else:
-                    print("[SYNC] No playlist assigned")
-                    return None
+                logging.debug(f"[SYNC] Device: {data.get('device_name')}")
+                return data
             elif response.status_code == 401:
-                print("[SYNC] Unauthorized: Invalid token. Device might have been deleted.")
-                # Optional: Clear token?
+                logging.error("[SYNC] Unauthorized: Invalid token. Device might have been deleted.")
                 return None
             else:
-                print(f"[SYNC] Error: {response.status_code} - {response.text}")
+                logging.error(f"[SYNC] Error: {response.status_code} - {response.text}")
                 return None
                 
         except requests.exceptions.RequestException as e:
-            print(f"[SYNC] Connection error: {e}")
+            logging.error(f"[SYNC] Connection error: {e}")
             return None
     
     def download_media(self, item: Dict) -> bool:
@@ -174,53 +157,80 @@ class SyncManager:
         url = item['url']
         filepath = os.path.join(self.media_dir, filename)
         
+        # Skip downloading for web content
+        if item.get('type') == 'web':
+            return True
+
         # Check if file already exists
         if os.path.exists(filepath):
-            # print(f"[DOWNLOAD] Skipping {filename} (already exists)")
             return True
         
         try:
-            print(f"[DOWNLOAD] Downloading {filename}...")
+            logging.info(f"[DOWNLOAD] Downloading {filename}...")
             response = requests.get(url, stream=True, timeout=30)
             
             if response.status_code == 200:
                 with open(filepath, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                print(f"[DOWNLOAD] ✓ {filename} downloaded")
+                logging.info(f"[DOWNLOAD] ✓ {filename} downloaded")
                 return True
             else:
-                print(f"[DOWNLOAD] ✗ Failed to download {filename}: {response.status_code}")
+                logging.error(f"[DOWNLOAD] ✗ Failed to download {filename}: {response.status_code}")
                 return False
                 
         except Exception as e:
-            print(f"[DOWNLOAD] ✗ Error downloading {filename}: {e}")
+            logging.error(f"[DOWNLOAD] ✗ Error downloading {filename}: {e}")
             return False
     
     def sync(self) -> bool:
-        """Sync playlist and download new media"""
-        playlist = self.fetch_playlist()
+        """Sync schedule and download new media"""
+        data = self.fetch_sync_data()
         
-        if not playlist:
-            # print("[SYNC] No playlist to sync")
+        if not data:
             return False
         
-        # Download all media files
+        # Collect all items to download
+        all_items = []
+        
+        # 1. Default Playlist
+        if data.get('default_playlist'):
+             all_items.extend(data['default_playlist']['items'])
+             
+        # 2. Schedule Items
+        if data.get('schedule'):
+            for item in data['schedule']['items']:
+                if item.get('playlist'):
+                    all_items.extend(item['playlist']['items'])
+        
+        # 3. Legacy Playlist (Fallback)
+        if data.get('playlist'):
+            all_items.extend(data['playlist']['items'])
+
+        # Download all unique media files
         success = True
-        for item in playlist['items']:
+        downloaded_filenames = set()
+        
+        for item in all_items:
+            # Avoid duplicates
+            if item['filename'] in downloaded_filenames:
+                continue
+                
             if not self.download_media(item):
                 success = False
+            
+            downloaded_filenames.add(item['filename'])
         
-        # Save playlist to cache
+        # Save full data to cache
         try:
             with open(self.playlist_cache, 'w') as f:
-                json.dump(playlist, f, indent=2)
-            print(f"[SYNC] Playlist cached to {self.playlist_cache}")
+                json.dump(data, f, indent=2)
+            logging.debug(f"[SYNC] Data cached to {self.playlist_cache}")
         except Exception as e:
-            print(f"[SYNC] Error saving playlist cache: {e}")
+            logging.error(f"[SYNC] Error saving cache: {e}")
             success = False
         
-        # TODO: Clean up old media files not in current playlist
+        # TODO: Clean up old media files
         
         return success
     
@@ -230,15 +240,16 @@ class SyncManager:
             with open(self.playlist_cache, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print("[SYNC] No cached playlist found")
+            logging.warning("[SYNC] No cached playlist found")
             return None
         except json.JSONDecodeError as e:
-            print(f"[SYNC] Error reading cached playlist: {e}")
+            logging.error(f"[SYNC] Error reading cached playlist: {e}")
             return None
 
 
 if __name__ == "__main__":
     # Test sync
+    logging.basicConfig(level=logging.INFO)
     sync = SyncManager()
     
     print("=" * 50)
@@ -246,3 +257,4 @@ if __name__ == "__main__":
     print("=" * 50)
     
     sync.sync()
+
