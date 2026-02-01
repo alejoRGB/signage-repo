@@ -19,13 +19,25 @@ sudo apt-get update -y
 echo "[INSTALLER] Installing apt dependencies..."
 # git: to clone source
 # mpv: media player
-# chromium-browser: web player
 # python3-pip: for python libs
 # pcmanfm: wallpaper manager
 # unclutter: hides mouse
 # feh: image viewer for pairing code
 # libopenjp2-7: often needed for Pillow
-sudo apt-get install -y git mpv chromium-browser python3-pip pcmanfm unclutter feh libopenjp2-7
+COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7"
+
+echo "[INSTALLER] Installing base packages: $COMMON_DEPS"
+sudo apt-get install -y $COMMON_DEPS
+
+echo "[INSTALLER] Installing Web Browser..."
+# Try chromium-browser (RPi OS) first, then chromium (Debian/Ubuntu)
+if sudo apt-get install -y chromium-browser; then
+    echo "[INSTALLER] chromium-browser installed successfully."
+elif sudo apt-get install -y chromium; then
+    echo "[INSTALLER] chromium installed successfully."
+else
+    echo "[INSTALLER] CRITICAL: Could not find 'chromium-browser' or 'chromium'. Continuing but web playback may fail."
+fi
 
 # 3. Setup Directory Structure
 echo "[INSTALLER] Setting up directory structure..."
