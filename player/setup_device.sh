@@ -51,11 +51,27 @@ if [ -d "$APP_DIR/.git" ]; then
     git pull
 else
     echo "[INSTALLER] Cloning repo..."
-    # We clone into a temp dir and move files because APP_DIR might not be empty (media dir)
+    # We clone the full repo
     git clone "$REPO_URL" "$APP_DIR/temp_repo"
-    cp -r "$APP_DIR/temp_repo/player/"* "$APP_DIR/" 2>/dev/null || true
-    # Also fetch setup scripts if they are in root or player
-    cp "$APP_DIR/temp_repo/deploy.ps1" "$APP_DIR/" 2>/dev/null || true
+    
+    # Copy ONLY the player directory contents to APP_DIR
+    echo "[INSTALLER] Extracting player code..."
+    
+    # Check if we are in Monorepo structure (likely)
+    if [ -d "$APP_DIR/temp_repo/player" ]; then
+        cp -r "$APP_DIR/temp_repo/player/"* "$APP_DIR/"
+        echo "[INSTALLER] Player code extracted from /player folder."
+        
+        # Also copy deploy scripts if useful
+        cp "$APP_DIR/temp_repo/deploy_player.ps1" "$APP_DIR/" 2>/dev/null || true
+    else
+        # Fallback if structure is weird (e.g. old structure)
+        echo "[INSTALLER] WARNING: /player folder not found. Attempting fallback copy..."
+        cp -r "$APP_DIR/temp_repo/"* "$APP_DIR/" 2>/dev/null || true
+    fi
+
+    # CLEANUP: Remove the heavy web app code
+    echo "[INSTALLER] Cleaning up temp repo..."
     rm -rf "$APP_DIR/temp_repo"
 fi
 
