@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { unlink } from "fs/promises";
-import { join } from "path";
+import { del } from "@vercel/blob";
+
 
 export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
@@ -63,14 +63,13 @@ export async function DELETE(request: Request) {
             where: { id: id },
         });
 
-        // 3. Delete from Disk (if file exists)
+        // 3. Delete from Blob Storage (if URL exists and is a blob URL)
         try {
-            if (mediaItem.filename) {
-                const filepath = join(process.cwd(), "public", "uploads", mediaItem.filename);
-                await unlink(filepath);
+            if (mediaItem.url && mediaItem.url.includes("public.blob.vercel-storage.com")) {
+                await del(mediaItem.url);
             }
         } catch (e) {
-            console.warn("Failed to delete file from disk:", e);
+            console.warn("Failed to delete file from blob:", e);
             // Continue, as DB record is gone
         }
 

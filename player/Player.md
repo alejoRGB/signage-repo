@@ -32,7 +32,9 @@ Este agente es responsable de todo el código que se ejecuta en los dispositivos
     -   Gestión de logs locales.
 
 ## Reglas y Límites
--   **Testing:** Las pruebas son manuales. Debes verificar que el script corre sin errores: `python3 player.py`.
+-   **Testing:** Las pruebas son **Automáticas** y Manuales.
+    -   **Unit Tests:** Ejecutar `python3 -m pytest player/tests` (asegúrate de instalar dependencias de test: `pip install -r player/requirements-test.txt`).
+    -   **Manual:** Verificar que el script corre sin errores: `python3 player.py`.
 -   **Deploy:** Al no haber un deploy automático centralizado (cada Pi se actualiza), tu "deploy" consiste en verificar que los cambios subidos al repositorio sean descargables correctamente por `install.sh` o el mecanismo de update.
 
 ## Flujo de Trabajo Típico

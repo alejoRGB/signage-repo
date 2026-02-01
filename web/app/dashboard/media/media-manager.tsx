@@ -144,9 +144,13 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         if (!deleteId) return;
 
         try {
-            await fetch(`/api/media?id=${deleteId}`, {
+            const res = await fetch(`/api/media?id=${deleteId}`, {
                 method: "DELETE",
             });
+
+            if (!res.ok) {
+                throw new Error("Failed to delete media");
+            }
             router.refresh();
         } catch (error) {
             showToast("Error deleting file", "error");

@@ -32,7 +32,9 @@ Este agente se encarga de la interfaz visual y la experiencia de usuario del Das
 
 ## Reglas y Límites
 -   **Prohibido:** Modificar archivos en `web/app/api` o `web/prisma`. Si necesitas un cambio en el Backend, solicítalo al `Coordinator`.
--   **Testing:** Realizar pruebas manuales de la UI (navegación, clicks, responsive) antes de reportar tarea completada.
+-   **Testing:** 
+    -   **Automático:** Ejecutar `npm run test:ui` (Componentes) y `npm run test:e2e` (E2E) y asegurar que pasen en verde.
+    -   **Manual:** Realizar pruebas manuales de la UI (navegación, clicks, responsive).
 -   **Deploy:** Verificar en Vercel (o logs de build) que el cambio se ha desplegado correctamente.
 
 ## Flujo de Trabajo Típico
