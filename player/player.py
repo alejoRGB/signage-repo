@@ -381,7 +381,14 @@ class Player:
         if sync_data.get('schedule') and sync_data['schedule'].get('items'):
             for item in sync_data['schedule']['items']:
                 if item['dayOfWeek'] == current_day_index:
-                    if item['startTime'] <= current_time_str < item['endTime']:
+                    start = item['startTime']
+                    end = item['endTime']
+                    
+                    # Handle Midnight Wrap for current day
+                    if end == "00:00":
+                        end = "24:00"
+                    
+                    if start <= current_time_str < end:
                         logging.info(f"[SCHEDULER] Match Rule: {item['startTime']}-{item['endTime']} -> Playlist {item.get('playlist', {}).get('name')}")
                         return item.get('playlist')
         
