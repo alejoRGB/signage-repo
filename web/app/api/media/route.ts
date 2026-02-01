@@ -58,7 +58,12 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: "Media not found" }, { status: 404 });
         }
 
-        // 2. Delete from DB
+        // 2. Delete related PlaylistItems (Manual Cascade)
+        await prisma.playlistItem.deleteMany({
+            where: { mediaItemId: id },
+        });
+
+        // 3. Delete from DB
         await prisma.mediaItem.delete({
             where: { id: id },
         });
