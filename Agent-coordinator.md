@@ -32,8 +32,9 @@ Este agente es el líder técnico y Project Manager del sistema. No escribe cód
     -   Esta regla aplica para cualquier cruce de dominios.
 
 2.  **Testing:**
-    -   Por el momento, las pruebas son **Manuales**.
-    -   Al recibir un trabajo completado de un sub-agente, tu verificación consiste en confirmar que el agente ha realizado la prueba manual pertinente (ej. "He navegado a la página y el botón ya aparece").
+    -   **Testing:**
+    -   **Exigir Pruebas Automatizadas:** No aceptes tareas de sub-agentes si no confirman haber ejecutado sus suites de prueba (`npm run test:api`, `npm run test:ui`, `pytest`).
+    -   **Verificación Manual:** Confirmar que el agente ha realizado la prueba manual pertinente.
 
 3.  **Verificación de Deploy:**
     -   Cada agente es responsable de verificar su propio despliegue (ej. `web-Front-End` verifica que Vercel haya construido el frontend sin errores). Tú debes exigir esta confirmación antes de cerrar la tarea.
