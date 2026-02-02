@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, ArrowUp, ArrowDown, Plus, Clock } from "lucide-react";
+import { Save, Trash2, ArrowUp, ArrowDown, Plus, Clock, Globe } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
 
 type MediaItem = {
@@ -144,6 +144,10 @@ export default function PlaylistEditor({
                                 <div className="h-12 w-16 bg-gray-200 rounded overflow-hidden flex-shrink-0">
                                     {item.mediaItem.type === 'video' ? (
                                         <video src={item.mediaItem.url} className="w-full h-full object-cover" />
+                                    ) : item.mediaItem.type === 'web' ? (
+                                        <div className="w-full h-full flex items-center justify-center bg-indigo-50">
+                                            <Globe className="h-6 w-6 text-indigo-400" />
+                                        </div>
                                     ) : (
                                         <img src={item.mediaItem.url} alt={item.mediaItem.name} className="w-full h-full object-cover" />
                                     )}
@@ -188,6 +192,10 @@ export default function PlaylistEditor({
                             <div className="h-10 w-14 bg-gray-200 rounded overflow-hidden flex-shrink-0">
                                 {media.type === 'video' ? (
                                     <video src={media.url} className="w-full h-full object-cover" />
+                                ) : media.type === 'web' ? (
+                                    <div className="w-full h-full flex items-center justify-center bg-indigo-50">
+                                        <Globe className="h-5 w-5 text-indigo-400" />
+                                    </div>
                                 ) : (
                                     <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
                                 )}

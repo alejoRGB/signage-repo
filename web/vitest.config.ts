@@ -10,6 +10,7 @@ export default defineConfig({
         setupFiles: ['./vitest.setup.ts'],
         alias: {
             '@': path.resolve(__dirname, './')
-        }
+        },
+        include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     },
 })
