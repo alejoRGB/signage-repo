@@ -139,7 +139,10 @@ export default function PlaylistEditor({
                         <span className="w-6 text-center">#</span>
                         <span className="w-16">Media</span>
                         <span className="flex-1">Nombre</span>
-                        <span className="w-24 text-center">Duración</span>
+                        <div className="w-24 text-center leading-tight">
+                            <div>Duración</div>
+                            <div className="text-[10px] normal-case opacity-75">(MM:SS)</div>
+                        </div>
                         <span className="w-20 text-center">Acciones</span>
                     </div>
 
