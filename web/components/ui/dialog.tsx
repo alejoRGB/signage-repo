@@ -43,7 +43,7 @@ export const DialogTrigger = ({ asChild, children, onClick }: { asChild?: boolea
 
     // Clone element to inject onClick if asChild
     if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement, {
+        return React.cloneElement(children as React.ReactElement<any>, {
             onClick: (e: React.MouseEvent) => {
                 onOpenChange(true);
                 onClick?.();
