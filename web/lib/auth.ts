@@ -16,6 +16,32 @@ export const authOptions: NextAuthOptions = {
                     return null;
                 }
 
+                // 1. Check Admin Table first
+                const admin = await prisma.admin.findUnique({
+                    where: { email: credentials.username }, // Admin uses email as username
+                });
+
+                if (admin) {
+                    const isAdminPasswordValid = await bcrypt.compare(
+                        credentials.password,
+                        admin.password
+                    );
+
+                    if (isAdminPasswordValid) {
+                        return {
+                            id: admin.id,
+                            username: admin.email,
+                            email: admin.email,
+                            name: admin.name || "Admin",
+                            role: "ADMIN",
+                            isActive: true,
+                        };
+                    }
+                    // If admin found but password wrong, return null (don't fall through to User)
+                    return null;
+                }
+
+                // 2. Fallback to User Table
                 const user = await prisma.user.findUnique({
                     where: { username: credentials.username },
                 });
@@ -42,7 +68,7 @@ export const authOptions: NextAuthOptions = {
                     username: user.username || "", // Handle null username
                     email: user.email,
                     name: user.name,
-                    role: user.role,
+                    role: user.role, // This should be "USER" based on schema default, but schema has Enum.
                     isActive: user.isActive,
                 };
             },

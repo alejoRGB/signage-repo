@@ -13,7 +13,7 @@ export default async function AdminPage() {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "ADMIN") {
-        redirect("/dashboard");
+        redirect("/admin/login");
     }
 
     // Fetch all users with their related data counts
