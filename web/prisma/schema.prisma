@@ -112,6 +112,7 @@ model MediaItem {
   fps       Float?
   size      Int      @default(0) // Size in bytes
   cacheForOffline Boolean @default(false)
+  orientation String @default("landscape") // landscape, portrait
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])

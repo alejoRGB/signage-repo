@@ -118,6 +118,7 @@ export async function POST(request: Request) {
                 size: size ? parseInt(size) : 0,
                 duration: duration ? parseInt(duration) : 10,
                 cacheForOffline: cacheForOffline || false,
+                orientation: body.orientation || "landscape",
                 userId: session.user.id,
             },
         });

@@ -2,13 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
-
-const updateUserSchema = z.object({
-    isActive: z.boolean().optional(),
-    name: z.string().optional(),
-    role: z.enum(["USER", "ADMIN"]).optional(),
-});
+import { UpdateUserSchema } from "@/lib/validations";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -20,7 +14,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
         const { id } = await params;
         const body = await request.json();
-        const validation = updateUserSchema.safeParse(body);
+        const validation = UpdateUserSchema.safeParse(body);
 
         if (!validation.success) {
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
