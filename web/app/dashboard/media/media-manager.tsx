@@ -33,13 +33,13 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         }
     };
 
-    const extractMetadata = (file: File): Promise<{ width: number; height: number; fps?: number }> => {
+    const extractMetadata = (file: File): Promise<{ width: number; height: number; fps?: number; duration?: number }> => {
         return new Promise((resolve) => {
             const url = URL.createObjectURL(file);
             if (file.type.startsWith("image")) {
                 const img = new Image();
                 img.onload = () => {
-                    resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                    resolve({ width: img.naturalWidth, height: img.naturalHeight, duration: 10 }); // Default 10s for images
                     URL.revokeObjectURL(url);
                 };
                 img.src = url;
@@ -47,12 +47,12 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                 const video = document.createElement("video");
                 video.preload = "metadata";
                 video.onloadedmetadata = () => {
-                    resolve({ width: video.videoWidth, height: video.videoHeight, fps: 30 });
+                    resolve({ width: video.videoWidth, height: video.videoHeight, fps: 30, duration: Math.floor(video.duration) });
                     URL.revokeObjectURL(url);
                 };
                 video.src = url;
             } else {
-                resolve({ width: 0, height: 0 });
+                resolve({ width: 0, height: 0, duration: 10 });
             }
         });
     };
@@ -120,7 +120,8 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     width: metadata.width,
                     height: metadata.height,
                     fps: metadata.fps,
-                    size: file.size
+                    size: file.size,
+                    duration: metadata.duration
                 }),
             });
 
