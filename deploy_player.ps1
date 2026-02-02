@@ -1,18 +1,25 @@
 param(
-    [string]$PlayerIp
+    [string]$PlayerIp,
+    [string]$PlayerUser
 )
+
 
 if ([string]::IsNullOrEmpty($PlayerIp)) {
     $PlayerIp = Read-Host "Enter Player IP Address (e.g. 192.168.1.100)"
 }
 
-$User = "masal"
+if ([string]::IsNullOrEmpty($PlayerUser)) {
+    $PlayerUser = Read-Host "Enter Player Username (e.g. pi, masal)"
+}
+
+$User = $PlayerUser
+
 $TargetDir = "~/signage-player"
 
 Write-Host "Deploying to $User@$PlayerIp..." -ForegroundColor Cyan
 
 # Copy files
-scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py "$User@$PlayerIp`:$TargetDir"
+scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py .\player\rotation_utils.py "$User@$PlayerIp`:$TargetDir"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Files transferred successfully." -ForegroundColor Green
