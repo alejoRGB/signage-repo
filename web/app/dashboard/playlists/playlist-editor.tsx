@@ -158,10 +158,21 @@ export default function PlaylistEditor({
                                     <p className="text-xs text-gray-500 uppercase">{item.mediaItem.type}</p>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-gray-400" />
-                                    <Clock className="h-4 w-4 text-gray-400" />
-                                    <span className="text-sm text-gray-600 font-mono">{item.mediaItem.duration || item.duration}s</span>
+                                <div className="flex items-center gap-2 w-24">
+                                    <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    {item.mediaItem.type === 'video' ? (
+                                        <span className="text-sm text-gray-500 font-mono" title="Video duration (fixed)">
+                                            {item.mediaItem.duration}s
+                                        </span>
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={item.duration}
+                                            onChange={(e) => handleDurationChange(index, parseInt(e.target.value) || 10)}
+                                            className="w-16 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-1">
