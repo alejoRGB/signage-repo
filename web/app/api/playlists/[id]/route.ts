@@ -92,6 +92,7 @@ export async function PUT(
                     playlistId: playlistId,
                     mediaItemId: item.mediaItemId,
                     order: index,
+                    duration: item.duration || 10,
                 }));
 
                 if (createData.length > 0) {

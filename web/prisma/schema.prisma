@@ -147,4 +147,6 @@ model PlaylistItem {
 
   mediaItemId String
   mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+  
+  duration    Int       @default(10) // Contextual duration (overrides MediaItem.duration for Images/Web)
 }

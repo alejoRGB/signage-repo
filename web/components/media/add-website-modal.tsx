@@ -32,14 +32,10 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
             return;
         }
 
-        if (duration < 5) {
-            setError("Duration must be at least 5 seconds");
-            return;
-        }
-
         try {
             setLoading(true);
-            await onAdd({ name, url, duration, cacheForOffline });
+            // Default duration 10s (user configures in playlist)
+            await onAdd({ name, url, duration: 10, cacheForOffline });
             onClose();
             // Reset form
             setName("");
@@ -92,16 +88,7 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Duration (seconds)</label>
-                            <input
-                                type="number"
-                                min="5"
-                                value={duration}
-                                onChange={(e) => setDuration(parseInt(e.target.value))}
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                            />
-                        </div>
+
 
                         <div className="flex items-center gap-2">
                             <input
