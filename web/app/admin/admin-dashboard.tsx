@@ -3,15 +3,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
     Users,
     Monitor,
     HardDrive,
-    StopCircle,
-    CheckCircle,
-    AlertCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
+import AddUserModal from "@/components/admin/add-user-modal";
 
 type UserStats = {
     id: string;
@@ -116,8 +115,9 @@ export default function AdminDashboard({ users }: { users: UserStats[] }) {
 
             {/* Users Table */}
             <div className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-200">
+                <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">User Management</h3>
+                    <AddUserModal />
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -141,7 +141,9 @@ export default function AdminDashboard({ users }: { users: UserStats[] }) {
                                                 </div>
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900">{user.name || "No Name"}</div>
+                                                <Link href={`/admin/users/${user.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:underline">
+                                                    {user.name || "No Name"}
+                                                </Link>
                                                 <div className="text-sm text-gray-500">{user.email}</div>
                                                 <div className="text-xs text-gray-400">Joined {new Date(user.createdAt).toLocaleDateString()}</div>
                                             </div>

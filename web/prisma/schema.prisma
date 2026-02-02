@@ -150,3 +150,12 @@ model PlaylistItem {
   
   duration    Int       @default(10) // Contextual duration (overrides MediaItem.duration for Images/Web)
 }
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
