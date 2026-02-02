@@ -72,7 +72,8 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     fps: null,
                     size: 0,
                     duration: data.duration,
-                    cacheForOffline: data.cacheForOffline
+                    cacheForOffline: data.cacheForOffline,
+                    orientation: data.orientation
                 }),
             });
 
