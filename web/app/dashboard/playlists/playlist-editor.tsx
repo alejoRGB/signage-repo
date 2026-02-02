@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, ArrowUp, ArrowDown, Plus, Clock, Globe } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
+import DurationInput, { formatTime } from "@/components/ui/duration-input";
 
 type MediaItem = {
     id: string;
@@ -26,6 +27,8 @@ type Playlist = {
     name: string;
     items: PlaylistItem[];
 };
+
+
 
 export default function PlaylistEditor({
     playlist,
@@ -131,6 +134,15 @@ export default function PlaylistEditor({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-100">
+                    {/* Header Row */}
+                    <div className="flex items-center gap-4 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <span className="w-6 text-center">#</span>
+                        <span className="w-16">Media</span>
+                        <span className="flex-1">Nombre</span>
+                        <span className="w-24 text-center">Duración</span>
+                        <span className="w-20 text-center">Acciones</span>
+                    </div>
+
                     {items.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <p>Playlist is empty</p>
@@ -158,27 +170,20 @@ export default function PlaylistEditor({
                                     <p className="text-xs text-gray-500 uppercase">{item.mediaItem.type}</p>
                                 </div>
 
-                                <div className="flex items-center gap-2 w-24">
-                                    <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                <div className="flex items-center justify-center w-24">
                                     {item.mediaItem.type === 'video' ? (
                                         <span className="text-sm text-gray-500 font-mono" title="Video duration (fixed)">
-                                            {item.mediaItem.duration}s
+                                            {formatTime(item.mediaItem.duration)}
                                         </span>
                                     ) : (
-                                        <div className="flex items-center gap-1">
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={item.duration}
-                                                onChange={(e) => handleDurationChange(index, parseInt(e.target.value) || 10)}
-                                                className="w-16 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-right"
-                                            />
-                                            <span className="text-xs text-gray-500">seg</span>
-                                        </div>
+                                        <DurationInput
+                                            value={item.duration}
+                                            onChange={(val) => handleDurationChange(index, val)}
+                                        />
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 w-20 justify-end">
                                     <button onClick={() => handleMove(index, 'up')} className="p-1 hover:bg-gray-100 rounded text-gray-500" disabled={index === 0}>
                                         <ArrowUp className="h-4 w-4" />
                                     </button>
