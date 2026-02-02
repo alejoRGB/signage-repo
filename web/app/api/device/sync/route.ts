@@ -107,8 +107,10 @@ export async function POST(request: Request) {
                         ? item.mediaItem.url
                         : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
                     order: item.order,
+                    order: item.order,
                     duration: item.mediaItem.type === 'video' ? (item.mediaItem.duration || 0) : (item.duration || 10),
-                    orientation: item.mediaItem.orientation || 'landscape', // Propagate orientation
+                    orientation: item.mediaItem.orientation || 'landscape',
+                    name: item.mediaItem.name, // Added for debugging
                 })),
             };
         };
