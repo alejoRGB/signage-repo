@@ -3,11 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
-
-const resetPasswordSchema = z.object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
-});
+import { ResetPasswordSchema } from "@/lib/validations";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -19,7 +15,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         const { id } = await params;
         const body = await request.json();
-        const validation = resetPasswordSchema.safeParse(body);
+        const validation = ResetPasswordSchema.safeParse(body);
 
         if (!validation.success) {
             return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });

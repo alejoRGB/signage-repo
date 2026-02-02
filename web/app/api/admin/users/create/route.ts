@@ -3,13 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
-
-const createUserSchema = z.object({
-    name: z.string().min(1, "Name is required"),
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-});
+import { CreateUserSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
     try {
@@ -20,7 +14,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const validation = createUserSchema.safeParse(body);
+        const validation = CreateUserSchema.safeParse(body);
 
         if (!validation.success) {
             return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });

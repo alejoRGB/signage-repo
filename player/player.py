@@ -14,6 +14,7 @@ from sync import SyncManager
 
 import logging
 from logger_service import LoggerService
+from rotation_utils import ScreenRotator
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +39,7 @@ class Player:
         
         self.media_dir = self.sync_manager.media_dir
         self.playlist_m3u = os.path.join(os.path.dirname(config_path), "playlist.m3u")
+        self.rotator = ScreenRotator()
         self.mpv_process = None
         self.running = True
         
@@ -143,6 +145,10 @@ class Player:
                 duration = media.get('duration', 10) 
                 
                 logging.info(f"[MIXED_PLAYER] Playing item {idx}: {media.get('name')} ({m_type})")
+                
+                # Apply Screen Rotation
+                target_orientation = media.get('orientation', 'landscape')
+                self.rotator.rotate(target_orientation)
                 
                 if m_type == 'web':
                     url = media.get('url')
@@ -302,6 +308,9 @@ class Player:
                      break
         
         finally:
+            # Reset Rotation to Landscape on exit
+            self.rotator.rotate("landscape")
+            
             # Cleanup on exit
             if browser_process:
                 logging.info("[MIXED_PLAYER] Cleaning up browser process...")
