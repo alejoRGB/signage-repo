@@ -54,3 +54,20 @@ export const UpdateDeviceSchema = z.object({
     defaultPlaylistId: z.string().optional().nullable().transform((val) => val ? sanitize(val) : val),
     scheduleId: z.string().optional().nullable().transform((val) => val ? sanitize(val) : val),
 });
+
+// Admin User Schemas
+export const CreateUserSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const ResetPasswordSchema = z.object({
+    password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const UpdateUserSchema = z.object({
+    isActive: z.boolean().optional(),
+    name: z.string().optional(),
+    role: z.enum(["USER", "ADMIN"]).optional(),
+});

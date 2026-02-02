@@ -7,7 +7,7 @@ import { Globe, X } from "lucide-react";
 interface AddWebsiteModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (data: { name: string; url: string; duration: number; cacheForOffline: boolean }) => Promise<void>;
+    onAdd: (data: { name: string; url: string; duration: number; cacheForOffline: boolean; orientation: string }) => Promise<void>;
 }
 
 export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteModalProps) {
@@ -15,8 +15,10 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
     const [url, setUrl] = useState("");
     const [duration, setDuration] = useState(15);
     const [cacheForOffline, setCacheForOffline] = useState(false);
+    const [orientation, setOrientation] = useState("landscape");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,13 +37,14 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
         try {
             setLoading(true);
             // Default duration 10s (user configures in playlist)
-            await onAdd({ name, url, duration: 10, cacheForOffline });
+            await onAdd({ name, url, duration: 10, cacheForOffline, orientation });
             onClose();
             // Reset form
             setName("");
             setUrl("");
             setDuration(15);
             setCacheForOffline(false);
+            setOrientation("landscape");
         } catch (err) {
             setError("Failed to add website");
         } finally {
@@ -89,6 +92,23 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
                         </div>
 
 
+
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Screen Orientation</label>
+                            <select
+                                value={orientation}
+                                onChange={(e) => setOrientation(e.target.value)}
+                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                            >
+                                <option value="landscape">Horizontal (Default)</option>
+                                <option value="portrait">Vertical (90° Left)</option>
+                                <option value="portrait-270">Vertical (270° Right)</option>
+                            </select>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Warning: Screen will temporarily go black when rotating.
+                            </p>
+                        </div>
 
                         <div className="flex items-center gap-2">
                             <input

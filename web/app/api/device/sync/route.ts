@@ -15,8 +15,7 @@ export async function POST(request: Request) {
             );
         }
 
-        console.log("[SYNC API] Looking for device with token:", device_token);
-        console.log("[SYNC API] Force update check - Duration logic active");
+
 
         // Find device by token
         const device = await prisma.device.findUnique({
@@ -63,7 +62,7 @@ export async function POST(request: Request) {
             },
         });
 
-        console.log("[SYNC API] Device found:", device ? `Yes (${device.id})` : "No");
+
 
         if (!device) {
             return NextResponse.json(
