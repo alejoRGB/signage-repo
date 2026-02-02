@@ -57,7 +57,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         });
     };
 
-    const handleAddWebsite = async (data: { name: string; url: string; duration: number; cacheForOffline: boolean }) => {
+    const handleAddWebsite = async (data: { name: string; url: string; duration: number; cacheForOffline: boolean; orientation: string }) => {
         try {
             const res = await fetch("/api/media", {
                 method: "POST",
