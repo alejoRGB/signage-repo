@@ -148,7 +148,21 @@ class Player:
                 
                 # Apply Screen Rotation
                 target_orientation = media.get('orientation', 'landscape')
+                rotation_changed = self.rotator.current_orientation != target_orientation
+                
+                logging.info(f"[MIXED_PLAYER] Rotation Logic -> Target: {target_orientation} | Current: {self.rotator.current_orientation} | Changed: {rotation_changed}")
+                
                 self.rotator.rotate(target_orientation)
+                
+                if rotation_changed and browser_process:
+                    logging.info("[MIXED_PLAYER] Orientation changed. Forcing browser restart.")
+                    try:
+                        browser_process.terminate()
+                        browser_process.wait(timeout=2)
+                    except:
+                        pass
+                    browser_process = None
+                    current_browser_url = None
                 
                 if m_type == 'web':
                     url = media.get('url')
