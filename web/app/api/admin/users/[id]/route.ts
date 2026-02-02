@@ -1,43 +1,41 @@
-
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { z } from "zod";
 
-export async function PUT(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const session = await getServerSession(authOptions);
+const updateUserSchema = z.object({
+    isActive: z.boolean().optional(),
+    name: z.string().optional(),
+    role: z.enum(["USER", "ADMIN"]).optional(),
+});
 
-    // 1. Security Check: Must be ADMIN
-    if (!session || session.user.role !== "ADMIN") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-    const { isActive } = body;
-
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        // 2. Prevent deactivating yourself
-        if (id === session.user.id && isActive === false) {
-            return NextResponse.json(
-                { error: "You cannot deactivate your own admin account." },
-                { status: 400 }
-            );
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user.role !== "ADMIN") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const updatedUser = await prisma.user.update({
+        const { id } = await params;
+        const body = await request.json();
+        const validation = updateUserSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+        }
+
+        const data = validation.data;
+
+        await prisma.user.update({
             where: { id },
-            data: { isActive },
+            data,
         });
 
-        return NextResponse.json(updatedUser);
+        return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json(
-            { error: "Failed to update user." },
-            { status: 500 }
-        );
+        console.error("Error updating user:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
