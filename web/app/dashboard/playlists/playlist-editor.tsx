@@ -165,13 +165,16 @@ export default function PlaylistEditor({
                                             {item.mediaItem.duration}s
                                         </span>
                                     ) : (
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={item.duration}
-                                            onChange={(e) => handleDurationChange(index, parseInt(e.target.value) || 10)}
-                                            className="w-16 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1"
-                                        />
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={item.duration}
+                                                onChange={(e) => handleDurationChange(index, parseInt(e.target.value) || 10)}
+                                                className="w-16 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-right"
+                                            />
+                                            <span className="text-xs text-gray-500">seg</span>
+                                        </div>
                                     )}
                                 </div>
 
