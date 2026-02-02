@@ -9,7 +9,7 @@ const resetPasswordSchema = z.object({
     password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions);
 
@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const validation = resetPasswordSchema.safeParse(body);
 
