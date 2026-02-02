@@ -7,14 +7,14 @@ import Link from "next/link";
 import { ArrowLeft, HardDrive, Image as ImageIcon, Video, Globe, List, Calendar } from "lucide-react";
 import ResetPasswordModal from "@/components/admin/reset-password-modal";
 
-export default async function AdminUserDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "ADMIN") {
         redirect("/admin/login");
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const user = await prisma.user.findUnique({
         where: { id },
