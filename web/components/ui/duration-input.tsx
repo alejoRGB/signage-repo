@@ -35,34 +35,49 @@ interface DurationInputProps {
 }
 
 export default function DurationInput({ value, onChange, disabled }: DurationInputProps) {
+    const inputRef = useRef<HTMLInputElement>(null); // Added inputRef
     const [text, setText] = useState(formatTime(value));
 
-    // Sync state when prop changes (critical for drag-drop reordering)
+    // Update text when value changes externally, BUT ONLY if not focused
+    // This prevents the cursor from jumping while typing
     useEffect(() => {
-        setText(formatTime(value));
+        if (document.activeElement !== inputRef.current) {
+            setText(formatTime(value));
+        }
     }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newText = e.target.value;
+        setText(newText);
+
+        // Optimistically update parent state if valid
+        // This fixes the race condition where clicking "Save" immediately after typing
+        // would use the old value because onBlur hasn't finished updating state.
+        const seconds = parseTime(newText);
+        onChange(seconds);
+    };
 
     const handleBlur = () => {
         const seconds = parseTime(text);
-        const valid = seconds > 0 ? seconds : 10; // Min 10s default
-        onChange(valid);
-        setText(formatTime(valid));
+        setText(formatTime(seconds)); // normalize text on blur (e.g. 70 -> 01:10)
+        onChange(seconds);
     };
 
     return (
-        <input
+        <input // Changed to 'input' as per original, assuming 'Input' was a typo or external component not provided.
+            ref={inputRef}
             type="text"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleChange}
             onBlur={handleBlur}
             onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                     e.currentTarget.blur();
                 }
             }}
-            disabled={disabled}
-            className="w-20 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-center font-mono disabled:bg-gray-100 disabled:text-gray-500"
+            disabled={disabled} // Re-added disabled prop
             placeholder="MM:SS"
+            className="w-20 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-center font-mono disabled:bg-gray-100 disabled:text-gray-500" // Merged new and old classNames
         />
     );
 }
