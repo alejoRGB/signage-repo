@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // Helper: 70 -> "01:10"
 export const formatTime = (seconds: number): string => {
