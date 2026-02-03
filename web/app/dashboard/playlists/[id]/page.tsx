@@ -70,7 +70,7 @@ export default async function EditPlaylistPage({ params }: Params) {
                     ...playlist,
                     items: playlist.items.map(item => ({
                         ...item,
-                        duration: item.mediaItem.duration || 10
+                        duration: item.duration || item.mediaItem.duration || 10
                     }))
                 }}
                 library={library}
