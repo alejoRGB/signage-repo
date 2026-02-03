@@ -144,7 +144,7 @@ export default function DeviceManager({
                 showToast={showToast}
             />
 
-// Removed ManualAddDeviceForm usage per user request
+            {/* Removed ManualAddDeviceForm usage per user request */}
 
             <EditDeviceModal
                 isOpen={!!deviceToEdit}
