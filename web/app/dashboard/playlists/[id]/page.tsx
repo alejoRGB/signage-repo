@@ -68,6 +68,7 @@ export default async function EditPlaylistPage({ params }: Params) {
             <PlaylistEditor
                 playlist={{
                     ...playlist,
+                    type: playlist.type as "media" | "web",
                     items: playlist.items.map(item => ({
                         ...item,
                         duration: item.duration || item.mediaItem.duration || 10
