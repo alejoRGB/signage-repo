@@ -97,20 +97,42 @@ class ScreenRotator:
         }
         val = transform_map.get(orientation, "normal")
         
+        # Prepare Environment for Wayland interaction
+        # Systemd services often lack these variables
+        env = os.environ.copy()
+        
+        # 1. Fix XDG_RUNTIME_DIR
+        if "XDG_RUNTIME_DIR" not in env:
+            uid = os.getuid()
+            candidate = f"/run/user/{uid}"
+            if os.path.exists(candidate):
+                env["XDG_RUNTIME_DIR"] = candidate
+                logging.info(f"[ROTATOR] Auto-set XDG_RUNTIME_DIR to {candidate}")
+            else:
+                logging.warning(f"[ROTATOR] Could not find XDG runtime dir at {candidate}")
+
+        # 2. Fix WAYLAND_DISPLAY
+        if "WAYLAND_DISPLAY" not in env:
+            # Try to guess. wayland-1 is standard for Wayfire on Pi
+            env["WAYLAND_DISPLAY"] = "wayland-1" 
+            logging.info(f"[ROTATOR] Auto-set WAYLAND_DISPLAY to wayland-1")
+
         # Simple implementation: Try predefined list or "wlr-randr" listing if needed.
-        # For now, let's try to run wlr-randr without arguments to see logs if we can capture it,
-        # but to keep it simple, we'll try common names.
-        # TODO: Implement wlr-randr parsing if this fails.
         outputs = ["HDMI-A-1", "HDMI-1", "HDMI-A-2", "HDMI-2"]
         
         success_any = False
         for out in outputs:
             cmd = ["wlr-randr", "--output", out, "--transform", val]
             logging.info(f"[ROTATOR] Running: {' '.join(cmd)}")
-            res = subprocess.run(cmd, capture_output=True, text=True)
+            
+            # Pass the modified environment
+            res = subprocess.run(cmd, capture_output=True, text=True, env=env)
+            
             if res.returncode == 0:
                 success_any = True
             else:
+                # Log only if it's not the "output not found" error to reduce noise, 
+                # but for debugging let's log everything.
                 logging.warning(f"[ROTATOR] Output {out} failed: {res.stderr.strip()}")
         
         return success_any
