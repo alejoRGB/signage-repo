@@ -40,7 +40,7 @@ export default async function PlaylistsPage() {
                 </p>
             </div>
 
-            <PlaylistList initialPlaylists={playlists} />
+            <PlaylistList initialPlaylists={playlists.map(p => ({ ...p, type: p.type as "media" | "web" }))} />
         </div>
     );
 }
