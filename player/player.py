@@ -46,6 +46,23 @@ class Player:
         # Ensure DISPLAY is set
         if "DISPLAY" not in os.environ:
             os.environ["DISPLAY"] = ":0"
+            
+        self.start_unclutter()
+
+    def start_unclutter(self):
+        """Start unclutter to hide mouse cursor"""
+        import shutil
+        if shutil.which("unclutter"):
+            try:
+                # Kill existing to avoid duplicates
+                subprocess.run(["pkill", "unclutter"], check=False)
+                # Start new instance, idle 0.1s, root window (all screens)
+                subprocess.Popen(["unclutter", "-idle", "0.1", "-root"])
+                logging.info("[PLAYER] unclutter started (Mouse hidden)")
+            except Exception as e:
+                logging.error(f"[PLAYER] Failed to start unclutter: {e}")
+        else:
+            logging.warning("[PLAYER] unclutter not found. Mouse will be visible.")
 
     def generate_m3u(self, playlist: Dict) -> bool:
         """Generate M3U playlist file for MPV"""
