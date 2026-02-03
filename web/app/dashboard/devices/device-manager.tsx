@@ -133,12 +133,7 @@ export default function DeviceManager({
                     >
                         <span>🔗</span> Pair Device
                     </button>
-                    <button
-                        onClick={() => setShowAddForm(!showAddForm)}
-                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                    >
-                        Manual Add
-                    </button>
+                    {/* Manual Add button removed */}
                 </div>
             </div>
 
@@ -149,11 +144,7 @@ export default function DeviceManager({
                 showToast={showToast}
             />
 
-            <ManualAddDeviceForm
-                isOpen={showAddForm}
-                onClose={() => setShowAddForm(false)}
-                showToast={showToast}
-            />
+// Removed ManualAddDeviceForm usage per user request
 
             <EditDeviceModal
                 isOpen={!!deviceToEdit}
