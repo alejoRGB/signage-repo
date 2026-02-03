@@ -82,6 +82,12 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
         async session({ session, token }) {
+            // Check for explicit expiry error from JWT callback
+            if (token.error === "AdminSessionExpired") {
+                // Return an empty/invalid session to force sign-out
+                return {} as any;
+            }
+
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as "USER" | "ADMIN";
@@ -94,7 +100,20 @@ export const authOptions: NextAuthOptions = {
                 token.id = user.id;
                 token.role = user.role;
                 token.isActive = user.isActive;
+                token.loginTimestamp = Date.now(); // Record login time
             }
+
+            // Enforce 1-hour session for Admins
+            if (token.role === 'ADMIN') {
+                const maxAge = 60 * 60 * 1000; // 1 hour in ms
+                const now = Date.now();
+                const loginTime = (token.loginTimestamp as number) || 0;
+
+                if (now - loginTime > maxAge) {
+                    return { ...token, error: "AdminSessionExpired" };
+                }
+            }
+
             return token;
         },
     },
