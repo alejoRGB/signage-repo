@@ -42,12 +42,61 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     resolve({ width: img.naturalWidth, height: img.naturalHeight, duration: 10 }); // Default 10s for images
                     URL.revokeObjectURL(url);
                 };
+                img.onerror = () => {
+                    resolve({ width: 0, height: 0, duration: 10 });
+                    URL.revokeObjectURL(url);
+                };
                 img.src = url;
             } else if (file.type.startsWith("video")) {
                 const video = document.createElement("video");
                 video.preload = "metadata";
+
+                const onLoaded = () => {
+                    let duration = video.duration;
+                    // Hack: invalid duration often comes as Infinity or NaN for Blobs
+                    if (!Number.isFinite(duration)) duration = 0;
+
+                    // If 0, try a hack: seek to end? No, that's heavy.
+                    // Just resolve what we have, but if it's 0, we might want to try harder?
+                    // Let's resolve. The user said "always detected", so if it's 0, it's a failure.
+                    // But usually this works if we just wait properly for 'loadedmetadata'.
+
+                    resolve({
+                        width: video.videoWidth,
+                        height: video.videoHeight,
+                        fps: 30,
+                        duration: Math.ceil(duration) || 0 // Use ceil to avoid 0.99s becoming 0s
+                    });
+                    URL.revokeObjectURL(url);
+                };
+
                 video.onloadedmetadata = () => {
-                    resolve({ width: video.videoWidth, height: video.videoHeight, fps: 30, duration: Math.floor(video.duration) });
+                    if (video.duration === Infinity) {
+                        // Fix for Chrome bug with Blobs: set currentTime to trigger duration calc
+                        video.currentTime = 1e101;
+                        video.ontimeupdate = () => {
+                            video.currentTime = 0;
+                            video.ontimeupdate = null;
+                            // The duration should be fixed now
+                            // We call onLoaded manually or wait? 
+                            // simpler: just re-read duration in a small timeout or directly
+                            let d = video.duration;
+                            if (d === Infinity) d = 0;
+                            resolve({
+                                width: video.videoWidth,
+                                height: video.videoHeight,
+                                fps: 30,
+                                duration: Math.ceil(d)
+                            });
+                            URL.revokeObjectURL(url);
+                        };
+                    } else {
+                        onLoaded();
+                    }
+                };
+
+                video.onerror = () => {
+                    resolve({ width: 0, height: 0, duration: 0 });
                     URL.revokeObjectURL(url);
                 };
                 video.src = url;
