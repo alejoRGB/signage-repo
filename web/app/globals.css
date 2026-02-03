@@ -22,32 +22,58 @@
 }
 
 :root {
-  /* Marketing Site Theme */
-  --background: #020617; /* Slate 950 */
-  --foreground: #f8fafc; /* Slate 50 */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  /* Slate 900 */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0f172a;
+  --radius: 0.5rem;
+}
 
-  /* Primary (Indigo 500) & Brand */
+.marketing-theme {
+  /* Marketing Site Theme */
+  --background: #020617;
+  /* Slate 950 */
+  --foreground: #f8fafc;
+  /* Slate 50 */
   --primary: #6366f1;
   --primary-foreground: #ffffff;
-
-  /* Secondary / Glow (Cyan 500) */
   --secondary: #06b6d4;
   --secondary-foreground: #ffffff;
-
-  /* Muted / Glass */
   --muted: rgba(255, 255, 255, 0.05);
-  --muted-foreground: #94a3b8; /* Slate 400 */
-
-  /* Card / Surfaces */
-  --card: rgba(15, 23, 42, 0.6); /* Slate 900 + opacity */
+  --muted-foreground: #94a3b8;
+  /* Slate 400 */
+  --card: rgba(15, 23, 42, 0.6);
+  /* Slate 900 + opacity */
   --card-foreground: #f8fafc;
-
-  /* Borders */
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.08);
   --ring: #6366f1;
-
   --radius: 0.75rem;
+
+  background-color: var(--background);
+  color: var(--foreground);
+
+  /* Cinematic Background Mesh */
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08), transparent 25%);
+  background-attachment: fixed;
 }
 
 body {
@@ -56,12 +82,6 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Cinematic Background Mesh */
-  background-image:
-    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08), transparent 25%);
-  background-attachment: fixed;
 }
 
 /* Glass Utility Helpers */
