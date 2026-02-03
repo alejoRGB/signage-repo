@@ -1,6 +1,7 @@
 import os
 import subprocess
 import logging
+import re
 
 class ScreenRotator:
     def __init__(self):
@@ -8,73 +9,131 @@ class ScreenRotator:
         self.method = self._detect_method()
         
     def _detect_method(self):
-        """Detect if we are on Wayland (Pi 5) or X11"""
-        # Simple check: Wayfire is the default compositor on Pi OS Bookworm (Wayland)
-        # But we can also check XDG_SESSION_TYPE
+        """Detect if we are on Wayland (Pi 5 / Bookworm) or X11"""
+        # 1. Check Env Vars
         session_type = os.environ.get("XDG_SESSION_TYPE", "").lower()
-        if "wayland" in session_type:
+        wayland_display = os.environ.get("WAYLAND_DISPLAY", "")
+        
+        if "wayland" in session_type or wayland_display:
+            logging.info("[ROTATOR] Detected Wayland environment variable.")
             return "wayland"
+            
+        # 2. Check for Wayfire process
+        try:
+            res = subprocess.run(["pgrep", "-x", "wayfire"], capture_output=True)
+            if res.returncode == 0:
+                logging.info("[ROTATOR] Detected Wayfire process. Assuming Wayland.")
+                return "wayland"
+        except:
+            pass
+            
+        logging.info("[ROTATOR] Defaulting to X11.")
         return "x11"
 
     def rotate(self, orientation):
         """
         Rotate screen to 'landscape', 'portrait' (left), or 'portrait-270' (right).
-        orientation: str from DB
         """
         if orientation == self.current_orientation:
             return
             
         logging.info(f"[ROTATOR] Changing orientation: {self.current_orientation} -> {orientation}")
         
+        success = False
         try:
+            # Primary Method
             if self.method == "wayland":
-                self._rotate_wayland(orientation)
+                success = self._rotate_wayland(orientation)
             else:
-                self._rotate_x11(orientation)
+                success = self._rotate_x11(orientation)
                 
-            self.current_orientation = orientation
+            # Fallback for X11 BadMatch (which often means It's actually XWayland)
+            if not success and self.method == "x11":
+                logging.warning("[ROTATOR] X11 method failed. Trying Wayland method as fallback...")
+                success = self._rotate_wayland(orientation)
+                if success:
+                    logging.info("[ROTATOR] Fallback to Wayland (wlr-randr) SUCCESSFUL!")
+                    self.method = "wayland" # Remember this for next time
+
+            if success:
+                self.current_orientation = orientation
+            else:
+                logging.error("[ROTATOR] Rotation command reported failure.")
+                
         except Exception as e:
-            logging.error(f"[ROTATOR] Rotation failed: {e}")
+            logging.error(f"[ROTATOR] Rotation logic crash: {e}")
+
+    def _get_connected_outputs_x11(self):
+        """Parse xrandr to find connected outputs"""
+        outputs = []
+        try:
+            # Run xrandr
+            res = subprocess.run(["xrandr"], capture_output=True, text=True)
+            if res.returncode != 0:
+                logging.error(f"[ROTATOR] xrandr failed: {res.stderr}")
+                return ["HDMI-1", "HDMI-0", "default"] # Fallback
+
+            # Look for lines like "HDMI-1 connected..."
+            for line in res.stdout.splitlines():
+                if " connected" in line:
+                    parts = line.split(" ")
+                    outputs.append(parts[0])
+            
+            if not outputs:
+                logging.warning("[ROTATOR] No connected outputs found via xrandr. Using fallback.")
+                return ["HDMI-1", "HDMI-0"]
+                
+            logging.info(f"[ROTATOR] Detected X11 Outputs: {outputs}")
+            return outputs
+        except Exception as e:
+            logging.error(f"[ROTATOR] Error detecting X11 outputs: {e}")
+            return ["HDMI-1", "HDMI-0"]
 
     def _rotate_wayland(self, orientation):
-        # Using wlr-randr
-        # HDMI-A-1 or HDMI-A-2 usually. We might need to detect outputs, but let's assume primary.
-        # transform: normal, 90, 180, 270, etc.
-        
         transform_map = {
             "landscape": "normal",
-            "portrait": "90",      # 90 deg counter-clockwise usually? or clockwise?
-                                   # wlr-randr "90" is usually 90 degrees counter-clockwise (Left)
-            "portrait-270": "270"  # Right
+            "portrait": "90",
+            "portrait-270": "270" 
         }
-        
         val = transform_map.get(orientation, "normal")
         
-        # We need to find the output name first? 
-        # For simplicity, we can try to rotate *all* connected outputs or just guess HDMI-A-1
-        # Better: run wlr-randr without args to find output name? 
-        # Let's try a generic command targeting the active output if possible, 
-        # or iterate common names.
+        # Simple implementation: Try predefined list or "wlr-randr" listing if needed.
+        # For now, let's try to run wlr-randr without arguments to see logs if we can capture it,
+        # but to keep it simple, we'll try common names.
+        # TODO: Implement wlr-randr parsing if this fails.
+        outputs = ["HDMI-A-1", "HDMI-1", "HDMI-A-2", "HDMI-2"]
         
-        outputs = ["HDMI-A-1", "HDMI-1"]
+        success_any = False
         for out in outputs:
             cmd = ["wlr-randr", "--output", out, "--transform", val]
-            subprocess.run(cmd, check=False)
-
+            logging.info(f"[ROTATOR] Running: {' '.join(cmd)}")
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            if res.returncode == 0:
+                success_any = True
+            else:
+                logging.warning(f"[ROTATOR] Output {out} failed: {res.stderr.strip()}")
+        
+        return success_any
 
     def _rotate_x11(self, orientation):
-        # Using xrandr
-        # rotate: normal, left, right, inverted
-        
         rotate_map = {
             "landscape": "normal",
             "portrait": "left",
             "portrait-270": "right"
         }
-        
         val = rotate_map.get(orientation, "normal")
         
-        outputs = ["HDMI-1", "HDMI-0", "default"]
+        outputs = self._get_connected_outputs_x11()
+        
+        success_any = False
         for out in outputs:
-             cmd = ["xrandr", "--output", out, "--rotate", val]
-             subprocess.run(cmd, check=False)
+            cmd = ["xrandr", "--output", out, "--rotate", val]
+            logging.info(f"[ROTATOR] Running: {' '.join(cmd)}")
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if res.returncode == 0:
+                success_any = True
+            else:
+                logging.error(f"[ROTATOR] Output {out} failed: {res.stderr.strip()}")
+                
+        return success_any
