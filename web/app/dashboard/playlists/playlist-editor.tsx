@@ -25,10 +25,10 @@ type PlaylistItem = {
 type Playlist = {
     id: string;
     name: string;
+    type: "media" | "web";
+    orientation?: string;
     items: PlaylistItem[];
 };
-
-
 
 export default function PlaylistEditor({
     playlist,
@@ -43,6 +43,14 @@ export default function PlaylistEditor({
     const [name, setName] = useState(playlist.name);
     const [saving, setSaving] = useState(false);
 
+    // Filter library based on playlist type
+    const filteredLibrary = library.filter((item) => {
+        if (playlist.type === "web") {
+            return item.type === "web";
+        } else {
+            return item.type !== "web";
+        }
+    });
 
     const handleAddItem = (media: MediaItem) => {
         const newItem: PlaylistItem = {
@@ -77,8 +85,9 @@ export default function PlaylistEditor({
     };
 
     const handleDurationChange = (index: number, duration: number) => {
-        const newItems = [...items];
-        newItems[index].duration = duration;
+        const newItems = items.map((item, i) =>
+            i === index ? { ...item, duration } : item
+        );
         setItems(newItems);
     };
 
@@ -97,13 +106,16 @@ export default function PlaylistEditor({
                 }),
             });
 
-            if (!res.ok) throw new Error("Failed to save");
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to save");
+            }
 
             router.refresh();
             showToast("Playlist saved successfully!", "success");
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            showToast("Error saving playlist", "error");
+            showToast(error.message, "error");
         } finally {
             setSaving(false);
         }
@@ -113,24 +125,35 @@ export default function PlaylistEditor({
         <div className="h-[calc(100vh-12rem)] flex flex-col sm:flex-row gap-6">
             {/* Left: Editor */}
             <div className="flex-1 flex flex-col bg-white shadow rounded-lg overflow-hidden">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="text-lg font-medium text-gray-900 bg-transparent border-b border-gray-300 focus:border-indigo-500 focus:outline-none w-1/2"
-                    />
-                    <div className="text-sm text-gray-500">
-                        {items.length} items • {items.reduce((acc, i) => acc + i.duration, 0)}s total
+                <div className="p-4 border-b border-gray-200 flex flex-col gap-2 bg-gray-50">
+                    <div className="flex justify-between items-center">
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="text-lg font-medium text-gray-900 bg-transparent border-b border-gray-300 focus:border-indigo-500 focus:outline-none w-1/2"
+                        />
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            <Save className="h-4 w-4 mr-2" />
+                            {saving ? "Saving..." : "Save"}
+                        </button>
                     </div>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? "Saving..." : "Save"}
-                    </button>
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span className="capitalize px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs font-semibold">
+                            {playlist.type}
+                        </span>
+                        {playlist.type === 'web' && (
+                            <span className="capitalize px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                                {playlist.orientation?.replace('-', ' ')}
+                            </span>
+                        )}
+                        <span>{items.length} items</span>
+                        <span>{items.reduce((acc, i) => acc + i.duration, 0)}s total</span>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-100">
@@ -207,9 +230,12 @@ export default function PlaylistEditor({
             <div className="w-full sm:w-1/3 flex flex-col bg-white shadow rounded-lg overflow-hidden border border-gray-200">
                 <div className="p-4 border-b border-gray-200 bg-gray-50">
                     <h3 className="font-medium text-gray-900">Media Library</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Showing {playlist.type === 'web' ? 'Web Pages' : 'Images & Videos'}
+                    </p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {library.map((media) => (
+                    {filteredLibrary.map((media) => (
                         <div key={media.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded border border-transparent hover:border-gray-200 group cursor-pointer" onClick={() => handleAddItem(media)}>
                             <div className="h-10 w-14 bg-gray-200 rounded overflow-hidden flex-shrink-0">
                                 {media.type === 'video' ? (
@@ -230,8 +256,10 @@ export default function PlaylistEditor({
                             </button>
                         </div>
                     ))}
-                    {library.length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-4">No media available.</p>
+                    {filteredLibrary.length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-4">
+                            No {playlist.type === 'web' ? 'web pages' : 'media'} available.
+                        </p>
                     )}
                 </div>
             </div>

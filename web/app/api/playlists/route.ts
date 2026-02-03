@@ -43,12 +43,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
         }
 
-        const { name } = result.data;
+        const { name, type, orientation } = result.data;
 
         const playlist = await prisma.playlist.create({
             data: {
                 userId: session.user.id,
                 name: name,
+                type: type,
+                orientation: orientation,
             },
         });
 

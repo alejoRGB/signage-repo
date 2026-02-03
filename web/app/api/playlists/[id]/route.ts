@@ -52,7 +52,7 @@ export async function PUT(
     try {
         const { id } = await context.params;
         const json = await request.json();
-        const { name, items } = json;
+        const { name, items, orientation } = json;
 
         // DEBUG LOGGING
         const fs = require('fs');
@@ -61,7 +61,7 @@ export async function PUT(
 
         const playlistId = id;
 
-        // Verify ownership
+        // Verify ownership and get current type
         const existing = await prisma.playlist.findUnique({
             where: { id: playlistId, userId: session.user.id },
         });
@@ -70,13 +70,44 @@ export async function PUT(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
+        // VALIDATION: Check content compatibility
+        if (items && Array.isArray(items) && items.length > 0) {
+            const mediaItemIds = items.map((i: any) => i.mediaItemId);
+            const mediaItems = await prisma.mediaItem.findMany({
+                where: { id: { in: mediaItemIds } },
+                select: { id: true, type: true }
+            });
+
+            const mediaMap = new Map(mediaItems.map(m => [m.id, m.type]));
+
+            for (const item of items) {
+                const type = mediaMap.get(item.mediaItemId);
+                if (!type) continue;
+
+                if (existing.type === 'web' && type !== 'web') {
+                    return NextResponse.json({ error: "Cannot add non-web items to a Web Playlist" }, { status: 400 });
+                }
+                if (existing.type === 'media' && type === 'web') {
+                    return NextResponse.json({ error: "Cannot add web items to a Media Playlist" }, { status: 400 });
+                }
+            }
+        }
+
         // Transaction to update
         await prisma.$transaction(async (tx: any) => {
             // 1. Update details
-            if (name) {
+            const updateData: any = {};
+            if (name) updateData.name = name;
+
+            // Allow updating orientation only for web playlists
+            if (existing.type === 'web' && orientation) {
+                updateData.orientation = orientation;
+            }
+
+            if (Object.keys(updateData).length > 0) {
                 await tx.playlist.update({
                     where: { id: playlistId },
-                    data: { name },
+                    data: updateData,
                 });
             }
 

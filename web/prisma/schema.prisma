@@ -112,7 +112,7 @@ model MediaItem {
   fps       Float?
   size      Int      @default(0) // Size in bytes
   cacheForOffline Boolean @default(false)
-  orientation String @default("landscape") // landscape, portrait
+  // orientation removed (moved to Playlist)
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])
@@ -126,6 +126,8 @@ model MediaItem {
 model Playlist {
   id        String   @id @default(cuid())
   name      String
+  type      String   @default("media") // media, web
+  orientation String @default("landscape") // landscape, portrait, portrait-270 (Only for type=web)
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])

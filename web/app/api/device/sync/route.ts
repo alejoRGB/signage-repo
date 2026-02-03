@@ -99,6 +99,7 @@ export async function POST(request: Request) {
             return {
                 id: playlist.id,
                 name: playlist.name,
+                orientation: playlist.orientation, // Include top-level orientation
                 items: playlist.items.map((item: any) => ({
                     id: item.id,
                     type: item.mediaItem.type,
@@ -108,8 +109,9 @@ export async function POST(request: Request) {
                         : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
                     order: item.order,
                     duration: item.mediaItem.type === 'video' ? (item.mediaItem.duration || 0) : (item.duration || 10),
-                    orientation: item.mediaItem.orientation || 'landscape',
-                    name: item.mediaItem.name, // Added for debugging
+                    // Use playlist orientation for web items; others default to landscape
+                    orientation: playlist.type === 'web' ? (playlist.orientation || 'landscape') : 'landscape',
+                    name: item.mediaItem.name,
                 })),
             };
         };
