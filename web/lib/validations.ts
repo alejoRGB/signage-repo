@@ -26,6 +26,8 @@ export const PlaylistItemSchema = z.object({
 
 export const CreatePlaylistSchema = z.object({
     name: z.string().min(1, "Playlist name is required").max(100, "Name is too long").transform(sanitize),
+    type: z.enum(["media", "web"]).optional().default("media"),
+    orientation: z.enum(["landscape", "portrait", "portrait-270"]).optional().default("landscape"),
     items: z.array(PlaylistItemSchema).optional(),
 });
 
