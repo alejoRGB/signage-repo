@@ -111,31 +111,54 @@ class ScreenRotator:
             else:
                 logging.warning(f"[ROTATOR] Could not find XDG runtime dir at {candidate}")
 
-        # 2. Fix WAYLAND_DISPLAY
-        if "WAYLAND_DISPLAY" not in env:
-            # Try to guess. wayland-1 is standard for Wayfire on Pi
-            env["WAYLAND_DISPLAY"] = "wayland-1" 
-            logging.info(f"[ROTATOR] Auto-set WAYLAND_DISPLAY to wayland-1")
+        # 2. Fix WAYLAND_DISPLAY (Brute-force)
+        # We don't know if it's wayland-0, wayland-1, etc.
+        # We will try a few likely candidates if not set.
+        candidate_sockets = ["wayland-1", "wayland-0", "wayland-2"]
+        if "WAYLAND_DISPLAY" in env:
+            candidate_sockets = [env["WAYLAND_DISPLAY"]] + candidate_sockets
 
         # Simple implementation: Try predefined list or "wlr-randr" listing if needed.
         outputs = ["HDMI-A-1", "HDMI-1", "HDMI-A-2", "HDMI-2"]
         
-        success_any = False
-        for out in outputs:
-            cmd = ["wlr-randr", "--output", out, "--transform", val]
-            logging.info(f"[ROTATOR] Running: {' '.join(cmd)}")
-            
-            # Pass the modified environment
-            res = subprocess.run(cmd, capture_output=True, text=True, env=env)
-            
-            if res.returncode == 0:
-                success_any = True
-            else:
-                # Log only if it's not the "output not found" error to reduce noise, 
-                # but for debugging let's log everything.
-                logging.warning(f"[ROTATOR] Output {out} failed: {res.stderr.strip()}")
+        transform_cmd_args = ["wlr-randr", "--transform", val]
+        # We need to target specific outputs, but wlr-randr might fail if we target a non-existent one.
+        # Safer strategy: List outputs first? No, let's just try to rotate known outputs on valid sockets.
         
-        return success_any
+        success_final = False
+        
+        for socket in candidate_sockets:
+            env["WAYLAND_DISPLAY"] = socket
+            
+            # Check if this socket allows connection by running a harmless command
+            check = subprocess.run(["wlr-randr", "--help"], capture_output=True, env=env)
+            # wait, help doesn't connect. We need to List.
+            check = subprocess.run(["wlr-randr"], capture_output=True, text=True, env=env)
+            
+            if check.returncode != 0 and "failed to connect" in check.stderr:
+                logging.debug(f"[ROTATOR] Socket {socket} failed to connect.")
+                continue
+                
+            logging.info(f"[ROTATOR] Connected to Wayland via {socket}!")
+            
+            # Now try to rotate all potential outputs on this valid socket
+            socket_success = False
+            for out in outputs:
+                cmd = ["wlr-randr", "--output", out, "--transform", val]
+                logging.info(f"[ROTATOR] Running on {socket}: {' '.join(cmd)}")
+                res = subprocess.run(cmd, capture_output=True, text=True, env=env)
+                
+                if res.returncode == 0:
+                    logging.info(f"[ROTATOR] Success rotating {out} on {socket}")
+                    socket_success = True
+                else:
+                    logging.warning(f"[ROTATOR] Failed {out} on {socket}: {res.stderr.strip()}")
+            
+            if socket_success:
+                success_final = True
+                break # We found the right socket and applied rotation
+                
+        return success_final
 
     def _rotate_x11(self, orientation):
         rotate_map = {
