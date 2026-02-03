@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "./providers";
 import { ToastProvider } from "@/components/ui/toast-context";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Cloud Signage",
@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
           <ToastProvider>
             {children}
