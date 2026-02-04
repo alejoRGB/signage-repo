@@ -13,6 +13,11 @@ export const authOptions: NextAuthOptions = {
                 loginType: { label: "Login Type", type: "text" },
             },
             async authorize(credentials) {
+                console.log("Authorize called with:", {
+                    username: credentials?.username,
+                    loginType: credentials?.loginType
+                });
+
                 if (!credentials?.username || !credentials?.password) {
                     return null;
                 }
