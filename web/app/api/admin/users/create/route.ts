@@ -42,6 +42,7 @@ export async function POST(request: Request) {
                 password: hashedPassword,
                 role: "USER", // Default role
                 isActive: true,
+                username: email, // Default username to email
             },
         });
 
