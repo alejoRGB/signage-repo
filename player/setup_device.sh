@@ -2,7 +2,7 @@
 set -e
 
 # ==========================================
-# Digital Signage Player - Auto Installer (v2.2)
+# Digital Signage Player - Auto Installer (v2.3 - Curl Only)
 # ==========================================
 
 USER_HOME="/home/$(whoami)"
@@ -10,7 +10,7 @@ APP_DIR="$USER_HOME/signage-player"
 REPO_URL="https://github.com/alejoRGB/signage-repo.git"
 CONFIG_BACKUP="/tmp/signage_config_backup.json"
 
-echo "[INSTALLER] Starting installation v2.2..."
+echo "[INSTALLER] Starting installation v2.3 (Direct Download)..."
 echo "[INSTALLER] 🛑 Stopping existing service to prevent conflicts..."
 sudo systemctl stop signage-player || true
 
@@ -46,30 +46,29 @@ else
 fi
 
 # 3. Clone & Extract
-echo "[INSTALLER] Cloning repository..."
-mkdir -p "$APP_DIR/temp_repo"
-git clone --depth 1 "$REPO_URL" "$APP_DIR/temp_repo"
+# 3. Download Source (Direct via Curl)
+echo "[INSTALLER] Downloading player files directly..."
 
-echo "[INSTALLER] Debug: Temp Repo Listing:"
-ls -F "$APP_DIR/temp_repo"
+BASE_URL="https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player"
+FILES="player.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py fix_rotation_boot.sh"
 
-# Extract Logic
-echo "[INSTALLER] Moving files..."
-if [ -d "$APP_DIR/temp_repo/player" ]; then
-    echo "[INSTALLER] Found /player folder (Monorepo). Moving files..."
-    # Move content of player folder to APP_DIR
-    cp -r "$APP_DIR/temp_repo/player/"* "$APP_DIR/"
-    # Also grab hidden files if any (like .env though unlikely)
-    cp -r "$APP_DIR/temp_repo/player/." "$APP_DIR/" 2>/dev/null || true
-else
-    echo "[INSTALLER] /player folder NOT found. Moving root..."
-    cp -r "$APP_DIR/temp_repo/"* "$APP_DIR/"
-fi
+mkdir -p "$APP_DIR"
+cd "$APP_DIR"
 
-echo "[INSTALLER] Debug: APP_DIR Listing after copy:"
-ls -la "$APP_DIR"
+for FILE in $FILES; do
+    echo "[INSTALLER] Downloading $FILE..."
+    if curl -sLf "$BASE_URL/$FILE" -o "$FILE"; then
+        echo "   -> OK"
+    else
+        echo "   -> FAIL: Could not download $FILE"
+        echo "      Url: $BASE_URL/$FILE"
+        exit 1
+    fi
+done
 
-# Cleanup Repo
+echo "[INSTALLER] Files downloaded successfully."
+
+# Cleanup legacy temp dirs if any
 rm -rf "$APP_DIR/temp_repo"
 
 # 4. Verification (Fail Fast)
