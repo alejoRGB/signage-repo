@@ -2,128 +2,95 @@
 set -e
 
 # ==========================================
-# Digital Signage Player - Auto Installer
+# Digital Signage Player - Auto Installer (Robust)
 # ==========================================
 
 USER_HOME="/home/$(whoami)"
 APP_DIR="$USER_HOME/signage-player"
 REPO_URL="https://github.com/alejoRGB/signage-repo.git"
+CONFIG_BACKUP="/tmp/signage_config_backup.json"
 
 echo "[INSTALLER] Starting installation..."
+echo "[INSTALLER] User: $(whoami)"
+echo "[INSTALLER] App Dir: $APP_DIR"
 
-# 1. System Update
-echo "[INSTALLER] Updating system packages..."
-sudo apt-get update -y
-
-# 2. Install Dependencies
-echo "[INSTALLER] Installing apt dependencies..."
-# git: to clone source
-# mpv: media player
-# python3-pip: for python libs
-# pcmanfm: wallpaper manager
-# unclutter: hides mouse
-# feh: image viewer for pairing code
-# libopenjp2-7: often needed for Pillow
-COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7"
-
-echo "[INSTALLER] Installing base packages: $COMMON_DEPS"
-sudo apt-get install -y $COMMON_DEPS
-
-echo "[INSTALLER] Installing Web Browser..."
-# Try chromium-browser (RPi OS) first, then chromium (Debian/Ubuntu)
-if sudo apt-get install -y chromium-browser; then
-    echo "[INSTALLER] chromium-browser installed successfully."
-elif sudo apt-get install -y chromium; then
-    echo "[INSTALLER] chromium installed successfully."
-else
-    echo "[INSTALLER] CRITICAL: Could not find 'chromium-browser' or 'chromium'. Continuing but web playback may fail."
+# 0. Backup Config (Prevention of data loss)
+if [ -f "$APP_DIR/config.json" ]; then
+    echo "[INSTALLER] Backing up existing configuration..."
+    cp "$APP_DIR/config.json" "$CONFIG_BACKUP"
 fi
 
-# 3. Setup Directory Structure
-echo "[INSTALLER] Setting up directory structure..."
+# 1. Clean Slate (Ensure no nested folder madness)
+if [ -d "$APP_DIR" ]; then
+    echo "[INSTALLER] Cleaning up existing installation to ensure fresh state..."
+    rm -rf "$APP_DIR"
+fi
 mkdir -p "$APP_DIR/media"
 
-# 4. Fetch Code
-echo "[INSTALLER] Fetching code from GitHub..."
-if [ -d "$APP_DIR/.git" ]; then
-    echo "[INSTALLER] Repo already exists, pulling changes..."
-    cd "$APP_DIR"
-    git pull
+# 2. System Dependencies
+echo "[INSTALLER] Installing dependencies..."
+sudo apt-get update -y
+COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7"
+sudo apt-get install -y $COMMON_DEPS
+
+# Browser check
+if sudo apt-get install -y chromium-browser; then
+    echo "[INSTALLER] chromium-browser installed."
+elif sudo apt-get install -y chromium; then
+    echo "[INSTALLER] chromium installed."
 else
-    echo "[INSTALLER] Cloning repo..."
-    # We clone the full repo
-    git clone "$REPO_URL" "$APP_DIR/temp_repo"
-    
-    # Copy ONLY the player directory contents to APP_DIR
-    echo "[INSTALLER] Extracting player code..."
-    
-    # Check if we are in Monorepo structure (likely)
-    if [ -d "$APP_DIR/temp_repo/player" ]; then
-        echo "[INSTALLER] Found /player folder in repo. Copying contents..."
-        cp -a "$APP_DIR/temp_repo/player/." "$APP_DIR/"
-        
-        # Also copy deploy scripts if useful
-        cp "$APP_DIR/temp_repo/deploy_player.ps1" "$APP_DIR/" 2>/dev/null || true
-    else
-        # Fallback: maybe we are already inside a player-only repo?
-        echo "[INSTALLER] WARNING: /player folder not found. Dumping valid files..."
-        cp -a "$APP_DIR/temp_repo/." "$APP_DIR/"
-    fi
-
-    # CLEANUP: Remove the heavy web app code and temp repo
-    echo "[INSTALLER] Cleaning up temp repo..."
-    rm -rf "$APP_DIR/temp_repo"
-
-    # CRITICAL FIX: Check if we have a nested 'player' folder incorrectly
-    if [ -f "$APP_DIR/player/player.py" ] && [ ! -f "$APP_DIR/player.py" ]; then
-        echo "[INSTALLER] Fixing nested directory structure..."
-        mv "$APP_DIR/player/"* "$APP_DIR/"
-        rmdir "$APP_DIR/player"
-    fi
-
-    # FINAL VERIFICATION
-    if [ ! -f "$APP_DIR/player.py" ]; then
-        echo "[INSTALLER] CRITICAL ERROR: player.py not found in $APP_DIR!"
-        echo "[INSTALLER] Directory listing:"
-        ls -R "$APP_DIR"
-        exit 1
-    fi
+    echo "[INSTALLER] WARNING: No chromium found."
 fi
 
-# 5. Install Python Dependencies
-echo "[INSTALLER] Installing Python libraries..."
-# Using --break-system-packages if on newer Debian/Raspberry OS (Bookworm)
-pip3 install requests python-socketio "Pillow" --break-system-packages || pip3 install requests python-socketio "Pillow" 
+# 3. Clone & Extract
+echo "[INSTALLER] Cloning repository..."
+git clone "$REPO_URL" "$APP_DIR/temp_repo"
 
-# 6. Init Configuration (Force Pairing Mode)
-echo "[INSTALLER] Initializing configuration..."
-CONFIG_PATH="$APP_DIR/config.json"
-if [ ! -f "$CONFIG_PATH" ]; then
-    cat <<EOF > "$CONFIG_PATH"
+echo "[INSTALLER] Debug: Repository Structure:"
+ls -F "$APP_DIR/temp_repo"
+
+# Extract Logic
+if [ -d "$APP_DIR/temp_repo/player" ]; then
+    echo "[INSTALLER] Found /player folder (Monorepo). Promoting files..."
+    cp -a "$APP_DIR/temp_repo/player/." "$APP_DIR/"
+else
+    echo "[INSTALLER] /player folder NOT found. Assuming root is player code..."
+    cp -a "$APP_DIR/temp_repo/." "$APP_DIR/"
+fi
+
+# Cleanup Repo
+rm -rf "$APP_DIR/temp_repo"
+
+# 4. Verification (Fail Fast)
+if [ ! -f "$APP_DIR/player.py" ]; then
+    echo "[INSTALLER] CRITICAL ERROR: player.py is MISSING in $APP_DIR"
+    echo "Current Directory Contents:"
+    ls -la "$APP_DIR"
+    exit 1
+fi
+echo "[INSTALLER] Verified: player.py exists."
+
+# 5. Restore Config
+if [ -f "$CONFIG_BACKUP" ]; then
+    echo "[INSTALLER] Restoring configuration..."
+    mv "$CONFIG_BACKUP" "$APP_DIR/config.json"
+else
+    echo "[INSTALLER] Creating new configuration..."
+    cat <<EOF > "$APP_DIR/config.json"
 {
   "server_url": "https://signage-repo-dc5s-git-master-alejos-projects-7a73f1be.vercel.app",
   "device_token": "",
   "media_dir": "$APP_DIR/media"
 }
 EOF
-    echo "[INSTALLER] config.json created. Device set to PAIRING MODE."
-else
-    echo "[INSTALLER] config.json already exists. Skipping overwrite."
 fi
 
-# 7. Stealth Mode & Wallpaper
-echo "[INSTALLER] Applying Stealth Mode..."
-if [ -f "$APP_DIR/setup_wallpaper.py" ]; then
-    python3 "$APP_DIR/setup_wallpaper.py"
-else
-    echo "[INSTALLER] WARNING: setup_wallpaper.py not found!"
-fi
+# 6. Python Deps
+echo "[INSTALLER] Installing Python libs..."
+pip3 install requests python-socketio "Pillow" --break-system-packages || pip3 install requests python-socketio "Pillow"
 
-# 8. Service Setup
-echo "[INSTALLER] Setting up Systemd Service..."
-SERVICE_FILE="$APP_DIR/signage-player.service"
-
-# Create service file content dynamically to ensure paths are correct
+# 7. Setup Service
+echo "[INSTALLER] Configuring Systemd..."
 cat <<EOF | sudo tee /etc/systemd/system/signage-player.service
 [Unit]
 Description=Digital Signage Player
@@ -145,14 +112,9 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable signage-player.service
-# sudo systemctl start signage-player.service  <-- Uncomment to auto-start immediately
-
-# 9. Mouse Hiding (Unclutter)
-# Usually unclutter auto-starts via X11, but we can ensure it via lxsession if needed.
-# For now, apt install is usually enough for desktop envs.
+sudo systemctl restart signage-player.service
 
 echo "[INSTALLER] ========================================="
-echo "[INSTALLER] Installation Complete!"
-echo "[INSTALLER] Device is ready."
-echo "[INSTALLER] To start the player: sudo systemctl start signage-player"
+echo "[INSTALLER] SUCCESS! Service restarted."
+echo "[INSTALLER] Logs: journalctl -u signage-player -f"
 echo "[INSTALLER] ========================================="
