@@ -8,25 +8,40 @@ export default withAuth(
         const token = req.nextauth.token;
         const isAdminPath = req.nextUrl.pathname.startsWith("/admin");
         const isDashboardPath = req.nextUrl.pathname.startsWith("/dashboard");
+        const isLoginPage = req.nextUrl.pathname === "/login";
+        const isAdminLoginPage = req.nextUrl.pathname === "/admin/login";
 
         // 1. Unauthenticated Handling
         if (!token) {
+            // Allow access to login pages (Prevent Loop)
+            if (isLoginPage || isAdminLoginPage) {
+                return NextResponse.next();
+            }
+
             if (isAdminPath) {
                 return NextResponse.redirect(new URL("/admin/login", req.url));
             }
-            return NextResponse.redirect(new URL("/login", req.url));
+            if (isDashboardPath) {
+                return NextResponse.redirect(new URL("/login", req.url));
+            }
+            // For other public routes, do nothing (allow access)
+            return NextResponse.next();
         }
 
         // 2. Authenticated But Wrong Role Handling
-        // Admin trying to access authorized dashboard vs Client trying to access admin
         if (isAdminPath && token.role !== "ADMIN") {
-            // Client trying to access Admin -> Send to Dashboard
             return NextResponse.redirect(new URL("/dashboard", req.url));
         }
 
         if (isDashboardPath && token.role === "ADMIN") {
-            // Admin trying to access Client Dashboard -> Send to Admin Dashboard
-            // User requested to BLOCK admin from dashboard
+            return NextResponse.redirect(new URL("/admin", req.url));
+        }
+
+        // 3. Authenticated Users Accessing Login Pages (Redirect to their respective home)
+        if (isLoginPage) {
+            return NextResponse.redirect(new URL("/dashboard", req.url));
+        }
+        if (isAdminLoginPage && token.role === "ADMIN") {
             return NextResponse.redirect(new URL("/admin", req.url));
         }
     },
