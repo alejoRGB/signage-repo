@@ -31,6 +31,17 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 5.  Configura el "Stealth Mode" (Fondo negro, oculta íconos y cursor).
 6.  Crea el servicio `systemd` para arranque automático.
 7.  Inicializa la configuración en **Modo Pairing**.
+8.  **Configuración de Zona Horaria (Arg)**: Se establece automáticamente a Buenos Aires.
+
+### 2.1 Configuración de Zona Horaria
+
+Para asegurar que los horarios de la cartelería funcionen correctamente, es recomendable establecer la zona horaria explícitamente si el script no lo hizo.
+
+```bash
+cd ~/signage-player
+chmod +x setup_timezone.sh
+./setup_timezone.sh America/Argentina/Buenos_Aires
+```
 
 ## 3. Post-Instalación
 
