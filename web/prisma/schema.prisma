@@ -1,157 +1,125 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  username  String?  @unique
-  email     String   @unique
+  id        String      @id @default(cuid())
+  email     String      @unique
   password  String
   name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  role      Role     @default(USER)
-  isActive  Boolean  @default(true)
-
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  isActive  Boolean     @default(true)
+  role      Role        @default(USER)
+  username  String?     @unique
   devices   Device[]
   media     MediaItem[]
   playlists Playlist[]
   schedules Schedule[]
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model Device {
-  id          String   @id @default(cuid())
-  name        String?  // Can be null until paired
-  token       String   @unique @default(cuid()) // Used for API authentication
-  status      String   @default("unpaired") // online, offline, unpaired
-  lastSeenAt  DateTime?
-  
-  userId      String?  // Optional until paired
-  user        User?    @relation(fields: [userId], references: [id])
-
-  activePlaylistId String?
-  activePlaylist   Playlist? @relation(fields: [activePlaylistId], references: [id])
-
-  pairingCode String?  @unique
+  id                   String      @id @default(cuid())
+  name                 String?
+  token                String      @unique @default(cuid())
+  status               String      @default("unpaired")
+  lastSeenAt           DateTime?
+  userId               String?
+  activePlaylistId     String?
+  pairingCode          String?     @unique
   pairingCodeExpiresAt DateTime?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  logs        DeviceLog[]
-  scheduleId        String?
-  schedule          Schedule? @relation(fields: [scheduleId], references: [id])
-
-  defaultPlaylistId String?
-  defaultPlaylist   Playlist? @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  defaultPlaylistId    String?
+  scheduleId           String?
+  activePlaylist       Playlist?   @relation(fields: [activePlaylistId], references: [id])
+  defaultPlaylist      Playlist?   @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
+  schedule             Schedule?   @relation(fields: [scheduleId], references: [id])
+  user                 User?       @relation(fields: [userId], references: [id])
+  logs                 DeviceLog[]
 }
 
 model Schedule {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   name      String
-  
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  
-  items     ScheduleItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   devices   Device[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user      User           @relation(fields: [userId], references: [id])
+  items     ScheduleItem[]
 }
 
 model ScheduleItem {
   id         String   @id @default(cuid())
-  
-  dayOfWeek  Int      // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime  String   // "08:00"
-  endTime    String   // "12:00"
-  
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
   playlistId String
-  playlist   Playlist @relation(fields: [playlistId], references: [id])
-
   scheduleId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
   schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 }
 
 model DeviceLog {
   id        String   @id @default(cuid())
-  level     String   // info, error, warning
+  level     String
   message   String
   deviceId  String
-  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
   @@index([deviceId])
 }
 
 model MediaItem {
-  id        String   @id @default(cuid())
-  name      String
-  type      String   // video, image, web
-  url       String   // /uploads/filename.mp4 or https://example.com
-  filename  String?  // stored filename on disk (if type != web)
-  duration  Int      @default(10) // default duration in seconds (for images/web)
-  width     Int?
-  height    Int?
-  fps       Float?
-  size      Int      @default(0) // Size in bytes
-  cacheForOffline Boolean @default(false)
-  // orientation removed (moved to Playlist)
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-
-  playlistItems PlaylistItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String         @id @default(cuid())
+  name            String
+  type            String
+  url             String
+  filename        String?
+  duration        Int            @default(10)
+  userId          String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  fps             Float?
+  height          Int?
+  width           Int?
+  size            Int            @default(0)
+  cacheForOffline Boolean        @default(false)
+  user            User           @relation(fields: [userId], references: [id])
+  playlistItems   PlaylistItem[]
 }
 
 model Playlist {
-  id        String   @id @default(cuid())
-  name      String
-  type      String   @default("media") // media, web
-  orientation String @default("landscape") // landscape, portrait, portrait-270 (Only for type=web)
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-
-  items     PlaylistItem[]
-  devices   Device[] // Relation to activePlaylist
-  defaultForDevices Device[] @relation("DefaultPlaylist")
-  scheduleItems ScheduleItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String         @id @default(cuid())
+  name              String
+  userId            String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  orientation       String         @default("landscape")
+  type              String         @default("media")
+  devices           Device[]
+  defaultForDevices Device[]       @relation("DefaultPlaylist")
+  user              User           @relation(fields: [userId], references: [id])
+  items             PlaylistItem[]
+  scheduleItems     ScheduleItem[]
 }
 
 model PlaylistItem {
-  id         String @id @default(cuid())
-  order      Int
-  
-  playlistId String
-  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-
+  id          String    @id @default(cuid())
+  order       Int
+  playlistId  String
   mediaItemId String
+  duration    Int       @default(10)
   mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
-  
-  duration    Int       @default(10) // Contextual duration (overrides MediaItem.duration for Images/Web)
+  playlist    Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
 }
 
 model Admin {
@@ -161,4 +129,9 @@ model Admin {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
 }
