@@ -50,7 +50,7 @@ fi
 echo "[INSTALLER] Downloading player files directly..."
 
 BASE_URL="https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player"
-FILES="player.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py fix_rotation_boot.sh"
+FILES="player.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py fix_rotation_boot.sh setup_timezone.sh"
 
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
