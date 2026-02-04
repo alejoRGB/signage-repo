@@ -37,6 +37,14 @@ function AuthButton() {
     if (status === "loading") return null
 
     if (session) {
+        if (session.user?.role === "ADMIN") {
+            // Admin request: go to client login
+            return (
+                <Button asChild variant="ghost" className="text-slate-300 hover:text-white">
+                    <Link href="/login">Login</Link>
+                </Button>
+            )
+        }
         return (
             <Button asChild variant="ghost" className="text-slate-300 hover:text-white">
                 <Link href="/dashboard">Dashboard</Link>

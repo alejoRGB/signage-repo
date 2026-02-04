@@ -39,7 +39,12 @@ export default withAuth(
 
         // 3. Authenticated Users Accessing Login Pages (Redirect to their respective home)
         if (isLoginPage) {
-            return NextResponse.redirect(new URL("/dashboard", req.url));
+            // If User, send to dashboard.
+            if (token.role !== 'ADMIN') {
+                return NextResponse.redirect(new URL("/dashboard", req.url));
+            }
+            // If Admin, ALLOW access to /login so they can switch accounts
+            return NextResponse.next();
         }
         if (isAdminLoginPage && token.role === "ADMIN") {
             return NextResponse.redirect(new URL("/admin", req.url));
