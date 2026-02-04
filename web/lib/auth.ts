@@ -10,38 +10,44 @@ export const authOptions: NextAuthOptions = {
             credentials: {
                 username: { label: "Username", type: "text" },
                 password: { label: "Password", type: "password" },
+                loginType: { label: "Login Type", type: "text" },
             },
             async authorize(credentials) {
                 if (!credentials?.username || !credentials?.password) {
                     return null;
                 }
 
-                // 1. Check Admin Table first
-                const admin = await prisma.admin.findUnique({
-                    where: { email: credentials.username }, // Admin uses email as username
-                });
+                const loginType = credentials.loginType;
 
-                if (admin) {
-                    const isAdminPasswordValid = await bcrypt.compare(
-                        credentials.password,
-                        admin.password
-                    );
+                // 1. ADMIN LOGIN PATH
+                if (loginType === 'admin') {
+                    const admin = await prisma.admin.findUnique({
+                        where: { email: credentials.username },
+                    });
 
-                    if (isAdminPasswordValid) {
-                        return {
-                            id: admin.id,
-                            username: admin.email,
-                            email: admin.email,
-                            name: admin.name || "Admin",
-                            role: "ADMIN",
-                            isActive: true,
-                        };
+                    if (admin) {
+                        const isAdminPasswordValid = await bcrypt.compare(
+                            credentials.password,
+                            admin.password
+                        );
+
+                        if (isAdminPasswordValid) {
+                            return {
+                                id: admin.id,
+                                username: admin.email,
+                                email: admin.email,
+                                name: admin.name || "Admin",
+                                role: "ADMIN",
+                                isActive: true,
+                            };
+                        }
                     }
-                    // If admin found but password wrong, return null (don't fall through to User)
-                    return null;
+                    return null; // Explicitly fail if admin login requested but failed
                 }
 
-                // 2. Fallback to User Table
+                // 2. USER LOGIN PATH (Default or explicit 'user')
+                // This block will NOT run if loginType === 'admin'
+
                 const user = await prisma.user.findUnique({
                     where: { username: credentials.username },
                 });
@@ -65,10 +71,10 @@ export const authOptions: NextAuthOptions = {
 
                 return {
                     id: user.id,
-                    username: user.username || "", // Handle null username
+                    username: user.username || "",
                     email: user.email,
                     name: user.name,
-                    role: user.role, // This should be "USER" based on schema default, but schema has Enum.
+                    role: user.role, // Should be USER
                     isActive: user.isActive,
                 };
             },

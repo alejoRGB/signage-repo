@@ -24,6 +24,7 @@ export default function AdminLoginPage() {
             redirect: false,
             username,
             password,
+            loginType: "admin", // Enforce Admin table check
         });
 
         if (res?.error) {

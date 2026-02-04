@@ -32,6 +32,7 @@ function LoginForm() {
             redirect: false,
             username,
             password,
+            loginType: "user", // Enforce User table check
         });
 
         if (res?.error) {
