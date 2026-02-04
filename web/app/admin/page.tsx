@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import AdminDashboard from "./admin-dashboard";
+import SignOutButton from "@/components/admin/sign-out-button";
 
 export const metadata = {
     title: "Super Admin | Cloud Signage",
@@ -41,7 +42,10 @@ export default async function AdminPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Super Admin Dashboard</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+                <SignOutButton />
+            </div>
             <AdminDashboard users={userStats} />
         </div>
     );
