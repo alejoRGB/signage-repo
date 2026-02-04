@@ -63,10 +63,12 @@ export const authOptions: NextAuthOptions = {
                 });
 
                 if (!user) {
+                    console.log("Auth Failed: User not found");
                     return null;
                 }
 
                 if (!user.isActive) {
+                    console.log("Auth Failed: User inactive");
                     throw new Error("Account is inactive.");
                 }
 
@@ -76,8 +78,11 @@ export const authOptions: NextAuthOptions = {
                 );
 
                 if (!isPasswordValid) {
+                    console.log("Auth Failed: Invalid password");
                     return null;
                 }
+
+                console.log("Auth Success for:", user.username);
 
                 return {
                     id: user.id,
