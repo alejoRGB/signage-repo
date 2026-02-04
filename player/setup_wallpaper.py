@@ -65,7 +65,11 @@ def set_wallpaper():
                 "show_trash": "0",
                 "show_mounts": "0",
                 "show_documents": "0",
-                "wallpaper_mode": "stretch"
+                "wallpaper_mode": "stretch",
+                "wallpaper": bg_path,  # FORCE wallpaper path directly in config
+                "desktop_bg": "#000000",
+                "desktop_fg": "#ffffff",
+                "desktop_shadow": "#000000",
             }
             
             new_lines = []
@@ -77,7 +81,7 @@ def set_wallpaper():
                 elif "=" in line:
                     key = line.split("=")[0].strip()
                     if key in updates:
-                        continue
+                        continue # Skip existing keys we want to overwrite
                     else:
                         new_lines.append(line)
             
