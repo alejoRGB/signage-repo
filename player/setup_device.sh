@@ -59,20 +59,35 @@ else
     
     # Check if we are in Monorepo structure (likely)
     if [ -d "$APP_DIR/temp_repo/player" ]; then
-        cp -r "$APP_DIR/temp_repo/player/"* "$APP_DIR/"
-        echo "[INSTALLER] Player code extracted from /player folder."
+        echo "[INSTALLER] Found /player folder in repo. Copying contents..."
+        cp -a "$APP_DIR/temp_repo/player/." "$APP_DIR/"
         
         # Also copy deploy scripts if useful
         cp "$APP_DIR/temp_repo/deploy_player.ps1" "$APP_DIR/" 2>/dev/null || true
     else
-        # Fallback if structure is weird (e.g. old structure)
-        echo "[INSTALLER] WARNING: /player folder not found. Attempting fallback copy..."
-        cp -r "$APP_DIR/temp_repo/"* "$APP_DIR/" 2>/dev/null || true
+        # Fallback: maybe we are already inside a player-only repo?
+        echo "[INSTALLER] WARNING: /player folder not found. Dumping valid files..."
+        cp -a "$APP_DIR/temp_repo/." "$APP_DIR/"
     fi
 
-    # CLEANUP: Remove the heavy web app code
+    # CLEANUP: Remove the heavy web app code and temp repo
     echo "[INSTALLER] Cleaning up temp repo..."
     rm -rf "$APP_DIR/temp_repo"
+
+    # CRITICAL FIX: Check if we have a nested 'player' folder incorrectly
+    if [ -f "$APP_DIR/player/player.py" ] && [ ! -f "$APP_DIR/player.py" ]; then
+        echo "[INSTALLER] Fixing nested directory structure..."
+        mv "$APP_DIR/player/"* "$APP_DIR/"
+        rmdir "$APP_DIR/player"
+    fi
+
+    # FINAL VERIFICATION
+    if [ ! -f "$APP_DIR/player.py" ]; then
+        echo "[INSTALLER] CRITICAL ERROR: player.py not found in $APP_DIR!"
+        echo "[INSTALLER] Directory listing:"
+        ls -R "$APP_DIR"
+        exit 1
+    fi
 fi
 
 # 5. Install Python Dependencies
