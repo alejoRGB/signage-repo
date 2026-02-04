@@ -48,8 +48,13 @@ export const authOptions: NextAuthOptions = {
                 // 2. USER LOGIN PATH (Default or explicit 'user')
                 // This block will NOT run if loginType === 'admin'
 
-                const user = await prisma.user.findUnique({
-                    where: { username: credentials.username },
+                const user = await prisma.user.findFirst({
+                    where: {
+                        OR: [
+                            { username: credentials.username },
+                            { email: credentials.username }
+                        ]
+                    },
                 });
 
                 if (!user) {
