@@ -26,7 +26,7 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 ### ¿Qué hace este script?
 1.  Actualiza el sistema (`apt-get update`).
 2.  Instala dependencias críticas: `mpv`, `chromium`, `git`, `python3-pip`, `feh`, `unclutter`.
-3.  Descarga el código fuente del reproductor (solo la carpeta `/player`).
+3.  Descarga los archivos del reproductor **directamente** (sin git clone, para evitar errores).
 4.  Instala las librerías de Python (`requests`, `socketio`, `Pillow`).
 5.  Configura el "Stealth Mode" (Fondo negro, oculta íconos y cursor).
 6.  Crea el servicio `systemd` para arranque automático.
