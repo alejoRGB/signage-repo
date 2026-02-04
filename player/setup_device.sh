@@ -2,7 +2,7 @@
 set -e
 
 # ==========================================
-# Digital Signage Player - Auto Installer (v2.1)
+# Digital Signage Player - Auto Installer (v2.2)
 # ==========================================
 
 USER_HOME="/home/$(whoami)"
@@ -10,7 +10,7 @@ APP_DIR="$USER_HOME/signage-player"
 REPO_URL="https://github.com/alejoRGB/signage-repo.git"
 CONFIG_BACKUP="/tmp/signage_config_backup.json"
 
-echo "[INSTALLER] Starting installation v2.1..."
+echo "[INSTALLER] Starting installation v2.2..."
 echo "[INSTALLER] 🛑 Stopping existing service to prevent conflicts..."
 sudo systemctl stop signage-player || true
 
@@ -47,19 +47,27 @@ fi
 
 # 3. Clone & Extract
 echo "[INSTALLER] Cloning repository..."
-git clone "$REPO_URL" "$APP_DIR/temp_repo"
+mkdir -p "$APP_DIR/temp_repo"
+git clone --depth 1 "$REPO_URL" "$APP_DIR/temp_repo"
 
-echo "[INSTALLER] Debug: Repository Structure:"
+echo "[INSTALLER] Debug: Temp Repo Listing:"
 ls -F "$APP_DIR/temp_repo"
 
 # Extract Logic
+echo "[INSTALLER] Moving files..."
 if [ -d "$APP_DIR/temp_repo/player" ]; then
-    echo "[INSTALLER] Found /player folder (Monorepo). Promoting files..."
-    cp -a "$APP_DIR/temp_repo/player/." "$APP_DIR/"
+    echo "[INSTALLER] Found /player folder (Monorepo). Moving files..."
+    # Move content of player folder to APP_DIR
+    cp -r "$APP_DIR/temp_repo/player/"* "$APP_DIR/"
+    # Also grab hidden files if any (like .env though unlikely)
+    cp -r "$APP_DIR/temp_repo/player/." "$APP_DIR/" 2>/dev/null || true
 else
-    echo "[INSTALLER] /player folder NOT found. Assuming root is player code..."
-    cp -a "$APP_DIR/temp_repo/." "$APP_DIR/"
+    echo "[INSTALLER] /player folder NOT found. Moving root..."
+    cp -r "$APP_DIR/temp_repo/"* "$APP_DIR/"
 fi
+
+echo "[INSTALLER] Debug: APP_DIR Listing after copy:"
+ls -la "$APP_DIR"
 
 # Cleanup Repo
 rm -rf "$APP_DIR/temp_repo"
