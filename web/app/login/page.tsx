@@ -112,7 +112,7 @@ function LoginForm() {
                     </div>
                 </form>
 
-
+                {/* Registration Link Removed */}
             </div>
         </div>
     );

@@ -5,14 +5,37 @@ import { NextResponse } from "next/server";
 export default withAuth(
     // `withAuth` augments your `Request` with the user's token.
     function middleware(req) {
-        // Only allow "ADMIN" role to access /admin
-        if (req.nextUrl.pathname.startsWith("/admin") && req.nextauth.token?.role !== "ADMIN") {
+        const token = req.nextauth.token;
+        const isAdminPath = req.nextUrl.pathname.startsWith("/admin");
+        const isDashboardPath = req.nextUrl.pathname.startsWith("/dashboard");
+
+        // 1. Unauthenticated Handling
+        if (!token) {
+            if (isAdminPath) {
+                return NextResponse.redirect(new URL("/admin/login", req.url));
+            }
+            return NextResponse.redirect(new URL("/login", req.url));
+        }
+
+        // 2. Authenticated But Wrong Role Handling
+        // Admin trying to access authorized dashboard vs Client trying to access admin
+        if (isAdminPath && token.role !== "ADMIN") {
+            // Client trying to access Admin -> Send to Dashboard
             return NextResponse.redirect(new URL("/dashboard", req.url));
+        }
+
+        if (isDashboardPath && token.role === "ADMIN") {
+            // Admin trying to access Client Dashboard -> Send to Admin Dashboard
+            // User requested to BLOCK admin from dashboard
+            return NextResponse.redirect(new URL("/admin", req.url));
         }
     },
     {
         callbacks: {
-            authorized: ({ token }) => !!token,
+            // Return true here to let the middleware function handle the logic.
+            // If false, it redirects to signIn page automatically, which matches generic /login.
+            // We want custom redirects, so we always authorized here and handle redirects above.
+            authorized: ({ token }) => true,
         },
     }
 );
