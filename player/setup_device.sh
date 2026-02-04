@@ -2,7 +2,7 @@
 set -e
 
 # ==========================================
-# Digital Signage Player - Auto Installer (v2.3 - Curl Only)
+# Digital Signage Player - Auto Installer (v2.4 - Config Fix)
 # ==========================================
 
 USER_HOME="/home/$(whoami)"
@@ -10,7 +10,7 @@ APP_DIR="$USER_HOME/signage-player"
 REPO_URL="https://github.com/alejoRGB/signage-repo.git"
 CONFIG_BACKUP="/tmp/signage_config_backup.json"
 
-echo "[INSTALLER] Starting installation v2.3 (Direct Download)..."
+echo "[INSTALLER] Starting installation v2.4 (Wallpaper Config Fix)..."
 echo "[INSTALLER] 🛑 Stopping existing service to prevent conflicts..."
 sudo systemctl stop signage-player || true
 
