@@ -268,6 +268,7 @@ class Player:
                                     "--disable-gpu",
                                     "--disable-software-rasterizer",
                                     "--disable-dev-shm-usage",
+                                    "--password-store=basic",
                                     "--user-data-dir=/home/masal/.config/chromium-signage-temp"
                                 ]
                                 try:

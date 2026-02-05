@@ -109,8 +109,8 @@ export async function POST(request: Request) {
                         : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
                     order: item.order,
                     duration: item.mediaItem.type === 'video' ? (item.mediaItem.duration || 0) : (item.duration || 10),
-                    // Use playlist orientation for web items; others default to landscape
-                    orientation: playlist.type === 'web' ? (playlist.orientation || 'landscape') : 'landscape',
+                    // Always use playlist orientation default
+                    orientation: playlist.orientation || 'landscape',
                     name: item.mediaItem.name,
                 })),
             };
