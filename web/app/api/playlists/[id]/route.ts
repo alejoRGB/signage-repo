@@ -99,8 +99,8 @@ export async function PUT(
             const updateData: any = {};
             if (name) updateData.name = name;
 
-            // Allow updating orientation only for web playlists
-            if (existing.type === 'web' && orientation) {
+            // Allow updating orientation for all playlists
+            if (orientation) {
                 updateData.orientation = orientation;
             }
 
