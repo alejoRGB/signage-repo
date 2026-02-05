@@ -1,0 +1,45 @@
+{
+  "device_id": "cml9y1xkp0014zd63ghegnnj4",
+  "device_name": "rp4",
+  "playlist": {
+    "id": "cml9yafi0000lfubkg0quc12z",
+    "name": "web girada",
+    "items": [
+      {
+        "id": "cml9yasaz000nfubktr3nd4m7",
+        "type": "web",
+        "filename": "file-cml7hvht5000710ad0ketwdi9",
+        "url": "https://flipclock.app/",
+        "order": 0
+      },
+      {
+        "id": "cml9yasaz000ofubkxt9x3gtv",
+        "type": "web",
+        "filename": "file-cml7dvfr40001ilv2336h6enm",
+        "url": "https://www.youtube.com/",
+        "order": 1
+      }
+    ]
+  },
+  "schedule": null,
+  "default_playlist": {
+    "id": "cml9yafi0000lfubkg0quc12z",
+    "name": "web girada",
+    "items": [
+      {
+        "id": "cml9yasaz000nfubktr3nd4m7",
+        "type": "web",
+        "filename": "file-cml7hvht5000710ad0ketwdi9",
+        "url": "https://flipclock.app/",
+        "order": 0
+      },
+      {
+        "id": "cml9yasaz000ofubkxt9x3gtv",
+        "type": "web",
+        "filename": "file-cml7dvfr40001ilv2336h6enm",
+        "url": "https://www.youtube.com/",
+        "order": 1
+      }
+    ]
+  }
+}
