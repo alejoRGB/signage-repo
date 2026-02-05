@@ -1,0 +1,13 @@
+{
+  "executionArgs": {
+    "projectName": "digital-signage",
+    "projectPath": "C:\\Users\\masal\\.gemini\\antigravity\\scratch\\digital-signage\\web",
+    "prdPath": "C:\\Users\\masal\\.gemini\\antigravity\\scratch\\digital-signage\\web\\testsprite_tests\\standard_prd.json",
+    "additionalInstruction": "Use data-testid where possible. Wait up to 20 seconds for page loads to account for compilation."
+  },
+  "type": "frontend",
+  "localEndpoint": "http://localhost:3000",
+  "API_KEY": "sk-user-j-Xdkhj8gnnicBSzxrkVU6LJdV1lujkWDFHeicvZLbG-Z2WVrC_me0_B9_fCK9WW8rn7humbGIsnprn3iKF6EuWcIDpqAJupCQXzyTSilf0Fu9ZRU9GsRnEbAVJm8mngHA8",
+  "serverPort": 55109,
+  "proxy": "http://bd89f1e4-dfd5-452c-972b-dfbbb96879e2:GQ67Pyv2zWWCtBYGf4IVlwi6ahlHnLQ3@tun.testsprite.com:8080"
+}

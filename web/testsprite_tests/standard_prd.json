@@ -1,0 +1,15 @@
+{
+    "project_name": "Digital Signage System",
+    "requirements": [
+        {
+            "id": "AUTH",
+            "requirement": "User Authentication",
+            "description": "Users must be able to log in and out."
+        },
+        {
+            "id": "DEV",
+            "requirement": "Device Management",
+            "description": "Users must be able to manage their devices."
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+[
+    {
+        "id": "AUTH_001",
+        "title": "Login with Valid Credentials",
+        "description": "Verify that a user can log in with valid email and password.",
+        "steps": [
+            "Navigate to login page",
+            "Enter valid email",
+            "Enter valid password",
+            "Click Login button",
+            "Verify redirection to dashboard (wait up to 20 seconds for dev server compilation)"
+        ]
+    },
+    {
+        "id": "DEV_001",
+        "title": "View Device List",
+        "description": "Verify that the device list loads correctly.",
+        "steps": [
+            "Navigate to Devices page (wait up to 20 seconds for load)",
+            "Verify device grid is visible"
+        ]
+    }
+]
