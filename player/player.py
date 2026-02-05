@@ -139,7 +139,7 @@ class Player:
         except OSError:
             return False
 
-    def play_mixed_content_loop(self, items: List[Dict], playlist_id: str):
+    def play_mixed_content_loop(self, items: List[Dict], playlist_id: str, playlist_obj: Dict = None):
         """
         Manages playback item-by-item to support Web/Mixed content.
         This blocks the main loop, so we need to be careful to check for schedule updates occasionally.
@@ -153,23 +153,39 @@ class Player:
         # Sync control for mixed loop
         last_sync_time = time.time()
         sync_interval = 60
+        
+        # Determine Playlist defaults
+        playlist_orientation = "landscape"
+        if playlist_obj:
+            playlist_orientation = playlist_obj.get("orientation", "landscape")
 
         try:
             while self.running:
                 item = items[idx]
                 media = item
                 m_type = media.get('type')
-                duration = media.get('duration', 10) 
                 
-                logging.info(f"[MIXED_PLAYER] Playing item {idx}: {media.get('name')} ({m_type})")
+                # Duration Logic: Try item -> playlist default -> hard default
+                duration = media.get('duration')
+                if not duration and playlist_obj:
+                    duration = playlist_obj.get('default_duration')
+                if not duration:
+                    duration = 10
                 
-                # Apply Screen Rotation
-                target_orientation = media.get('orientation', 'landscape')
-                rotation_changed = self.rotator.current_orientation != target_orientation
+                logging.info(f"[MIXED_PLAYER] Playing item {idx}: {media.get('name')} | Type: {m_type} | Duration: {duration}s")
                 
-                logging.info(f"[MIXED_PLAYER] Rotation Logic -> Target: {target_orientation} | Current: {self.rotator.current_orientation} | Changed: {rotation_changed}")
+                # Apply Screen Rotation: Item > Playlist > Default
+                target_orientation = media.get('orientation')
+                if not target_orientation:
+                    target_orientation = playlist_orientation
                 
-                self.rotator.rotate(target_orientation)
+                curr_orientation = self.rotator.current_orientation
+                rotation_changed = curr_orientation != target_orientation
+                
+                logging.info(f"[MIXED_PLAYER] Rotation -> Target: {target_orientation} (Playlist: {playlist_orientation}) | Current: {curr_orientation}")
+                
+                if rotation_changed:
+                    self.rotator.rotate(target_orientation)
                 
                 if rotation_changed and browser_process:
                     logging.info("[MIXED_PLAYER] Orientation changed. Forcing browser restart.")
@@ -234,6 +250,12 @@ class Player:
                             if not browser_exec:
                                 logging.error("[MIXED_PLAYER] Chromium not found!")
                             else:
+                                env = os.environ.copy()
+                                # Suppress DBus errors by explicitly setting address if missing, or finding user bus
+                                if "DBUS_SESSION_BUS_ADDRESS" not in env:
+                                     uid = os.getuid()
+                                     env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path=/run/user/{uid}/bus"
+
                                 cmd = [
                                     browser_exec,
                                     "--kiosk",
@@ -249,7 +271,7 @@ class Player:
                                     "--user-data-dir=/home/masal/.config/chromium-signage-temp"
                                 ]
                                 try:
-                                    browser_process = subprocess.Popen(cmd)
+                                    browser_process = subprocess.Popen(cmd, env=env, stderr=subprocess.DEVNULL) # Reduce log spam
                                     current_browser_url = url
                                 except Exception as e:
                                     logging.error(f"[MIXED_PLAYER] Failed to launch browser: {e}")
@@ -503,7 +525,7 @@ class Player:
                              # We need a new "Play Loop" that iterates items one by one.
                              logging.info("[PLAYER] Mixed content detected. Switching to Item-by-Item Controller.")
                              self.stop_mpv()
-                             self.play_mixed_content_loop(items, target_id)
+                             self.play_mixed_content_loop(items, target_id, target_playlist)
                              current_playlist_id = target_id
                              continue
                          
