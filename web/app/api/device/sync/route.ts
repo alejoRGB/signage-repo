@@ -123,6 +123,7 @@ export async function POST(request: Request) {
 
         // Construct Response
         const responsePayload = {
+            _debug_version: "1.0.1",
             device_id: device.id,
             device_name: device.name,
             // Legacy field (deprecated but useful for fallback)
