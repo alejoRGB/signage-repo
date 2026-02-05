@@ -41,6 +41,7 @@ export default function PlaylistEditor({
     const { showToast } = useToast();
     const [items, setItems] = useState<PlaylistItem[]>(playlist.items);
     const [name, setName] = useState(playlist.name);
+    const [orientation, setOrientation] = useState(playlist.orientation || 'landscape');
     const [saving, setSaving] = useState(false);
 
     // Filter library based on playlist type
@@ -99,7 +100,7 @@ export default function PlaylistEditor({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
-                    orientation: playlist.orientation, // Send orientation (read-only in UI but needed for existing value)
+                    orientation, // Use state value
                     items: items.map((item) => ({
                         mediaItemId: item.mediaItemId, // Send correct field
                         duration: item.duration,
@@ -147,16 +148,19 @@ export default function PlaylistEditor({
                         <span className="capitalize px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs font-semibold">
                             {playlist.type}
                         </span>
-                        {playlist.type === 'web' && (
-                            <span className="capitalize px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
-                                {playlist.orientation?.replace('-', ' ')}
-                            </span>
-                        )}
-                        <span>{items.length} items</span>
-                        <span>{items.reduce((acc, i) => acc + i.duration, 0)}s total</span>
+                        <select
+                            value={orientation}
+                            onChange={(e) => setOrientation(e.target.value)}
+                            className="text-xs border-gray-300 rounded shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        >
+                            <option value="landscape">Landscape</option>
+                            <option value="portrait">Portrait</option>
+                        </select>
                     </div>
+                    <span>{items.length} items</span>
+                    <span>{items.reduce((acc, i) => acc + i.duration, 0)}s total</span>
                 </div>
-
+                {/* Item List moved inside Left Editor */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-100">
                     {/* Header Row */}
                     <div className="flex items-center gap-4 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -264,8 +268,7 @@ export default function PlaylistEditor({
                     )}
                 </div>
             </div>
-            {/* Toast Container removed */}
 
-        </div >
+        </div>
     );
 }
