@@ -103,7 +103,15 @@ export async function POST(request: Request) {
                 name: playlist.name,
                 orientation: playlist.orientation, // Include top-level orientation
                 items: playlist.items.map((item: any) => {
-                    console.log(`[SYNC API] Item ${item.id} (${item.mediaItem.type}): Raw duration=${item.duration}, Media duration=${item.mediaItem.duration}`);
+                    const rawDuration = item.duration;
+                    const mediaDuration = item.mediaItem.duration;
+                    const finalDuration = item.mediaItem.type === 'video' ? (mediaDuration || 0) : (rawDuration || 10);
+
+                    console.log(`[SYNC API] Item ${item.id} (${item.mediaItem.type}):`);
+                    console.log(`  - PlaylistItem.duration (from DB): ${rawDuration}`);
+                    console.log(`  - MediaItem.duration: ${mediaDuration}`);
+                    console.log(`  - Final duration sent to player: ${finalDuration}`);
+
                     return {
                         id: item.id,
                         type: item.mediaItem.type,
@@ -112,7 +120,7 @@ export async function POST(request: Request) {
                             ? item.mediaItem.url
                             : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
                         order: item.order,
-                        duration: item.mediaItem.type === 'video' ? (item.mediaItem.duration || 0) : (item.duration || 10),
+                        duration: finalDuration,
                         // Always use playlist orientation default
                         orientation: playlist.orientation || 'landscape',
                         name: item.mediaItem.name,
