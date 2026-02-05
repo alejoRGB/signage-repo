@@ -96,23 +96,28 @@ export async function POST(request: Request) {
 
         const formatPlaylist = (playlist: any) => {
             if (!playlist) return null;
+            console.log(`[SYNC API] Formatting Playlist ${playlist.id} (${playlist.name})`);
+            console.log(`[SYNC API] Playlist Orientation: ${playlist.orientation}`);
             return {
                 id: playlist.id,
                 name: playlist.name,
                 orientation: playlist.orientation, // Include top-level orientation
-                items: playlist.items.map((item: any) => ({
-                    id: item.id,
-                    type: item.mediaItem.type,
-                    filename: item.mediaItem.filename || `file-${item.mediaItem.id}`,
-                    url: item.mediaItem.url.startsWith("http")
-                        ? item.mediaItem.url
-                        : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
-                    order: item.order,
-                    duration: item.mediaItem.type === 'video' ? (item.mediaItem.duration || 0) : (item.duration || 10),
-                    // Always use playlist orientation default
-                    orientation: playlist.orientation || 'landscape',
-                    name: item.mediaItem.name,
-                })),
+                items: playlist.items.map((item: any) => {
+                    console.log(`[SYNC API] Item ${item.id} (${item.mediaItem.type}): Raw duration=${item.duration}, Media duration=${item.mediaItem.duration}`);
+                    return {
+                        id: item.id,
+                        type: item.mediaItem.type,
+                        filename: item.mediaItem.filename || `file-${item.mediaItem.id}`,
+                        url: item.mediaItem.url.startsWith("http")
+                            ? item.mediaItem.url
+                            : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
+                        order: item.order,
+                        duration: item.mediaItem.type === 'video' ? (item.mediaItem.duration || 0) : (item.duration || 10),
+                        // Always use playlist orientation default
+                        orientation: playlist.orientation || 'landscape',
+                        name: item.mediaItem.name,
+                    };
+                }),
             };
         };
 
