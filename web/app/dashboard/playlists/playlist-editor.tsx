@@ -99,6 +99,7 @@ export default function PlaylistEditor({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
+                    orientation: playlist.orientation, // Send orientation (read-only in UI but needed for existing value)
                     items: items.map((item) => ({
                         mediaItemId: item.mediaItemId, // Send correct field
                         duration: item.duration,
