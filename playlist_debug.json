@@ -1,0 +1,47 @@
+{
+  "device_id": "cml9zim7t0064zd63s7pc7fba",
+  "device_name": "Rp4",
+  "playlist": {
+    "id": "cml7dwpx50007ilv2v5e7nxs0",
+    "name": "primera",
+    "items": [
+      {
+        "id": "cml9y6cew000dfubkvzmt3npj",
+        "type": "image",
+        "filename": "1770170643063-IMG_20211217_195228.jpg",
+        "url": "https://f6nvxe4zva3jdvvy.public.blob.vercel-storage.com/1770170643063-IMG_20211217_195228.jpg",
+        "order": 0,
+        "duration": 10
+      },
+      {
+        "id": "cml9y6cew000efubkxuopsos7",
+        "type": "video",
+        "filename": "1770170609379-video_test.mp4",
+        "url": "https://f6nvxe4zva3jdvvy.public.blob.vercel-storage.com/1770170609379-video_test.mp4",
+        "order": 1
+      }
+    ]
+  },
+  "schedule": null,
+  "default_playlist": {
+    "id": "cml7dwpx50007ilv2v5e7nxs0",
+    "name": "primera",
+    "items": [
+      {
+        "id": "cml9y6cew000dfubkvzmt3npj",
+        "type": "image",
+        "filename": "1770170643063-IMG_20211217_195228.jpg",
+        "url": "https://f6nvxe4zva3jdvvy.public.blob.vercel-storage.com/1770170643063-IMG_20211217_195228.jpg",
+        "order": 0,
+        "duration": 10
+      },
+      {
+        "id": "cml9y6cew000efubkxuopsos7",
+        "type": "video",
+        "filename": "1770170609379-video_test.mp4",
+        "url": "https://f6nvxe4zva3jdvvy.public.blob.vercel-storage.com/1770170609379-video_test.mp4",
+        "order": 1
+      }
+    ]
+  }
+}
