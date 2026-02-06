@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const PairDeviceSchema = z.object({
+    code: z.string().length(6, "Code must be 6 characters"),
+    name: z.string().min(1, "Name is required").max(50, "Name too long"),
+});
 
 export async function POST(request: Request) {
     try {
@@ -12,14 +18,17 @@ export async function POST(request: Request) {
         }
 
         const json = await request.json();
-        const { code, name } = json;
 
-        if (!code || !name) {
+        // Zod Validation
+        const result = PairDeviceSchema.safeParse(json);
+        if (!result.success) {
             return NextResponse.json(
-                { error: "Code and name are required" },
+                { error: result.error.issues[0].message },
                 { status: 400 }
             );
         }
+
+        const { code, name } = result.data;
 
         // Find device by pairing code
         const device = await prisma.device.findUnique({

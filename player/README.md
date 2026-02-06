@@ -106,9 +106,32 @@ The player will now start automatically when the Pi boots up!
 
 ## Transferring Files to Pi
 
+### 6. Deployment (Recommended)
+
+We provide a PowerShell script to handle file transfer, permission fixing, and service restarting automatically.
+
+**From your development machine:**
+```powershell
+.\deploy_player.ps1 -PlayerIp <RPI_IP> -PlayerUser <USER>
+# Example: .\deploy_player.ps1 -PlayerIp 192.168.1.50 -PlayerUser pi
+```
+
+### 7. Playback Modes
+
+The player automatically selects the best playback strategy:
+
+*   **Native Mode (Optimized):** Used when the playlist contains **only** videos/images.
+    *   Handled entirely by MPV for gapless/seamless transitions.
+    *   Uses a persistent window to prevent black screens.
+*   **Mixed Mode:** Used when the playlist contains Web Content.
+    *   Manages a mixed loop of MPV (for video) and Chromium (for web).
+    *   Slightly higher overhead but higher flexibility.
+
+## Transferring Files to Pi (Manual)
+
 ### Option 1: SCP (from your PC)
 ```bash
-scp sync.py player.py pi@raspberrypi.local:/home/pi/signage-player/
+scp -r player.py sync.py config.json scripts/ pi@raspberrypi.local:/home/pi/signage-player/
 ```
 
 ### Option 2: Direct Edit via SSH

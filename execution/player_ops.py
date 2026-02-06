@@ -57,13 +57,13 @@ if __name__ == "__main__":
     elif command == "deploy":
         # Call the legacy deploy script
         # Check for deploy_player.ps1 in root or legacy folder
-        legacy_script = os.path.join(project_root, "deploy_player.ps1")
+        legacy_script = os.path.join(project_root, "deploy.ps1")
         if os.path.exists(legacy_script):
              print(f"Delegating to legacy script: {legacy_script}")
              cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", legacy_script] + extra_args
              sys.exit(run_command(cmd, cwd=project_root))
         else:
-            print("Error: deploy_player.ps1 not found in project root.")
+            print("Error: deploy.ps1 not found in project root.")
             sys.exit(1)
             
     elif command in ["remote_start", "remote_stop", "remote_restart", "remote_status"]:

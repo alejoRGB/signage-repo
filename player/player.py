@@ -25,6 +25,11 @@ logging.basicConfig(
     ]
 )
 
+# --- MPV SKILL CONFIGURATION ---
+# See .agent/skills/mpv-playback/SKILL.md
+ENABLE_AUDIO = False 
+# -------------------------------
+
 class Player:
     def __init__(self):
         # Dynamically find config based on user home
@@ -102,17 +107,17 @@ class Player:
 
         logging.info("[PLAYER] Starting MPV seamless playback...")
         try:
-            # --image-display-duration=10 : Default duration for images (can be tunable later)
-            # --loop-playlist : Loop forever
-            # --fullscreen : Fullscreen
-            # --no-osd-bar : Clean look
-            # --input-ipc-server : Allow controlling mpv while running
+            # See mpv-playback skill for flag justification
             cmd = [
                 "mpv",
                 f"--playlist={self.playlist_m3u}",
                 "--fullscreen",
-                "--no-osd-bar",
-                "--no-audio-display",
+                "--no-border",
+                "--no-osc",
+                "--no-input-default-bindings",
+                "--input-vo-keyboard=no",
+                "--cursor-autohide=always",
+                "--hwdec=auto-safe",
                 "--image-display-duration=10",
                 "--loop-playlist=inf",
                 "--prefetch-playlist=yes",
@@ -121,9 +126,14 @@ class Player:
                 "--demuxer-max-bytes=150M",
                 "--demuxer-max-back-bytes=50M",
                 "--hr-seek=yes",
-                "--gpu-context=auto",
-                "--input-ipc-server=/tmp/mpv-socket"
+                "--keep-open=no",
+                "--really-quiet",
             ]
+
+            if not ENABLE_AUDIO:
+                cmd.append("--audio=no")
+
+            cmd.append("--input-ipc-server=/tmp/mpv-socket")
             
             self.mpv_process = subprocess.Popen(cmd)
         except Exception as e:
@@ -139,12 +149,124 @@ class Player:
         except OSError:
             return False
 
+    def _play_media_only_native(self, items: List[Dict], playlist_id: str, playlist_obj: Dict = None):
+        """
+        Native MPV playlist mode for media-only playlists (no web items).
+        Generates M3U file and uses --loop-playlist=inf for seamless transitions.
+        """
+        logging.info(f"[NATIVE_MPV] Starting native MPV playback for {len(items)} media items.")
+        
+        # Apply playlist rotation if needed
+        playlist_orientation = playlist_obj.get("orientation", "landscape") if playlist_obj else "landscape"
+        if self.rotator.current_orientation != playlist_orientation:
+            self.rotator.rotate(playlist_orientation)
+        
+        # Generate M3U playlist file
+        m3u_path = os.path.join(self.media_dir, "current_playlist.m3u")
+        try:
+            with open(m3u_path, 'w') as f:
+                f.write("#EXTM3U\n")
+                for item in items:
+                    filename = item.get('filename')
+                    if filename:
+                        local_path = os.path.join(self.media_dir, filename)
+                        if os.path.exists(local_path):
+                            f.write(f"{local_path}\n")
+                        else:
+                            logging.warning(f"[NATIVE_MPV] File not found: {local_path}")
+            logging.info(f"[NATIVE_MPV] Generated M3U playlist: {m3u_path}")
+        except Exception as e:
+            logging.error(f"[NATIVE_MPV] Failed to write M3U: {e}")
+            return
+        
+        # Stop any existing MPV
+        self.stop_mpv()
+        
+        # Start MPV with native playlist looping (Raspberry Pi 4 optimized)
+        # See mpv-playback skill
+        try:
+            cmd = [
+                "mpv",
+                f"--playlist={m3u_path}",
+                "--fullscreen",
+                "--no-osd-bar",
+                "--no-audio-display",
+                "--image-display-duration=10",
+                "--loop-playlist=inf",
+                "--prefetch-playlist=yes",
+                "--force-window=immediate",
+                "--keep-open=yes", # Keep window open (but not always, to allow loop)
+                "--cache=yes",
+                "--demuxer-max-bytes=150M",
+                "--demuxer-max-back-bytes=50M",
+                "--hr-seek=yes",
+                "--gpu-context=auto",
+            ]
+            
+            if ENABLE_AUDIO:
+                cmd.append("--gapless-audio=yes")
+            else:
+                cmd.append("--audio=no")
+
+            
+            cmd.append("--input-ipc-server=/tmp/mpv-socket")
+
+            self.mpv_process = subprocess.Popen(cmd)
+            logging.info("[NATIVE_MPV] MPV started with native playlist loop.")
+        except Exception as e:
+            logging.error(f"[NATIVE_MPV] Failed to start MPV: {e}")
+            return
+        
+        # Now loop to monitor for playlist changes and send heartbeats
+        last_sync_time = time.time()
+        sync_interval = 60
+        
+        while self.running:
+            # Check if MPV is still running
+            if self.mpv_process and self.mpv_process.poll() is not None:
+                logging.warning("[NATIVE_MPV] MPV process died unexpectedly. Will restart on next loop.")
+                self.mpv_process = None
+                break  # Break to let main loop restart
+            
+            # Heartbeat / Sync check
+            if time.time() - last_sync_time > sync_interval:
+                logging.debug("[NATIVE_MPV] Sending Heartbeat (Sync)...")
+                self.sync_manager.sync()
+                last_sync_time = time.time()
+                
+                # Check for playlist change (hot-swap)
+                data = self.sync_manager.load_cached_playlist()
+                new_target = self.get_current_target_playlist(data)
+                new_id = new_target.get('id') if new_target else None
+                
+                if new_id != playlist_id:
+                    logging.info(f"[NATIVE_MPV] Playlist changed ({playlist_id} -> {new_id}). Breaking loop.")
+                    self.stop_mpv()
+                    break
+            
+            time.sleep(1)
+        
+        logging.info("[NATIVE_MPV] Exiting native MPV playback loop.")
+
     def play_mixed_content_loop(self, items: List[Dict], playlist_id: str, playlist_obj: Dict = None):
         """
         Manages playback item-by-item to support Web/Mixed content.
         This blocks the main loop, so we need to be careful to check for schedule updates occasionally.
+        
+        OPTIMIZATION: For media-only playlists (no web), use native MPV playlist for seamless transitions.
         """
         logging.info(f"[MIXED_PLAYER] Starting mixed content loop with {len(items)} items. Playlist ID: {playlist_id}")
+        
+        # Check if ALL items are media (video/image) - no web items
+        has_web = any(item.get('type') == 'web' for item in items)
+        
+        if not has_web and len(items) > 0:
+            logging.info("[MIXED_PLAYER] Media-only playlist detected. Using native MPV playback for seamless transitions.")
+            self._play_media_only_native(items, playlist_id, playlist_obj)
+            return
+        
+        # Continue with mixed content loop for playlists with web items
+        logging.info("[MIXED_PLAYER] Mixed content detected (has web items). Using item-by-item playback.")
         
         idx = 0
         browser_process = None
@@ -321,23 +443,102 @@ class Player:
                         current_browser_url = None
 
                     # Play MPV logic (Simplified for clarity)
+                    if rotation_changed:
+                         logging.info("[MIXED_PLAYER] Rotation changed. Restarting MPV.")
+                         self.stop_mpv()
+
+                    # Play MPV logic
                     filename = media.get('filename')
                     if filename:
                         local_path = os.path.join(self.media_dir, filename)
-                        try:
-                            cmd = [
-                                "mpv",
-                                local_path,
-                                "--fullscreen",
-                                "--no-osd-bar",
-                                f"--image-display-duration={duration}" if m_type == 'image' else "",
-                                "--no-terminal"
-                            ]
-                            cmd = [c for c in cmd if c]
-                            proc = subprocess.Popen(cmd)
-                            proc.wait() 
-                        except Exception as e:
-                             logging.error(f"[MIXED_PLAYER] Media failed: {e}")
+                        
+                        # 1. Try Seamless Transition via IPC
+                        ipc_success = False
+                        if self.mpv_process and self.mpv_process.poll() is None:
+                            # Use "loadfile" to switch content without closing window
+                            # "replace" tells MPV to stop current and play this one immediately
+                            ipc_success = self.send_ipc_command(["loadfile", local_path, "replace"])
+                            if ipc_success:
+                                logging.info(f"[MIXED_PLAYER] Seamless transition to {filename}")
+                            else:
+                                logging.warning("[MIXED_PLAYER] IPC failed. Restarting MPV.")
+                                self.stop_mpv()
+                        
+                        # 2. Start new instance if needed
+                        if not ipc_success:
+                            try:
+                                cmd = [
+                                    "mpv",
+                                    "--idle=yes",   # Keep open even after file ends
+                                    "--keep-open=always", # ALWAYS keep window open (not just 'yes')
+                                    "--force-window=immediate", # Force window to show immediately
+                                    local_path,
+                                    "--fullscreen",
+                                    "--no-border",
+                                    "--no-osc",
+                                    "--no-input-default-bindings",
+                                    "--input-vo-keyboard=no",
+                                    "--cursor-autohide=always",
+                                    "--no-terminal",
+                                    f"--image-display-duration={duration}" if m_type == 'image' else "",
+                                    "--input-ipc-server=/tmp/mpv-socket",
+                                    "--hwdec=auto-safe",
+                                    "--video-sync=display-resample", # Smoother playback
+                                    "--cache=yes",
+                                    "--cache-secs=10",
+                                    "--demuxer-readahead-secs=5",
+                                ]
+                                
+                                if ENABLE_AUDIO:
+                                    cmd.append("--gapless-audio=yes")
+                                else:
+                                    cmd.append("--audio=no")
+
+                                cmd = [c for c in cmd if c]
+                                self.mpv_process = subprocess.Popen(cmd)
+                                logging.info(f"[MIXED_PLAYER] Started MPV for {filename}")
+                            except Exception as e:
+                                logging.error(f"[MIXED_PLAYER] Failed to start MPV: {e}")
+                                continue
+
+                        # 3. Wait Loop (for Duration & Heartbeats)
+                        # We use the same non-blocking logic as before to handle duration
+                        start_time = time.time()
+                        proc = self.mpv_process # Use class member
+                        
+                        while time.time() - start_time < duration:
+                            # Check if MPV died
+                            if proc.poll() is not None:
+                                logging.warning("[MIXED_PLAYER] MPV died unexpectedly.")
+                                self.mpv_process = None
+                                break
+                            
+                            # HEARTBEAT CHECK
+                            if time.time() - last_sync_time > sync_interval:
+                                logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync)...")
+                                self.sync_manager.sync()
+                                last_sync_time = time.time()
+                                
+                                # HOT-SWAP CHECK
+                                data = self.sync_manager.load_cached_playlist()
+                                new_target = self.get_current_target_playlist(data)
+                                new_id = new_target.get('id') if new_target else None
+                                
+                                if new_id != playlist_id:
+                                    logging.info(f"[MIXED_PLAYER] Detected playlist change ({playlist_id} -> {new_id}). Hot-swapping...")
+                                    # Don't kill MPV here if next playlist is media!
+                                    # But for simplicity/safety of mixed content logic, let's break loop.
+                                    # Verify next playlist type? No, just break.
+                                    # Clean up will happen if type changes next loop or we can just stop it.
+                                    # Let's stop it to be safe and ensure clean state for new playlist.
+                                    self.stop_mpv()
+                                    break 
+                                    
+                            time.sleep(0.5)
+
+                        # End of Item Duration
+                        # Do NOT kill MPV here! We want it to stay open for the next item.
+                        # Unless rotation changed or next item is web (handled at start of loop)
 
                 # Next Item
                 idx = (idx + 1) % len(items)
@@ -515,49 +716,37 @@ class Player:
                      if target_id != current_playlist_id:
                          logging.info(f"[PLAYER] Playlist changed! New: {target_playlist.get('name')} ({target_id})")
                          
-                         # Check if mixed content (Web vs Video)
                          items = target_playlist.get('items', [])
-                         has_web = any(item.get('type') == 'web' for item in items)
                          
-                         if has_web:
-                             # mixed mode logic would go here, for now we just handle switching
-                             # But wait, the original logic assumes MPV for everything. 
-                             # If we have web items, we can't just throw them at MPV.
-                             # We need a new "Play Loop" that iterates items one by one.
-                             logging.info("[PLAYER] Mixed content detected. Switching to Item-by-Item Controller.")
-                             self.stop_mpv()
-                             self.play_mixed_content_loop(items, target_id, target_playlist)
-                             current_playlist_id = target_id
-                             continue
+                         # Always use the Item-by-Item Controller (Mixed Loop)
+                         # This ensures consistent handling of:
+                         # 1. Per-item duration (especially for images)
+                         # 2. Per-item rotation
+                         # 3. Web content
+                         # 4. Seamless transitions (best effort)
                          
-                         if self.generate_m3u(target_playlist):
-                             # 1. Try Seamless IPC Switch first
-                             ipc_success = False
-                             if self.mpv_process and self.mpv_process.poll() is None:
-                                 # "loadlist <file> replace" replaces the current playlist and starts playing it
-                                 ipc_success = self.send_ipc_command(["loadlist", self.playlist_m3u, "replace"])
-                             
-                             if ipc_success:
-                                 logging.info("[PLAYER] Seamlessly switched playlist via IPC.")
-                                 current_playlist_id = target_id
-                             else:
-                                 # 2. Fallback to Restart
-                                 logging.info("[PLAYER] IPC failed or MPV not running. Restarting process.")
-                                 self.start_mpv()
-                                 current_playlist_id = target_id
+                         logging.info("[PLAYER] Starting Playback Loop...")
+                         self.stop_mpv() 
+
+                         # Optimization: Check content type here for explicit dispatch
+                         has_web = any(x.get('type') == 'web' for x in items)
+                         
+                         if not has_web and len(items) > 0:
+                             logging.info("[PLAYER] Optimized Mode: Native MPV Loop (Media Only)")
+                             self._play_media_only_native(items, target_id, target_playlist)
                          else:
-                             logging.error("[PLAYER] Failed to generate M3U")
-                
+                             logging.info("[PLAYER] Standard Mode: Mixed Content Loop (Web + Media)")
+                             self.play_mixed_content_loop(items, target_id, target_playlist)
+                         
+                         # CRITICAL FIX: If loop returns (crash/end), reset ID so it restarts next check
+                         current_playlist_id = None 
+                         continue
+                         
                 elif self.mpv_process:
-                    # No playlist should be playing (e.g. gaps in schedule and no default)
+                    # No playlist should be playing
                     logging.info("[PLAYER] No target playlist. Stopping playback.")
                     self.stop_mpv()
                     current_playlist_id = None
-
-            # Check if MPV crashed
-            if self.mpv_process and self.mpv_process.poll() is not None:
-                logging.error("[PLAYER] MPV exited unexpectedly. Restarting...")
-                self.start_mpv()
 
 
 if __name__ == "__main__":
