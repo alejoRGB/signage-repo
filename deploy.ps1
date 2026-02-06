@@ -1,48 +1,58 @@
-param (
-    [string]$PiUser = "masal",
-    [string]$PiHost = "192.168.100.6"
+param(
+    [string]$PlayerIp,
+    [string]$PlayerUser
 )
 
-$RemotePath = "~/signage-player"
-$LocalPath = "c:\Users\masal\.gemini\antigravity\scratch\digital-signage\player"
 
-Write-Host "--- Digital Signage Player Deployment ---" -ForegroundColor Cyan
-Write-Host "Target: ${PiUser}@${PiHost}:${RemotePath}" -ForegroundColor Gray
+if ([string]::IsNullOrEmpty($PlayerIp)) {
+    $PlayerIp = Read-Host "Enter Player IP Address (e.g. 192.168.1.100)"
+}
 
-# 1. Check if files exist locally
-$Files = @("player.py", "sync.py", "logger_service.py", "setup_service.sh", "setup_timezone.sh", "setup_wallpaper.py")
-foreach ($File in $Files) {
-    if (-not (Test-Path "$LocalPath\$File")) {
-        Write-Error "File not found: $LocalPath\$File"
-        exit 1
+if ([string]::IsNullOrEmpty($PlayerUser)) {
+    $PlayerUser = Read-Host "Enter Player Username (e.g. pi, masal)"
+}
+
+$User = $PlayerUser
+
+$TargetDir = "~/signage-player"
+
+Write-Host "Deploying to $User@$PlayerIp..." -ForegroundColor Cyan
+
+# Copy files
+scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py .\player\rotation_utils.py .\player\fix_rotation_boot.sh .\player\setup_service.sh .\player\logger_service.py .\player\config.json .\player\install_dependencies.sh "$User@$PlayerIp`:$TargetDir"
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Files transferred successfully." -ForegroundColor Green
+    
+    # Make scripts executable
+    ssh "$User@$PlayerIp" "chmod +x $TargetDir/setup_service.sh $TargetDir/install_dependencies.sh"
+
+    # Install Dependencies
+    Write-Host "Installing/Verifying Dependencies (this may take a minute)..." -ForegroundColor Cyan
+    ssh "$User@$PlayerIp" "bash $TargetDir/install_dependencies.sh"
+
+    # Restart Service
+    Write-Host "Attempting to restart signage-player service..." -ForegroundColor Cyan
+    ssh "$User@$PlayerIp" "sudo systemctl restart signage-player"
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Service restarted." -ForegroundColor Green
+    }
+    else {
+        Write-Host "Service restart failed. Service might not be installed." -ForegroundColor Yellow
+        Write-Host "Attempting to install service via setup_service.sh..." -ForegroundColor Cyan
+        
+        # Run setup_service.sh
+        ssh "$User@$PlayerIp" "bash $TargetDir/setup_service.sh"
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Service installed and started successfully." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Failed to install service." -ForegroundColor Red
+        }
     }
 }
-
-# 1.5 Pre-cleanup (Fix Permissions)
-Write-Host "`n[0/3] Fixing permissions..." -ForegroundColor Yellow
-$FixCmd = "ssh ${PiUser}@${PiHost} 'sudo rm -f ~/signage-player/logger_service.py'"
-Invoke-Expression $FixCmd
-
-# 2. Upload Files (SCP)
-Write-Host "`n[1/3] Uploading files..." -ForegroundColor Yellow
-$ScpCmd = "scp $LocalPath\player.py $LocalPath\sync.py $LocalPath\logger_service.py $LocalPath\setup_service.sh $LocalPath\setup_timezone.sh $LocalPath\setup_wallpaper.py ${PiUser}@${PiHost}:${RemotePath}/"
-Write-Host "Command: $ScpCmd"
-Invoke-Expression $ScpCmd
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "SCP failed. Please check your password and connection."
-    exit 1
+else {
+    Write-Host "File transfer failed. Check IP address and connection." -ForegroundColor Red
 }
-
-# 3. Restart Service (SSH)
-Write-Host "`n[2/3] Restarting Player Service..." -ForegroundColor Yellow
-$SshRestartCmd = "ssh ${PiUser}@${PiHost} 'sudo systemctl restart signage-player'"
-Invoke-Expression $SshRestartCmd
-
-# 4. Verify Status (SSH)
-Write-Host "`n[3/3] Verifying Status & Logs..." -ForegroundColor Yellow
-$SshStatusCmd = "ssh ${PiUser}@${PiHost} 'systemctl status signage-player --no-pager -n 10'"
-Invoke-Expression $SshStatusCmd
-
-Write-Host "`n--- Deployment Complete ---" -ForegroundColor Cyan
-Write-Host "Please check the Dashboard to see if the device comes online."
