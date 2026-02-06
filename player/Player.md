@@ -21,7 +21,8 @@ Este agente es responsable de todo el código que se ejecuta en los dispositivos
     -   Reportar el estado del dispositivo ("online", "offline", "playing") a la API.
 
 2.  **Reproducción:**
-    -   Orquestar la reproducción de imágenes, videos y páginas web.
+    -   **Modo Híbrido:** Orquestar la reproducción de imágenes, videos y páginas web.
+    -   **Modo Nativo:** Delegar playlists de solo-video a MPV para transiciones *seamless* (sin cortes ni pantalla negra).
     -   Manejar el ciclo de vida del proceso MPV.
     -   Asegurar transiciones suaves entre contenidos.
     -   Gestionar la duración de visualización de imágenes y webs.
