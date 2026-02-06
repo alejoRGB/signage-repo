@@ -41,6 +41,12 @@ The project is configured for **Continuous Deployment** via Vercel.
     *   After pushing, check the Vercel dashboard or the project URL to ensure the build succeeded.
     *   **Project URL**: `https://signage-repo.vercel.app` (or similar, check `config.json` for the specific endpoint being used).
 
+### Standard Operating Procedure (SOP)
+**After any successful verification of code changes:**
+1.  **Commit**: Immediately commit the changes with a descriptive message.
+2.  **Push**: Push to `origin master` to trigger Vercel deployment.
+3.  **Notify**: Inform the user that a new version is building and provide the link.
+
 ## 3. Troubleshooting Discrepancies
 
 If the live site (or API) does not match your local code:
