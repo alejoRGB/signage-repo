@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
+// Force redeploy for sync fix
 export async function POST(request: Request) {
     try {
         const json = await request.json();
