@@ -19,7 +19,7 @@ $TargetDir = "~/signage-player"
 Write-Host "Deploying to $User@$PlayerIp..." -ForegroundColor Cyan
 
 # Copy files
-scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py .\player\rotation_utils.py .\player\fix_rotation_boot.sh .\player\setup_service.sh .\player\logger_service.py .\player\config.json .\player\install_dependencies.sh "$User@$PlayerIp`:$TargetDir"
+scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py .\player\rotation_utils.py .\player\fix_rotation_boot.sh .\player\setup_service.sh .\player\logger_service.py .\player\config.json .\player\install_dependencies.sh .\player\setup_wallpaper.py .\player\setup_device.sh .\player\README.md "$User@$PlayerIp`:$TargetDir"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Files transferred successfully." -ForegroundColor Green
@@ -30,6 +30,10 @@ if ($LASTEXITCODE -eq 0) {
     # Install Dependencies
     Write-Host "Installing/Verifying Dependencies (this may take a minute)..." -ForegroundColor Cyan
     ssh "$User@$PlayerIp" "bash $TargetDir/install_dependencies.sh"
+
+    # Setup Wallpaper
+    Write-Host "Setting Black Wallpaper..." -ForegroundColor Cyan
+    ssh "$User@$PlayerIp" "python3 $TargetDir/setup_wallpaper.py"
 
     # Restart Service
     Write-Host "Attempting to restart signage-player service..." -ForegroundColor Cyan

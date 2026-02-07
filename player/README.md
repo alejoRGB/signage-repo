@@ -27,9 +27,14 @@ mkdir -p /home/pi/signage-player/media
 cd /home/pi/signage-player
 
 # Copy player files (you'll need to transfer these from your PC)
-# - sync.py
 # - player.py
+# - sync.py
 # - config.json
+# - setup_wallpaper.py
+# - setup_device.sh
+# - rotation_utils.py
+# - logger_service.py
+# - README.md
 ```
 
 ### 3. Create Configuration
