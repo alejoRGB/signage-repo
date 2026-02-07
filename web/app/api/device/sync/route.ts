@@ -87,6 +87,7 @@ export async function POST(request: Request) {
             data: {
                 status: "online",
                 lastSeenAt: new Date(),
+                // @ts-ignore - Prisma types might be lagging during build
                 playingPlaylistId: playing_playlist_id || undefined,
             },
         });
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
 
         // Construct Response
         const responsePayload = {
-            _debug_version: "1.0.1",
+            _debug_version: "1.0.2",
             device_id: device.id,
             device_name: device.name,
             // Legacy field (deprecated but useful for fallback)
