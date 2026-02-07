@@ -13,6 +13,10 @@ This file consolidates the responsibilities, capabilities, and tools for all age
 - **Synthesize** results and report to the user.
 - **Maintain** high-level roadmap (`task.md`).
 
+### Available Skills
+- **Security Review** (`.agent/skills/security-review`): Guidelines for secure coding (Auth, Zod, Secrets).
+- **Performance Review** (`.agent/skills/vercel-react-best-practices`): Guidelines for React/Next.js optimization (Server Components, Bundle Size).
+
 ---
 
 ## 2. Frontend Agent
@@ -60,7 +64,7 @@ This file consolidates the responsibilities, capabilities, and tools for all age
 - **Offline**: Caches content for offline playback.
 
 ### Execution Tools
-- **Deploy**: `python execution/player_ops.py deploy` (Deploys code & config)
+- **Deploy**: `powershell execution/deploy.ps1` (Deploys code & config to RPi)
 - **Start Local**: `python execution/player_ops.py start`
 - **Remote Control**: `python execution/player_ops.py remote_<action>` (start, stop, restart, status)
 
