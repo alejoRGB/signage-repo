@@ -29,6 +29,12 @@ export default async function DevicesPage() {
                     name: true,
                 },
             },
+            schedule: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
         },
         orderBy: {
             createdAt: "desc",
