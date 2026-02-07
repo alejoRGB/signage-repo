@@ -20,6 +20,7 @@ describe('PlaylistEditor', () => {
     const mockPlaylist = {
         id: 'p1',
         name: 'My Playlist',
+        type: 'web' as const,
         items: []
     };
 

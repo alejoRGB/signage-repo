@@ -26,7 +26,15 @@ def main():
     elif command == "lint":
         start_cmd = npm_cmd + ["lint"]
     elif command == "test":
-        start_cmd = npm_cmd + ["test"]
+        # Default to all if just 'test' is passed, but package.json doesn't have 'test' script
+        # So we'll run all of them sequentially or error out.
+        # For now, let's default to unit tests (test:api) if no specific one is given
+        print("Running all web tests...")
+        run_command(npm_cmd + ["test:api"], cwd=web_dir, shell=True)
+        run_command(npm_cmd + ["test:ui"], cwd=web_dir, shell=True)
+        sys.exit(0)
+    elif command in ["test:api", "test:ui", "test:e2e"]:
+        start_cmd = npm_cmd + [command]
     elif command == "db:migrate":
         # Direct npx call for clarity or usage of package.json script
         start_cmd = ["npx", "prisma", "migrate", "dev"]
@@ -35,7 +43,7 @@ def main():
     elif command == "db:seed":
         start_cmd = ["npx", "prisma", "db", "seed"]
     else:
-        print(f"Unknown command: {command}")
+        print(f"Unknown command or custom script: {command}")
         # Allow pass-through
         start_cmd = ["npm", "run", command]
 

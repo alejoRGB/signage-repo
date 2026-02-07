@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "test:api": "jest",
-    "test:ui": "vitest",
+    "test:api": "jest --ci --forceExit",
+    "test:ui": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
