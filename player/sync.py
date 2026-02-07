@@ -140,9 +140,15 @@ class SyncManager:
             response = requests.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
-                data = response.json()
-                logging.debug(f"[SYNC] Device: {data.get('device_name')}")
-                return data
+                try:
+                    data = response.json()
+                    logging.info(f"[SYNC] Response: {str(data)[:200]}") # Log first 200 chars to check version
+                    logging.debug(f"[SYNC] Device: {data.get('device_name')}")
+                    return data
+                except json.JSONDecodeError as e:
+                    logging.error(f"[SYNC] Failed to decode JSON response: {e}")
+                    logging.debug(f"[SYNC] Raw response text: {response.text}")
+                    return None
             elif response.status_code == 401:
                 logging.error("[SYNC] Unauthorized: Invalid token. Device might have been deleted.")
                 return None
