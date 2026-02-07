@@ -16,8 +16,15 @@ test('capture production ui screenshots', async ({ page }) => {
 
     // 2. Login Flow
     console.log('Logging in...');
-    await page.fill('input[name="username"]', 'demo@expanded.com');
-    await page.fill('input[name="password"]', 'signage2026');
+    const username = process.env.E2E_USERNAME || 'demo@expanded.com'; // Fallback only for local dev if needed, but better to force env
+    const password = process.env.E2E_PASSWORD;
+
+    if (!password) {
+        throw new Error('E2E_PASSWORD environment variable is not set');
+    }
+
+    await page.fill('input[name="username"]', username);
+    await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
 
     // Wait for navigation to dashboard
