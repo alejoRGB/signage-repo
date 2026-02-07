@@ -10,6 +10,7 @@ export type Device = {
     scheduleId?: string | null;
     playingPlaylistId?: string | null;
     connectivityStatus?: string;
+    schedule?: { id: string; name: string } | null;
     createdAt: string;
 };
 

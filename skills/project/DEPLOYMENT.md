@@ -6,6 +6,13 @@
   - `DATABASE_URL`: Neon Postgres Connection String.
   - `NEXTAUTH_SECRET`: Auth secret.
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
+  - `E2E_USERNAME` / `E2E_PASSWORD`: Required for E2E testing (DO NOT hardcode in tests).
+
+## Security & Maintenance
+- **Credentials:** Never commit hardcoded secrets. Use `.env` and environment variables.
+- **Gitignore:** Ensure `playwright-report`, `test-results`, and `.env` are ignored.
+- **Admin Recovery:** Use `web/scripts/reset_password.js` to reset admin credentials directly in DB.
+- **Device Debugging:** Use `web/scripts/check_devices.js` to verify device tokens and status in DB.
 
 ## Edge Deployment (Raspberry Pi)
 ### One-Line Install (Canonical)
