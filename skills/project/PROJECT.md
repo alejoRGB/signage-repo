@@ -2,7 +2,7 @@
 
 ## Overview
 **Product Name:** Expanded Signage (Digital Signage System)
-**Version:** 1.0 (Feb 2026)
+**Version:** 1.1 (Feb 2026)
 **Purpose:** Cloud-based digital signage management system with web dashboard and Raspberry Pi player client.
 
 ## Core Decisions
@@ -11,7 +11,7 @@
   - **Edge:** Player Client (Raspberry Pi, Python, MPV).
 - **Control Flow:**
   - Dashboard is Source of Truth for configuration.
-  - Player syncs via API (Push/Pull model via Heartbeat).
+  - Player syncs via API (Push/Pull model via Heartbeat) and reports active state ("True Sync").
 - **Authentication:**
   - **Users:** NextAuth (Email/Password). No self-registration.
   - **Devices:** Pairing Code (6-digit). Device Token authentication.
@@ -25,7 +25,7 @@
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
-2. **Sync:** Device heartbeats (60s) -> Receives JSON payload -> Downloads media -> Plays.
+2. **Sync:** Device heartbeats (60s) -> Receives JSON payload -> Downloads media -> Reports `playingPlaylistId` -> Plays.
 3. **Playback:**
    - Media: MPV loop.
    - Web: Chromium Kiosk.
