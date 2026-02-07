@@ -60,15 +60,46 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
     };
 
     const addItem = (day: number) => {
+        // Find existing items for this day to determine start time
+        const dayItems = items.filter(i => i.dayOfWeek === day);
+
+        let startTime = "08:00";
+        let endTime = "12:00";
+
+        if (dayItems.length > 0) {
+            // Find the latest end time
+            const lastItem = dayItems.reduce((prev, current) => {
+                return (prev.endTime > current.endTime) ? prev : current;
+            });
+
+            startTime = lastItem.endTime;
+
+            // Add 1 hour for valid default duration
+            const [h, m] = startTime.split(':').map(Number);
+            const startMins = h * 60 + m;
+            let endMins = startMins + 60; // +1 hour
+
+            // Cap at 23:59
+            if (endMins >= 24 * 60) {
+                endMins = 23 * 60 + 59;
+                // If start is also late, we might want to try finding an early slot, 
+                // but for now let's just accept it might overlap/fail if full.
+            }
+
+            const endH = Math.floor(endMins / 60);
+            const endM = endMins % 60;
+            endTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+        }
+
         const newItem: ScheduleItem = {
             dayOfWeek: day,
-            startTime: "08:00",
-            endTime: "12:00",
+            startTime,
+            endTime,
             playlistId: playlists?.[0]?.id || "",
         };
 
         if (hasOverlap(newItem.dayOfWeek, newItem.startTime, newItem.endTime)) {
-            showToast("Cannot add item: Time slot overlaps with an existing schedule.", "error");
+            showToast("Cannot add item: No space found after last item, or overlaps.", "error");
             return;
         }
 

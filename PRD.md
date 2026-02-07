@@ -486,7 +486,7 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 
 **POST** `/api/device/sync`
 - Fetch playlists and schedule for device
-- Body: `{ device_token }`
+- Body: `{ device_token, playing_playlist_id }`
 - Returns: `{ device_name, default_playlist, schedule, playlist }`
 - Updates `lastSeenAt` timestamp (heartbeat)
 
@@ -603,6 +603,7 @@ status: String (default: "unpaired")
 lastSeenAt: DateTime?
 userId: String?
 activePlaylistId: String?
+playingPlaylistId: String? (reported by device)
 defaultPlaylistId: String?
 scheduleId: String?
 pairingCode: String? (unique)
