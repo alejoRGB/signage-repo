@@ -30,6 +30,8 @@ export default function DeviceManager({
     const [deviceToEdit, setDeviceToEdit] = useState<Device | null>(null); // New state
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
 
+    const [updatingDeviceId, setUpdatingDeviceId] = useState<string | null>(null);
+
     // Sync state with props when router.refresh() fetches new data
     useEffect(() => {
         setDevices(initialDevices);
@@ -61,6 +63,7 @@ export default function DeviceManager({
     };
 
     const handlePlaylistChange = async (deviceId: string, playlistId: string) => {
+        setUpdatingDeviceId(deviceId);
         try {
             const res = await fetch(`/api/devices/${deviceId}`, {
                 method: "PUT",
@@ -82,6 +85,8 @@ export default function DeviceManager({
         } catch (error) {
             console.error("Error updating playlist:", error);
             showToast("Error updating playlist", "error");
+        } finally {
+            setUpdatingDeviceId(null);
         }
     };
 
@@ -179,6 +184,7 @@ export default function DeviceManager({
                 onEdit={setDeviceToEdit} // Pass setter as handler
                 onViewLogs={setSelectedDeviceForLogs}
                 onDelete={handleDeleteClick}
+                updatingDeviceId={updatingDeviceId}
             />
 
             {/* Toast Container removed */}
