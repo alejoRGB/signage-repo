@@ -218,7 +218,7 @@ class Player:
             return
         
         # Now loop to monitor for playlist changes and send heartbeats
-        last_sync_time = time.time()
+        last_sync_time = 0 # Force immediate sync
         sync_interval = 60
         
         while self.running:
@@ -273,7 +273,7 @@ class Player:
         current_browser_url = None
         
         # Sync control for mixed loop
-        last_sync_time = time.time()
+        last_sync_time = 0 # Force immediate sync
         sync_interval = 60
         
         # Determine Playlist defaults
