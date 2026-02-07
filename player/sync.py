@@ -136,7 +136,7 @@ class SyncManager:
             if playing_playlist_id:
                 payload["playing_playlist_id"] = playing_playlist_id
             
-            logging.debug(f"[SYNC] Fetching sync data from {url}")
+            logging.info(f"[SYNC] Fetching sync data. Sending ID: {playing_playlist_id}")
             response = requests.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
