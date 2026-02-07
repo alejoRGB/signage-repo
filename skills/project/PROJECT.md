@@ -13,15 +13,17 @@
   - Dashboard is Source of Truth for configuration.
   - Player syncs via API (Push/Pull model via Heartbeat) and reports active state ("True Sync").
 - **Authentication:**
-  - **Users:** NextAuth (Email/Password). No self-registration.
-  - **Devices:** Pairing Code (6-digit). Device Token authentication.
+  - **Users:** NextAuth (Email/Password) against `User` table.
+  - **Admins:** NextAuth against `Admin` table. Separate credentials.
+  - **Devices:** Pairing Code (6-digit). Device Token authentication. Token in `config.json` MUST match DB.
 
 ## Constraints
 - **Hardware:** Raspberry Pi 4/5 targeting standard displays.
 - **Operating System:** Raspberry Pi OS / Linux.
 - **Network:** Devices must handle offline playback (cache required).
 - **Multi-Device:** No synchronized playback (Video Wall features NOT supported).
-- **Content:** Images, Videos, Web Pages. No mixed playlists (enforced).
+- **Content:** Images, Videos, Web Pages. No mixed playlists (enforced via UI, handled via Mixed Loop if necessary).
+- **Schedule:** Items calculated dynamically (Start = Prev End). Default duration 1h. Capped at 23:59.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.

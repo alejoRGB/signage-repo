@@ -22,6 +22,12 @@ export async function GET(request: Request) {
                     name: true,
                 },
             },
+            schedule: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
         },
         orderBy: {
             createdAt: "desc",
