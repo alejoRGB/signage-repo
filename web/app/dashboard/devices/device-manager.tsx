@@ -90,10 +90,6 @@ export default function DeviceManager({
         }
     };
 
-    const handlePushPlaylist = async (deviceId: string) => {
-        showToast("Playlist update queued! Device will update shortly.", "success");
-    };
-
     const handleDeleteClick = (id: string) => {
         setDeviceToDelete(id);
     };
@@ -180,7 +176,6 @@ export default function DeviceManager({
                 devices={devices}
                 playlists={playlists}
                 onPlaylistChange={handlePlaylistChange}
-                onPushPlaylist={handlePushPlaylist}
                 onEdit={setDeviceToEdit} // Pass setter as handler
                 onViewLogs={setSelectedDeviceForLogs}
                 onDelete={handleDeleteClick}
@@ -189,6 +184,6 @@ export default function DeviceManager({
 
             {/* Toast Container removed */}
 
-        </div>
+        </div >
     );
 }
