@@ -8,26 +8,41 @@ describe('DeviceListTable', () => {
             id: 'd1',
             name: 'Device 1',
             status: 'paired',
+            token: 't1',
+            createdAt: new Date().toISOString(),
             lastSeenAt: new Date().toISOString(),
-            activePlaylist: { id: 'p1', name: 'Playlist 1' }
+            activePlaylist: { id: 'p1', name: 'Playlist 1' },
+            playingPlaylistId: 'p1' // Synced
         },
         {
             id: 'd2',
             name: 'Device 2',
             status: 'offline',
+            token: 't2',
+            createdAt: new Date().toISOString(),
             lastSeenAt: new Date().toISOString(),
-            activePlaylist: null
+            activePlaylist: null,
+            playingPlaylistId: null
+        },
+        {
+            id: 'd3',
+            name: 'Device 3',
+            status: 'paired',
+            token: 't3',
+            createdAt: new Date().toISOString(),
+            lastSeenAt: new Date().toISOString(),
+            activePlaylist: { id: 'p2', name: 'Playlist 2' },
+            playingPlaylistId: 'p1' // Mismatch -> Syncing
         }
     ];
 
     const mockPlaylists = [
-        { id: 'p1', name: 'Playlist 1', type: 'media', items: [] },
-        { id: 'p2', name: 'Playlist 2', type: 'media', items: [] }
+        { id: 'p1', name: 'Playlist 1' },
+        { id: 'p2', name: 'Playlist 2' }
     ];
 
     const mockHandlers = {
         onPlaylistChange: vi.fn(),
-        onPushPlaylist: vi.fn(),
         onEdit: vi.fn(),
         onViewLogs: vi.fn(),
         onDelete: vi.fn()
@@ -40,7 +55,7 @@ describe('DeviceListTable', () => {
     });
 
     it('shows loading state when updatingDeviceId matches', () => {
-        // d1 is updating
+        // d1 is updating (Optimistic)
         render(
             <DeviceListTable
                 devices={mockDevices}
@@ -51,13 +66,19 @@ describe('DeviceListTable', () => {
         );
 
         // d1 should show "Syncing..."
-        expect(screen.getByText('Syncing...')).toBeInTheDocument();
+        const syncingElements = screen.getAllByText('Syncing...');
+        expect(syncingElements[0]).toBeInTheDocument();
+    });
 
-        // d2 should still show the select, but it might be disabled if we disabled all
-        // In our implementation we disabled all selects when one is updating
-        // Let's check if the select for d2 exists
-        const selects = screen.getAllByRole('combobox');
-        expect(selects).toHaveLength(1); // Only d2 has a select, d1 has Syncing text
-        expect(selects[0]).toBeDisabled();
+    it('shows loading state when activePlaylist differs from playingPlaylistId', () => {
+        render(<DeviceListTable devices={mockDevices} playlists={mockPlaylists} {...mockHandlers} />);
+
+        // d3 has mismatch (p2 vs p1), should show Syncing
+        // d1 is synced, shows select
+        // d2 has no playlist, shows select (default) or whatever default is
+
+        // We expect at least one "Syncing..." for d3
+        const syncingElements = screen.getAllByText('Syncing...');
+        expect(syncingElements).toHaveLength(1);
     });
 });

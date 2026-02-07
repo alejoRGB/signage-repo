@@ -123,7 +123,7 @@ class SyncManager:
             logging.error(f"[SYNC] Error generating pairing image: {e}")
             return None
 
-    def fetch_sync_data(self) -> Optional[Dict]:
+    def fetch_sync_data(self, playing_playlist_id: Optional[str] = None) -> Optional[Dict]:
         """Fetch sync data (schedule, default, etc) from server"""
         if not self.device_token:
             logging.warning("[SYNC] No device token. Cannot fetch playlist.")
@@ -132,6 +132,9 @@ class SyncManager:
         try:
             url = f"{self.server_url}/api/device/sync"
             payload = {"device_token": self.device_token}
+            
+            if playing_playlist_id:
+                payload["playing_playlist_id"] = playing_playlist_id
             
             logging.debug(f"[SYNC] Fetching sync data from {url}")
             response = requests.post(url, json=payload, timeout=10)
@@ -183,9 +186,9 @@ class SyncManager:
             logging.error(f"[DOWNLOAD] ✗ Error downloading {filename}: {e}")
             return False
     
-    def sync(self) -> bool:
+    def sync(self, playing_playlist_id: Optional[str] = None) -> bool:
         """Sync schedule and download new media"""
-        data = self.fetch_sync_data()
+        data = self.fetch_sync_data(playing_playlist_id)
         
         if not data:
             return False

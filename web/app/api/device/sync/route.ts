@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
     try {
         const json = await request.json();
-        const { device_token } = json;
+        const { device_token, playing_playlist_id } = json;
 
         if (!device_token || typeof device_token !== "string") {
             return NextResponse.json(
@@ -86,6 +86,7 @@ export async function POST(request: Request) {
             data: {
                 status: "online",
                 lastSeenAt: new Date(),
+                playingPlaylistId: playing_playlist_id || undefined,
             },
         });
 

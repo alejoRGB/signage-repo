@@ -38,6 +38,7 @@ model Device {
   updatedAt            DateTime    @updatedAt
   defaultPlaylistId    String?
   scheduleId           String?
+  playingPlaylistId    String?     // The playlist currently playing on the device
   activePlaylist       Playlist?   @relation(fields: [activePlaylistId], references: [id])
   defaultPlaylist      Playlist?   @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
   schedule             Schedule?   @relation(fields: [scheduleId], references: [id])

@@ -231,7 +231,7 @@ class Player:
             # Heartbeat / Sync check
             if time.time() - last_sync_time > sync_interval:
                 logging.debug("[NATIVE_MPV] Sending Heartbeat (Sync)...")
-                self.sync_manager.sync()
+                self.sync_manager.sync(playlist_id)
                 last_sync_time = time.time()
                 
                 # Check for playlist change (hot-swap)
@@ -413,7 +413,7 @@ class Player:
                                  # HEARTBEAT CHECK (Inside Duration Loop)
                                  if time.time() - last_sync_time > sync_interval:
                                      logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync) during playback...")
-                                     self.sync_manager.sync()
+                                     self.sync_manager.sync(playlist_id)
                                      last_sync_time = time.time()
                                      
                                      # HOT-SWAP CHECK
@@ -516,7 +516,7 @@ class Player:
                             # HEARTBEAT CHECK
                             if time.time() - last_sync_time > sync_interval:
                                 logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync)...")
-                                self.sync_manager.sync()
+                                self.sync_manager.sync(playlist_id)
                                 last_sync_time = time.time()
                                 
                                 # HOT-SWAP CHECK
@@ -546,7 +546,7 @@ class Player:
                 # HEARTBEAT CHECK
                 if time.time() - last_sync_time > sync_interval:
                     logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync)...")
-                    self.sync_manager.sync() # This updates lastSeenAt on server
+                    self.sync_manager.sync(playlist_id) # This updates lastSeenAt on server
                     last_sync_time = time.time()
                 
                 # Check for playlist change
@@ -695,7 +695,7 @@ class Player:
             
             # A. SYNC TASK
             if now_ts - last_sync_time > sync_interval:
-                if self.sync_manager.sync():
+                if self.sync_manager.sync(current_playlist_id):
                      logging.debug("[PLAYER] Sync completed")
                 last_sync_time = now_ts
 

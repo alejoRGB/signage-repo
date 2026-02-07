@@ -8,6 +8,7 @@ export type Device = {
     activePlaylist: { id: string; name: string } | null;
     defaultPlaylistId?: string | null;
     scheduleId?: string | null;
+    playingPlaylistId?: string | null;
     connectivityStatus?: string;
     createdAt: string;
 };
