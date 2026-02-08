@@ -42,6 +42,14 @@ export async function POST(request: Request) {
             );
         }
 
+        // Check if code is expired
+        if (device.pairingCodeExpiresAt && new Date() > device.pairingCodeExpiresAt) {
+            return NextResponse.json(
+                { error: "Pairing code expired" },
+                { status: 410 } // Gone
+            );
+        }
+
         // Check if already paired
         if (device.userId) {
             return NextResponse.json(
