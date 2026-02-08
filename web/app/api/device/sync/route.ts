@@ -17,6 +17,16 @@ export async function POST(request: Request) {
             );
         }
 
+        // Rate Limit Check
+        const { checkRateLimit } = await import("@/lib/rate-limit");
+        const isAllowed = await checkRateLimit(device_token);
+        if (!isAllowed) {
+            return NextResponse.json(
+                { error: "Too many requests" },
+                { status: 429 }
+            );
+        }
+
 
 
         // Find device by token
@@ -96,9 +106,7 @@ export async function POST(request: Request) {
         });
 
         // Helper to format a playlist
-        const protocol = request.headers.get("x-forwarded-proto") || "http";
-        const host = request.headers.get("host") || "localhost:3000";
-        const baseUrl = `${protocol}://${host}`;
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
         const formatPlaylist = (playlist: any) => {
             if (!playlist) return null;
