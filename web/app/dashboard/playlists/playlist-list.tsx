@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, PlaySquare, Trash2, Edit, Video, Globe, ChevronDown, ChevronUp, Clock, FileImage, Layout } from "lucide-react";
