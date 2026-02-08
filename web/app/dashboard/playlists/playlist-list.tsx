@@ -2,33 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, PlaySquare, Trash2, Edit, Video, Globe, ChevronDown, ChevronUp, Clock, FileImage, Layout } from "lucide-react";
+import { Plus, PlaySquare, Trash2, Edit, Video, Globe } from "lucide-react";
 import Link from "next/link";
 import ConfirmModal from "@/components/confirm-modal";
 import CreatePlaylistDialog from "@/components/playlists/create-playlist-dialog";
 import { useToast } from "@/components/ui/toast-context";
-
-type MediaItem = {
-    id: string;
-    name: string;
-    type: string;
-    url: string;
-    duration: number | null;
-};
-
-type PlaylistItem = {
-    id: string;
-    order: number;
-    duration: number;
-    mediaItem: MediaItem;
-};
 
 type Playlist = {
     id: string;
     name: string;
     type: "media" | "web";
     orientation: string;
-    items: PlaylistItem[];
     _count: { items: number };
     createdAt: Date;
 };
@@ -38,7 +22,6 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
     const { showToast } = useToast();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const handleCreateSuccess = () => {
         router.refresh();
@@ -59,25 +42,13 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
         }
     };
 
-    const toggleExpand = (id: string, e: React.MouseEvent) => {
-        e.preventDefault();
-        setExpandedId(expandedId === id ? null : id);
-    };
-
-    const calculateTotalDuration = (items: PlaylistItem[]) => {
-        const totalSeconds = items.reduce((acc, item) => acc + (item.duration || item.mediaItem.duration || 10), 0);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}m ${seconds}s`;
-    };
-
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center bg-card p-4 rounded-lg border border-border">
-                <h2 className="text-lg font-medium text-foreground">Your Playlists</h2>
+            <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow">
+                <h2 className="text-lg font-medium text-gray-900">Your Playlists</h2>
                 <button
                     onClick={() => setIsCreateOpen(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-lg shadow-primary/20 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
                 >
                     <Plus className="h-4 w-4 mr-2" /> New Playlist
                 </button>
@@ -100,102 +71,63 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
             />
 
             {initialPlaylists.length === 0 ? (
-                <div className="text-center py-12 bg-card rounded-lg border-2 border-dashed border-border">
-                    <PlaySquare className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                    <h3 className="mt-2 text-sm font-medium text-foreground">No playlists</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Create a playlist to organize your content.</p>
+                <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                    <PlaySquare className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No playlists</h3>
+                    <p className="mt-1 text-sm text-gray-500">Create a playlist to organize your content.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {initialPlaylists.map((playlist) => (
-                        <div
+                        <Link
                             key={playlist.id}
-                            className={`bg-card border border-border rounded-lg overflow-hidden transition-all duration-300 ${expandedId === playlist.id ? 'ring-1 ring-primary/50 shadow-lg shadow-primary/5' : 'hover:border-primary/30'}`}
+                            href={`/dashboard/playlists/${playlist.id}`}
+                            className="block hover:no-underline"
                         >
-                            <div className="px-4 py-4 sm:px-6 cursor-pointer" onClick={(e) => toggleExpand(playlist.id, e)}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center min-w-0 gap-4">
-                                        <div className={`flex-shrink-0 rounded-md p-2.5 ${playlist.type === 'web' ? 'bg-purple-500/10 text-purple-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                                            {playlist.type === 'web' ? <Globe className="h-5 w-5" /> : <PlaySquare className="h-5 w-5" />}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-base font-semibold text-foreground truncate">{playlist.name}</h3>
-                                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                                <span className="flex items-center gap-1">
-                                                    <Layout className="h-3 w-3" />
-                                                    {playlist._count.items} items
-                                                </span>
-                                                <span className="flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {calculateTotalDuration(playlist.items)}
-                                                </span>
-                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${playlist.type === 'web' ? 'bg-purple-500/5 text-purple-400 border-purple-500/20' : 'bg-blue-500/5 text-blue-400 border-blue-500/20'}`}>
-                                                    {playlist.type}
-                                                </span>
+                            <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow border border-gray-200 group h-full flex flex-col">
+                                <div className="px-4 py-5 sm:p-6 flex-1">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start">
+                                            <div className={`flex-shrink-0 rounded-md p-3 ${playlist.type === 'web' ? 'bg-purple-100 text-purple-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                                {playlist.type === 'web' ? <Globe className="h-6 w-6" /> : <Video className="h-6 w-6" />}
+                                            </div>
+                                            <div className="ml-4">
+                                                <h3 className="text-lg font-medium leading-6 text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                                                    {playlist.name}
+                                                </h3>
+                                                <div className="mt-1 flex flex-wrap gap-2">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                                                        {playlist.type}
+                                                    </span>
+                                                    {playlist.type === 'web' && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                                                            {playlist.orientation.replace('-', ' ')}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div
+                                        <button
                                             onClick={(e) => {
-                                                e.stopPropagation();
+                                                e.preventDefault();
                                                 setDeleteId(playlist.id);
                                             }}
-                                            className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                                            role="button"
+                                            className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                                         >
-                                            <Trash2 className="h-4 w-4" />
-                                        </div>
-                                        <Link
-                                            href={`/dashboard/playlists/${playlist.id}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Link>
-                                        <div className="p-2 text-muted-foreground">
-                                            {expandedId === playlist.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                        </div>
+                                            <Trash2 className="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                    <p className="mt-4 text-sm text-gray-500">
+                                        {playlist._count.items} {playlist._count.items === 1 ? 'item' : 'items'}
+                                    </p>
+                                </div>
+                                <div className="bg-gray-50 px-4 py-3 sm:px-6">
+                                    <div className="text-xs text-gray-400">
+                                        Created {new Date(playlist.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Expanded Content */}
-                            {expandedId === playlist.id && (
-                                <div className="border-t border-border bg-black/20 px-4 py-3 sm:px-6">
-                                    <div className="space-y-2">
-                                        {playlist.items.length === 0 ? (
-                                            <p className="text-sm text-muted-foreground italic text-center py-2">No items in this playlist.</p>
-                                        ) : (
-                                            playlist.items.map((item, index) => (
-                                                <div key={item.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 transition-colors">
-                                                    <span className="text-muted-foreground/50 font-mono text-xs w-6 text-center">{index + 1}</span>
-                                                    <div className="h-8 w-14 bg-black/40 rounded overflow-hidden flex-shrink-0 flex items-center justify-center border border-white/5">
-                                                        {item.mediaItem.type === 'video' ? <Video className="h-4 w-4 text-muted-foreground" /> :
-                                                            item.mediaItem.type === 'image' ? <FileImage className="h-4 w-4 text-muted-foreground" /> :
-                                                                <Globe className="h-4 w-4 text-muted-foreground" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-foreground truncate">{item.mediaItem.name}</p>
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground font-mono">
-                                                        {item.duration || item.mediaItem.duration}s
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                        <div className="pt-2 flex justify-center">
-                                            <Link
-                                                href={`/dashboard/playlists/${playlist.id}`}
-                                                className="text-xs text-primary hover:text-primary/80 font-medium"
-                                            >
-                                                Manage Playlist Items &rarr;
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        </Link>
                     ))}
                 </div>
             )}

@@ -9,25 +9,27 @@ type DeviceStatusBadgeProps = {
 export default function DeviceStatusBadge({ status, connectivity }: DeviceStatusBadgeProps) {
 
     let label = connectivity || status;
-    // Default (Offline/Unknown) - Deep Space Style
-    let colorClass = "bg-red-500/10 text-red-500 border border-red-500/20";
+    let colorClass = "bg-gray-100 text-gray-800"; // Default (Offline/Unknown)
 
     // 1. Connectivity Check
     if (connectivity === "online") {
-        colorClass = "bg-green-500/10 text-green-400 border border-green-500/20";
+        colorClass = "bg-green-100 text-green-800";
     } else if (connectivity === "offline") {
-        colorClass = "bg-red-500/10 text-red-500 border border-red-500/20";
+        colorClass = "bg-gray-100 text-gray-800";
     }
 
     // 2. Administrative/Special Status Overrides
+    // If the device is unpaired, we prioritize that information
     if (status === "unpaired") {
         label = "Unpaired";
-        colorClass = "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20";
+        colorClass = "bg-yellow-100 text-yellow-800";
     }
+
+    // Future: If status === 'disabled', make it red
 
     return (
         <span
-            className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${colorClass}`}
+            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${colorClass} capitalize`}
         >
             {label}
         </span>

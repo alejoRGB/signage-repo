@@ -49,19 +49,19 @@ export default function DeviceRow({
     const shouldShowSyncing = isOptimisticUpdating || (hasActivePlaylist && !isSynced);
 
     return (
-        <tr className="hover:bg-white/5 transition-colors group">
+        <tr className="hover:bg-gray-50">
             <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-foreground">
+                <div className="text-sm font-medium text-gray-900">
                     {device.name}
                 </div>
-                <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                <div className="text-xs text-gray-500 font-mono">
                     {device.id}
                 </div>
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
                 <DeviceStatusBadge status={device.status} connectivity={device.connectivityStatus} />
             </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground font-mono" suppressHydrationWarning>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" suppressHydrationWarning>
                 {formatDate(device.lastSeenAt)}
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
@@ -72,7 +72,7 @@ export default function DeviceRow({
                             onPlaylistChange(device.id, e.target.value)
                         }
                         disabled={isOptimisticUpdating}
-                        className="text-sm bg-card text-foreground border border-border rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 min-w-[140px]"
+                        className="text-sm text-gray-900 border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                     >
                         <option value="">No playlist</option>
                         {playlists.map((playlist) => (
@@ -84,7 +84,7 @@ export default function DeviceRow({
 
 
                     {shouldShowReady && (
-                        <div className="flex items-center gap-1 text-xs text-green-400">
+                        <div className="flex items-center gap-1 text-xs text-green-600">
                             <svg className="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
@@ -93,7 +93,7 @@ export default function DeviceRow({
                     )}
                 </div>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {device.schedule?.name || "No Schedule"}
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

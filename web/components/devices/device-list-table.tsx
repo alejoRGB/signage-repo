@@ -23,36 +23,35 @@ export default function DeviceListTable({
     updatingDeviceId
 }: DeviceListTableProps) {
     return (
-
-        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
-            <table className="min-w-full divide-y divide-border">
-                <thead className="bg-white/2">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                     <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Device
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Last Seen
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Active Playlist
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Schedule
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
                         </th>
                     </tr>
                 </thead>
-                <tbody className="bg-card divide-y divide-border/50">
+                <tbody className="bg-white divide-y divide-gray-200">
                     {devices.length === 0 ? (
                         <tr>
-                            <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                                No devices yet. Click "Pair Device" above to get started.
+                            <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                No devices yet. Click "Add Device" to get started.
                             </td>
                         </tr>
                     ) : (
