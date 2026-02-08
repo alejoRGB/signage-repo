@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propuesta 3: Glassmorphism Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-highlight: rgba(255, 255, 255, 0.2);
+            --accent-pink: #e94560;
+            --accent-blue: #0f3460;
+            --text-white: #ffffff;
+            --text-gray: #b0b0b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top left, #2a2a4e, #1a1a2e);
+            color: var(--text-white);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Ambient Orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #e94560;
+            top: -100px;
+            left: -100px;
+            opacity: 0.4;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: #533483;
+            bottom: -150px;
+            right: -150px;
+            opacity: 0.4;
+        }
+
+        /* Glass Container - The main app frame */
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 85vh;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 250px;
+            padding: 2rem;
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-circle {
+            width: 12px;
+            height: 12px;
+            background: #e94560;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #e94560;
+        }
+
+        .nav-links li {
+            list-style: none;
+            margin-bottom: 1rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-gray);
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 12px 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-white);
+            transform: translateX(5px);
+        }
+
+        .nav-links a.active {
+            background: linear-gradient(90deg, rgba(233, 69, 96, 0.2), transparent);
+            border-left: 3px solid #e94560;
+        }
+
+        /* Main Area */
+        .content {
+            flex: 1;
+            padding: 3rem;
+            overflow-y: auto;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .search-bar {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            padding: 10px 20px;
+            border-radius: 20px;
+            width: 300px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-text {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .profile-img {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            background: #e94560;
+            /* placeholder */
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Cards Grid */
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px;
+            color: #fff;
+            transition: transform 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--glass-highlight);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            opacity: 0.8;
+        }
+
+        .big-number {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sub-text {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+
+        /* Wide Section */
+        .wide-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .section-title {
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .item-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(0, 255, 128, 0.15);
+            color: #00ff80;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="brand">
+                <div class="brand-circle"></div>
+                Expanded
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Dashboard</a></li>
+                <li><a href="#">Analíticas</a></li>
+                <li><a href="#">Dispositivos</a></li>
+                <li><a href="#">Media</a></li>
+                <li><a href="#">Ajustes</a></li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="top-bar">
+                <div class="search-bar">
+                    <span class="search-text">Buscar dispositivo...</span>
+                </div>
+                <div class="profile-img"></div>
+            </div>
+
+            <div class="cards-container">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span>Total Online</span>
+                        <span class="card-icon">⚡</span>
+                    </div>
+                    <div class="big-number">84%</div>
+                    <div class="sub-text">12 dispositivos activos de 14</div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span>Storage Usado</span>
+                        <span class="card-icon">💾</span>
+                    </div>
+                    <div class="big-number">64GB</div>
+                    <div class="sub-text">Espacio en nube consumido</div>
+                </div>
+            </div>
+
+            <div class="wide-section">
+                <div class="section-title">Última Actividad</div>
+
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon">📺</div>
+                        <div>
+                            <div style="font-weight: 600;">Samsung QLED Lobby</div>
+                            <div style="font-size: 0.8rem; color: #888;">Actualizado hace 2m</div>
+                        </div>
+                    </div>
+                    <span class="item-status status-active">Sincronizado</span>
+                </div>
+
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon">🖥️</div>
+                        <div>
+                            <div style="font-weight: 600;">Monitor Pasillo 2</div>
+                            <div style="font-size: 0.8rem; color: #888;">Reiniciado hace 15m</div>
+                        </div>
+                    </div>
+                    <span class="item-status status-active">Online</span>
+                </div>
+
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon">⚠️</div>
+                        <div>
+                            <div style="font-weight: 600;">Kiosko Entrada</div>
+                            <div style="font-size: 0.8rem; color: #888;">Error de conexión</div>
+                        </div>
+                    </div>
+                    <span class="item-status"
+                        style="background: rgba(233, 69, 96, 0.15); color: #e94560;">Revisar</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -22,12 +22,12 @@ export function SidebarNav() {
     const { data: session } = useSession();
 
     return (
-        <div className="hidden w-64 flex-col bg-gray-900 md:flex h-full">
-            <div className="flex h-16 items-center justify-center bg-gray-800">
-                <h1 className="text-xl font-bold text-white">Cloud Signage</h1>
+        <div className="hidden w-64 flex-col bg-card/95 border-r border-border md:flex h-full backdrop-blur-sm z-10">
+            <div className="flex h-16 items-center justify-center border-b border-white/5 bg-white/2">
+                <h1 className="text-xl font-bold text-foreground font-display tracking-tight">Cloud Signage</h1>
             </div>
             <div className="flex flex-1 flex-col overflow-y-auto pt-5">
-                <nav className="flex-1 space-y-1 px-2">
+                <nav className="flex-1 space-y-1 px-4">
                     {navigation.map((item) => {
                         const isActive = pathname === item.href;
                         return (
@@ -36,17 +36,17 @@ export function SidebarNav() {
                                 href={item.href}
                                 className={classNames(
                                     isActive
-                                        ? "bg-gray-800 text-white"
-                                        : "text-gray-300 hover:bg-gray-700 hover:text-white",
-                                    "group flex items-center rounded-md px-2 py-2 text-sm font-medium"
+                                        ? "bg-white/10 text-foreground"
+                                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                                    "group flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200"
                                 )}
                             >
                                 <item.icon
                                     className={classNames(
                                         isActive
-                                            ? "text-white"
-                                            : "text-gray-400 group-hover:text-gray-300",
-                                        "mr-3 h-6 w-6 flex-shrink-0"
+                                            ? "text-foreground opacity-100"
+                                            : "text-muted-foreground opacity-70 group-hover:opacity-100",
+                                        "mr-3 h-5 w-5 flex-shrink-0"
                                     )}
                                 />
                                 {item.name}
@@ -55,15 +55,15 @@ export function SidebarNav() {
                     })}
                 </nav>
             </div>
-            <div className="bg-gray-800 p-4">
+            <div className="bg-transparent border-t border-border p-4">
                 <div className="flex items-center">
                     <div className="ml-3">
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-medium text-foreground">
                             {session?.user?.name || session?.user?.email}
                         </p>
                         <button
                             onClick={() => signOut({ callbackUrl: "/login" })}
-                            className="text-xs text-gray-400 hover:text-white flex items-center mt-1"
+                            className="text-xs text-muted-foreground hover:text-foreground flex items-center mt-2 transition-colors"
                         >
                             <LogOut className="h-3 w-3 mr-1" />
                             Sign out
