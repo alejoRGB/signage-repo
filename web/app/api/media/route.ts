@@ -47,7 +47,8 @@ export async function DELETE(request: Request) {
 
     try {
         // 1. Find the item to get filename
-        const mediaItem = await prisma.mediaItem.findUnique({
+        // 1. Find the item to get filename
+        const mediaItem = await prisma.mediaItem.findFirst({
             where: {
                 id: id,
                 userId: session.user.id, // Ensure ownership

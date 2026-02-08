@@ -10,6 +10,16 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Token required" }, { status: 400 });
         }
 
+        // Rate Limit Check
+        const { checkRateLimit } = await import("@/lib/rate-limit");
+        const isAllowed = await checkRateLimit(token);
+        if (!isAllowed) {
+            return NextResponse.json(
+                { error: "Too many requests" },
+                { status: 429 }
+            );
+        }
+
         const device = await prisma.device.findUnique({
             where: { token },
         });

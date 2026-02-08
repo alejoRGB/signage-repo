@@ -10,7 +10,7 @@ import { del } from "@vercel/blob";
 jest.mock("@/lib/prisma", () => ({
     prisma: {
         mediaItem: {
-            findUnique: jest.fn(),
+            findFirst: jest.fn(),
             delete: jest.fn(),
         },
         playlistItem: {
@@ -49,7 +49,7 @@ describe("DELETE /api/media", () => {
 
     it("should return 404 if media not found", async () => {
         (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
-        (prisma.mediaItem.findUnique as jest.Mock).mockResolvedValue(null);
+        (prisma.mediaItem.findFirst as jest.Mock).mockResolvedValue(null);
 
         const req = new Request("http://localhost/api/media?id=123");
         const res = await DELETE(req);
@@ -58,7 +58,7 @@ describe("DELETE /api/media", () => {
 
     it("should delete media from DB and Blob", async () => {
         (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
-        (prisma.mediaItem.findUnique as jest.Mock).mockResolvedValue({
+        (prisma.mediaItem.findFirst as jest.Mock).mockResolvedValue({
             id: "media1",
             userId: "user1",
             url: "https://public.blob.vercel-storage.com/file.mp4",
