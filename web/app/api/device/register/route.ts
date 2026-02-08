@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
-const limiter = rateLimit({
-    uniqueTokenPerInterval: 500, // Max 500 users per second
-    interval: 60000, // 1 minute
-});
+// Remove old limiter definition
+// const limiter = ...
 
 export async function POST(request: Request) {
     try {
         // Rate Limiting
         const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-        try {
-            await limiter.check(5, ip); // 5 requests per minute per IP
-        } catch {
+        const isAllowed = await checkRateLimit(ip);
+
+        if (!isAllowed) {
             return NextResponse.json(
                 { error: "Too Many Requests" },
                 { status: 429 }
