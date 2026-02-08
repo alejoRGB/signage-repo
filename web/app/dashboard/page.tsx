@@ -22,24 +22,24 @@ export default async function DashboardPage() {
 
     return (
         <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-1 text-sm text-gray-500">Welcome back, {session.user.name}</p>
+            <h1 className="text-3xl font-bold text-foreground font-display tracking-tight">Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Welcome back, {session.user.name}</p>
 
             <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {stats.map((item) => (
-                    <div key={item.name} className="overflow-hidden rounded-lg bg-white shadow">
+                    <div key={item.name} className="overflow-hidden rounded-lg bg-card border border-border shadow-none hover:border-white/10 transition-colors">
                         <div className="p-5">
                             <div className="flex items-center">
                                 <div className="flex-shrink-0">
-                                    <div className={`flex h-12 w-12 items-center justify-center rounded-md ${item.color} text-white`}>
+                                    <div className={`flex h-12 w-12 items-center justify-center rounded-md ${item.color.replace('bg-', 'bg-opacity-20 bg-').replace('500', '500')} ${item.color.replace('bg-', 'text-')}`}>
                                         <item.icon className="h-6 w-6" aria-hidden="true" />
                                     </div>
                                 </div>
                                 <div className="ml-5 w-0 flex-1">
                                     <dl>
-                                        <dt className="truncate text-sm font-medium text-gray-500">{item.name}</dt>
+                                        <dt className="truncate text-sm font-medium text-muted-foreground">{item.name}</dt>
                                         <dd>
-                                            <div className="text-lg font-medium text-gray-900">{item.value}</div>
+                                            <div className="text-2xl font-bold text-foreground font-display mt-1">{item.value}</div>
                                         </dd>
                                     </dl>
                                 </div>

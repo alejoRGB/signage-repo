@@ -209,18 +209,19 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
     return (
         <div className="flex flex-col h-full">
             {/* Toolbar */}
-            <div className="border-b px-6 py-4 flex justify-between items-center bg-gray-50">
+            <div className="border-b border-border px-6 py-4 flex justify-between items-center bg-card/50 backdrop-blur-sm sticky top-0 z-20">
                 <input
                     type="text"
                     value={name}
                     onChange={(e) => { setName(e.target.value); setIsDirty(true); }}
-                    className="text-lg font-bold bg-transparent border-none focus:ring-0 w-1/2"
+                    className="text-xl font-bold bg-transparent border-none focus:ring-0 w-1/2 text-foreground font-display placeholder:text-muted-foreground/50"
+                    placeholder="Schedule Name"
                 />
 
                 <button
                     onClick={handleSave}
                     disabled={!isDirty || saving}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
                 >
                     {saving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}
                     Save Changes
@@ -228,7 +229,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
             </div>
 
             {/* Grid / List Editor */}
-            <div className="flex-1 overflow-x-auto p-6 bg-gray-100/50">
+            <div className="flex-1 overflow-x-auto p-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
                 <div className="flex gap-4 min-w-max pb-4">
                     {DAYS.map((dayName, dayIndex) => {
                         // 0=Sunday (in Data), lets follow standard US for now or user locale. 
@@ -237,15 +238,15 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                         const dayItems = items.filter(i => i.dayOfWeek === dayIndex).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
                         return (
-                            <div key={dayIndex} className="bg-gray-50 rounded-xl p-4 w-[280px] min-h-[400px] border border-gray-200 flex flex-col shadow-sm">
-                                <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                    <h3 className="font-semibold text-gray-700">{dayName}</h3>
+                            <div key={dayIndex} className="bg-card/80 backdrop-blur-sm rounded-xl p-4 w-[300px] min-h-[500px] border border-border flex flex-col shadow-none">
+                                <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
+                                    <h3 className="font-semibold text-foreground font-display tracking-tight">{dayName}</h3>
                                     <button
                                         onClick={() => openCopyModal(dayIndex)}
                                         title="Copy this day's schedule"
-                                        className="text-gray-400 hover:text-indigo-600 transition-colors"
+                                        className="text-muted-foreground hover:text-primary transition-colors p-1 hover:bg-primary/10 rounded"
                                     >
-                                        <Copy className="w-4 h-4" />
+                                        <Copy className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
 
@@ -254,58 +255,58 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                                         // Find index in main array
                                         const globalIndex = items.indexOf(item);
                                         return (
-                                            <div key={globalIndex} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative group hover:shadow-md transition-shadow">
+                                            <div key={globalIndex} className="bg-black/20 p-3 rounded-lg border border-border/50 shadow-none relative group hover:border-primary/30 transition-all">
                                                 {/* Delete Button */}
                                                 <button
                                                     onClick={() => removeItem(globalIndex)}
-                                                    className="absolute -top-2 -right-2 bg-white text-gray-400 p-0.5 rounded-full border shadow-sm hover:text-red-500 hover:border-red-500 opacity-0 group-hover:opacity-100 transition-all z-10"
+                                                    className="absolute -top-2 -right-2 bg-card text-muted-foreground p-1 rounded-full border border-border shadow-sm hover:text-red-500 hover:border-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all z-10"
                                                     title="Remove item"
                                                 >
-                                                    <X className="w-4 h-4" />
+                                                    <X className="w-3 h-3" />
                                                 </button>
 
                                                 <div className="flex flex-col gap-3">
                                                     {/* Time Inputs Row */}
                                                     <div className="flex items-center gap-2">
-                                                        <div className="relative flex-1">
-                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-gray-400">
+                                                        <div className="relative flex-1 group/time">
+                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-muted-foreground group-focus-within/time:text-primary transition-colors">
                                                                 <Clock className="w-3 h-3" />
                                                             </div>
                                                             <input
                                                                 type="time"
                                                                 value={item.startTime}
                                                                 onChange={(e) => updateItem(globalIndex, 'startTime', e.target.value)}
-                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                                className="w-full pl-7 pr-1 py-1.5 text-xs bg-black/40 border border-border rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none text-foreground font-mono"
                                                             />
                                                         </div>
-                                                        <span className="text-gray-400 text-xs">-</span>
-                                                        <div className="relative flex-1">
-                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-gray-400">
+                                                        <span className="text-muted-foreground text-xs">-</span>
+                                                        <div className="relative flex-1 group/time">
+                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-muted-foreground group-focus-within/time:text-primary transition-colors">
                                                                 <Clock className="w-3 h-3" />
                                                             </div>
                                                             <input
                                                                 type="time"
                                                                 value={item.endTime}
                                                                 onChange={(e) => updateItem(globalIndex, 'endTime', e.target.value)}
-                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                                className="w-full pl-7 pr-1 py-1.5 text-xs bg-black/40 border border-border rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none text-foreground font-mono"
                                                             />
                                                         </div>
                                                     </div>
 
                                                     {/* Playlist Selector */}
-                                                    <div className="relative">
+                                                    <div className="relative group/select">
                                                         <select
                                                             value={item.playlistId}
                                                             onChange={(e) => updateItem(globalIndex, 'playlistId', e.target.value)}
-                                                            className="w-full text-xs p-2 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 outline-none appearance-none"
+                                                            className="w-full text-xs p-2 pl-3 border border-border rounded bg-black/40 focus:bg-black/60 focus:ring-1 focus:ring-primary outline-none appearance-none text-foreground transition-colors cursor-pointer"
                                                         >
-                                                            <option value="">Select Playlist...</option>
+                                                            <option value="" className="bg-card text-muted-foreground">Select Playlist...</option>
                                                             {playlists.map((p: any) => (
-                                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                                                <option key={p.id} value={p.id} className="bg-card text-foreground">{p.name}</option>
                                                             ))}
                                                         </select>
-                                                        {/* Custom Arrow because appearance-none removes it */}
-                                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                                        {/* Custom Arrow */}
+                                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-muted-foreground group-focus-within/select:text-primary transition-colors">
                                                             <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                                                         </div>
                                                     </div>
@@ -317,9 +318,9 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
 
                                 <button
                                     onClick={() => addItem(dayIndex)}
-                                    className="mt-3 text-xs w-full py-2 border border-dashed border-gray-300 text-gray-500 rounded hover:bg-white hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
+                                    className="mt-4 text-xs w-full py-2.5 border border-dashed border-border text-muted-foreground rounded hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all flex items-center justify-center gap-1 group"
                                 >
-                                    <Plus className="w-3 h-3" /> Add Item
+                                    <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" /> Add Item
                                 </button>
                             </div>
                         );
