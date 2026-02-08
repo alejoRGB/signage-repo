@@ -2,7 +2,7 @@
 
 ## Overview
 **Product Name:** Expanded Signage (Digital Signage System)
-**Version:** 1.1 (Feb 2026)
+**Version:** 1.2 (Feb 2026)
 **Purpose:** Cloud-based digital signage management system with web dashboard and Raspberry Pi player client.
 
 ## Core Decisions
@@ -16,6 +16,18 @@
   - **Users:** NextAuth (Email/Password) against `User` table.
   - **Admins:** NextAuth against `Admin` table. Separate credentials.
   - **Devices:** Pairing Code (6-digit). Device Token authentication. Token in `config.json` MUST match DB.
+
+## Frontend Design & UX
+- **Theme:** "Deep Space Minimal" (Dark, Gradient backgrounds, Glassmorphism elements).
+- **Navigation:** Sidebar with Overview, Devices, Media, Playlists, Schedules.
+- **Tab Specifications:**
+  - **Devices:** Table view. Action buttons: Edit, Logs, Delete (icon-only, right aligned).
+  - **Media:** Grid view. Card displays:
+    - **Video:** Thumbnail + Duration + Resolution (e.g., 1920x1080).
+    - **Image:** Thumbnail + Resolution.
+    - **Web:** Placeholder + URL + Name.
+  - **Playlists:** Expanded card view showing internal "Content Sequence" (list of items with individual durations).
+  - **Schedules:** Weekly Calendar view (Grid).
 
 ## Constraints
 - **Hardware:** Raspberry Pi 4/5 targeting standard displays.
