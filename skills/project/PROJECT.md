@@ -24,6 +24,7 @@
 - **Multi-Device:** No synchronized playback (Video Wall features NOT supported).
 - **Content:** Images, Videos, Web Pages. No mixed playlists (enforced via UI, handled via Mixed Loop if necessary).
 - **Schedule:** Items calculated dynamically (Start = Prev End). Default duration 1h. Capped at 23:59.
+- **Observability:** Dashboard displays assigned Schedule per device (or "No Schedule"). Status reflects connectivity and sync state.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.

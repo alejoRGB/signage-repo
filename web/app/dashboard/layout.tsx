@@ -6,7 +6,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-transparent">
             {/* Sidebar (Client Component) */}
             <SidebarNav />
 

@@ -27,10 +27,10 @@ export default async function MediaPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                <h1 className="text-3xl font-bold leading-7 text-foreground font-display tracking-tight sm:truncate sm:text-4xl">
                     Media Library
                 </h1>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Manage your images and videos. Upload content here to use in your playlists.
                 </p>
             </div>
