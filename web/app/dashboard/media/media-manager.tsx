@@ -16,7 +16,6 @@ type MediaItem = {
     width: number | null;
     height: number | null;
     fps: number | null;
-    duration: number | null;
     createdAt: Date;
 };
 
@@ -230,11 +229,11 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             />
 
             {/* Upload Section */}
-            <div className="bg-card border border-border sm:rounded-lg p-6 shadow-none">
+            <div className="bg-white shadow sm:rounded-lg p-6">
                 <div className="sm:flex sm:items-center sm:justify-between">
                     <div>
-                        <h3 className="text-lg font-medium leading-6 text-foreground">Upload Media</h3>
-                        <div className="mt-2 max-w-xl text-sm text-muted-foreground">
+                        <h3 className="text-lg font-medium leading-6 text-gray-900">Upload Media</h3>
+                        <div className="mt-2 max-w-xl text-sm text-gray-500">
                             <p>Upload images/videos or add dashboard URLs.</p>
                         </div>
                     </div>
@@ -242,15 +241,15 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                         <button
                             type="button"
                             onClick={() => setIsAddWebsiteOpen(true)}
-                            className="inline-flex items-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                         >
-                            <Globe className="mr-2 h-4 w-4 text-primary" />
+                            <Globe className="mr-2 h-4 w-4 text-indigo-500" />
                             Add Website
                         </button>
                     </div>
                 </div>
 
-                <form onSubmit={handleUpload} className="mt-5 sm:flex sm:items-center gap-4">
+                <form onSubmit={handleUpload} className="mt-5 sm:flex sm:items-center">
                     <div className="w-full sm:max-w-xs">
                         <label htmlFor="file-upload" className="sr-only">
                             Choose file
@@ -261,13 +260,13 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                             name="file-upload"
                             accept="image/*,video/*"
                             onChange={handleFileChange}
-                            className="block w-full rounded-md border border-border bg-black/20 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all focus:outline-none focus:border-primary"
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 border p-2"
                         />
                     </div>
                     <button
                         type="submit"
                         disabled={!file || uploading}
-                        className={`mt-3 inline-flex w-full items-center justify-center rounded-md border border-transparent bg-primary px-4 py-2 font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm transition-all ${(!file || uploading) ? "opacity-50 cursor-not-allowed" : ""
+                        className={`mt-3 inline-flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm ${(!file || uploading) ? "opacity-50 cursor-not-allowed" : ""
                             }`}
                     >
                         {uploading ? (
@@ -280,72 +279,61 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             </div>
 
             {/* Gallery Section */}
-            <h3 className="text-lg font-medium leading-6 text-foreground mt-8 mb-4">Media Library <span className="text-muted-foreground ml-2 text-sm font-normal">({initialMedia.length} items)</span></h3>
+            <h3 className="text-lg font-medium leading-6 text-gray-900 mt-8">Media Library ({initialMedia.length})</h3>
 
             {initialMedia.length === 0 ? (
-                <div className="text-center py-12 bg-card rounded-lg border-2 border-dashed border-border">
-                    <FileImage className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                    <h3 className="mt-2 text-sm font-medium text-foreground">No media</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Get started by uploading a file or adding a website.</p>
+                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <FileImage className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No media</h3>
+                    <p className="mt-1 text-sm text-gray-500">Get started by uploading a file or adding a website.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {initialMedia.map((item) => (
-                        <div key={item.id} className="group relative bg-card border border-border rounded-xl overflow-hidden shadow-none hover:border-primary/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)] transition-all duration-300">
-                            <div className="aspect-video w-full relative bg-black/50 overflow-hidden">
+                        <div key={item.id} className="relative group bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            <div className="aspect-w-16 aspect-h-9 bg-gray-200 h-48 w-full flex items-center justify-center overflow-hidden">
                                 {item.type === 'video' ? (
-                                    <div className="relative w-full h-full flex items-center justify-center">
-                                        <video src={item.url} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
-                                        <FileVideo className="h-10 w-10 text-white/50 relative z-10" />
-                                        <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 rounded text-[10px] font-mono text-white/90 z-10 backdrop-blur-sm">
-                                            {item.duration ? `${item.duration}s` : 'Unknown'}
+                                    <div className="relative w-full h-full flex items-center justify-center bg-gray-900">
+                                        <FileVideo className="h-12 w-12 text-gray-500" />
+                                        <video src={item.url} className="absolute inset-0 w-full h-full object-cover opacity-50" />
+                                    </div>
+                                ) : item.type === 'image' ? (
+                                    <img src={item.url} alt={item.name} className="object-cover w-full h-full" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center w-full h-full bg-indigo-50">
+                                        <Globe className="h-12 w-12 text-indigo-400 mb-2" />
+                                        <div className="px-4 text-center">
+                                            <span className="text-indigo-900 text-xs font-medium block truncate max-w-[150px]">{item.url}</span>
                                         </div>
                                     </div>
-                                ) : item.type === 'web' ? (
-                                    <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
-                                        <Globe className="h-10 w-10 text-primary/50 mb-2 group-hover:text-primary transition-colors" />
-                                        <span className="text-primary/70 text-xs font-medium px-2 rounded-full border border-primary/20 bg-primary/5">WEB CONTENT</span>
-                                    </div>
-                                ) : (
-                                    <div className="relative w-full h-full">
-                                        <img src={item.url} alt={item.name} className="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition-opacity" />
-                                        {item.width && (
-                                            <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 rounded text-[10px] font-mono text-white/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {item.width}x{item.height}
-                                            </div>
-                                        )}
-                                    </div>
                                 )}
+                            </div>
 
-                                {/* Overlay Actions */}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                    <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2 bg-white/10 rounded-full text-white hover:bg-primary hover:scale-110 transition-all border border-white/20 backdrop-blur-sm"
-                                        title="View"
-                                    >
-                                        <ExternalLink className="h-4 w-4" />
-                                    </a>
-                                    <button
-                                        onClick={() => setDeleteId(item.id)}
-                                        className="p-2 bg-white/10 rounded-full text-white hover:bg-red-500 hover:scale-110 transition-all border border-white/20 backdrop-blur-sm"
-                                        title="Delete"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
+                            <div className="p-4">
+                                <p className="block text-sm font-medium text-gray-900 truncate" title={item.name}>{item.name}</p>
+                                <div className="flex justify-between items-center mt-1">
+                                    <p className="block text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</p>
+                                    <div className="flex items-center gap-1">
+                                        {item.width && item.height ? (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                                {item.width}x{item.height}
+                                            </span>
+                                        ) : item.type === 'web' ? (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                WEB
+                                            </span>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="p-3 border-t border-border bg-card/50">
-                                <p className="block text-sm font-medium text-foreground truncate" title={item.name}>{item.name}</p>
-                                <div className="flex justify-between items-center mt-1">
-                                    <p className="block text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</p>
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">
-                                        {item.type}
-                                    </span>
-                                </div>
+                            <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-1 bg-white rounded-full shadow hover:bg-gray-100 text-gray-600">
+                                    <ExternalLink className="h-4 w-4" />
+                                </a>
+                                <button onClick={() => setDeleteId(item.id)} className="p-1 bg-white rounded-full shadow hover:bg-red-50 text-red-600">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
                     ))}
