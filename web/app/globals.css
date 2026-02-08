@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+
+  /* Deep Space Custom Colors */
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-success: var(--accent-success);
+  --color-accent-danger: var(--accent-danger);
+}
+
+:root {
+  /* Deep Space Theme - Default */
+  --background: #030407;
+  --foreground: #f8fafc;
+
+  --card: #0a0c14;
+  --card-foreground: #f8fafc;
+
+  --popover: #0a0c14;
+  --popover-foreground: #f8fafc;
+
+  --primary: #3b82f6; /* Blue-500 */
+  --primary-foreground: #ffffff;
+
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #94a3b8;
+
+  --accent: rgba(255, 255, 255, 0.05);
+  --accent-foreground: #f8fafc;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
+
+  --radius: 0.5rem;
+
+  /* Custom Variables */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #8b5cf6;
+  --accent-success: #22c55e;
+  --accent-danger: #ef4444;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background-image: 
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 60%, rgba(255,255,255,0.06) 0%, transparent 100%),
+      radial-gradient(2px 2px at 80% 10%, rgba(255,255,255,0.07) 0%, transparent 100%),
+      radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.05) 0%, transparent 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
