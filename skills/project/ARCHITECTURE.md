@@ -7,7 +7,8 @@
 - **Database:** PostgreSQL (Neon Serverless)
 - **ORM:** Prisma
 - **Storage:** Vercel Blob
-- **Styling:** Tailwind CSS v4 (Premium Dark SaaS / Glassmorphism)
+- **Styling:** Tailwind CSS v4 (Deep Space Theme)
+  - Config: Native CSS variables in `globals.css` (No `tailwind.config.ts`)
 - **Auth:** NextAuth.js
 
 ### Edge (Player Client)
