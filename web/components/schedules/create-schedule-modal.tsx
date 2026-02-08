@@ -44,18 +44,18 @@ export default function CreateScheduleModal({ isOpen, onClose, onCreated }: Crea
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-foreground font-display tracking-tight">Create New Schedule</h2>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+                    <h2 className="text-xl font-bold">Create New Schedule</h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
                             Schedule Name
                         </label>
                         <input
@@ -64,22 +64,22 @@ export default function CreateScheduleModal({ isOpen, onClose, onCreated }: Crea
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g., Opening Hours, Holiday Special"
-                            className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-black/40 text-foreground placeholder:text-muted-foreground/50"
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     </div>
 
-                    <div className="flex justify-end gap-3">
+                    <div className="flex justify-end gap-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-muted-foreground bg-secondary/50 rounded-md hover:bg-secondary hover:text-foreground transition-colors border border-border"
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
+                            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
                         >
                             {loading ? "Creating..." : "Create Schedule"}
                         </button>
