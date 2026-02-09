@@ -68,26 +68,25 @@ export default function DeviceRow({
                 <div className="flex flex-col gap-1">
                     <select
                         value={device.activePlaylist?.id || ""}
-                        onChange={(e) =>
-                            onPlaylistChange(device.id, e.target.value)
-                        }
-                        disabled={isOptimisticUpdating}
-                        className="text-sm text-gray-900 border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        disabled={shouldShowSyncing} // Disable when syncing
+                        onChange={(e) => onPlaylistChange(device.activePlaylist?.id || "", e.target.value)}
+                        className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${shouldShowSyncing ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                     >
-                        <option value="">No playlist</option>
+                        <option value="">Select Playlist</option>
                         {playlists.map((playlist) => (
                             <option key={playlist.id} value={playlist.id}>
                                 {playlist.name}
                             </option>
                         ))}
                     </select>
-
-
+                    {shouldShowSyncing && (
+                        <span className="text-xs text-amber-600 animate-pulse font-medium">
+                            Syncing...
+                        </span>
+                    )}
                     {shouldShowReady && (
                         <div className="flex items-center gap-1 text-xs text-green-600">
-                            <svg className="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
                             <span className="font-medium">Synced</span>
                         </div>
                     )}
