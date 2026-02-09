@@ -25,15 +25,35 @@ export async function PUT(
 
         const body = result.data;
 
+        // Verify device exists and belongs to user
+        const existingDevice = await prisma.device.findUnique({
+            where: { id: id },
+            select: { userId: true }
+        });
+
+        if (!existingDevice) {
+            return NextResponse.json({ error: "Device not found" }, { status: 404 });
+        }
+
+        if (existingDevice.userId !== session.user.id) {
+            return NextResponse.json({ error: "Unauthorized access to device" }, { status: 403 });
+        }
+
+        // Clean up IDs: Empty string "" should be treated as null
+        const activePlaylistId = body.activePlaylistId === "" ? null : body.activePlaylistId;
+        const defaultPlaylistId = body.defaultPlaylistId === "" ? null : body.defaultPlaylistId;
+        const scheduleId = body.scheduleId === "" ? null : body.scheduleId;
+
         const device = await prisma.device.update({
             where: {
                 id: id,
             },
             data: {
                 name: body.name,
-                activePlaylistId: body.activePlaylistId,
-                defaultPlaylistId: body.defaultPlaylistId,
-                scheduleId: body.scheduleId,
+                // Only update if provided (undefined means no change, null means disconnect)
+                ...(body.activePlaylistId !== undefined && { activePlaylistId }),
+                ...(body.defaultPlaylistId !== undefined && { defaultPlaylistId }),
+                ...(body.scheduleId !== undefined && { scheduleId }),
             },
         });
 

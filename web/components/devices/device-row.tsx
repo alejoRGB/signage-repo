@@ -68,7 +68,7 @@ export default function DeviceRow({
                 <div className="flex flex-col gap-1">
                     <select
                         value={device.activePlaylist?.id || ""}
-                        onChange={(e) => onPlaylistChange(device.activePlaylist?.id || "", e.target.value)}
+                        onChange={(e) => onPlaylistChange(device.id, e.target.value)}
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                     >
                         <option value="">Select Playlist</option>
