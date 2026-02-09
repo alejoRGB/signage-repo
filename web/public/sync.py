@@ -230,7 +230,25 @@ class SyncManager:
             logging.error(f"[SYNC] Error saving cache: {e}")
             success = False
         
-        # TODO: Clean up old media files
+        # Clean up old media files
+        try:
+            for filename in os.listdir(self.media_dir):
+                filepath = os.path.join(self.media_dir, filename)
+                
+                # Skip if it's a directory
+                if os.path.isdir(filepath):
+                    continue
+                    
+                # Skip if it's the pairing image
+                if filename == "pairing.png":
+                    continue
+                    
+                # Delete if not in current playlist
+                if filename not in downloaded_filenames:
+                    os.remove(filepath)
+                    logging.info(f"[CLEANUP] Deleted old file: {filename}")
+        except Exception as e:
+            logging.error(f"[CLEANUP] Error cleaning up files: {e}")
         
         return success
     
