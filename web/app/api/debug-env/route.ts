@@ -5,6 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
+        if (process.env.NODE_ENV === 'production') {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
         const envCheck = {
             POSTGRES_PRISMA_URL: process.env.POSTGRES_PRISMA_URL ? "Present (Starts with " + process.env.POSTGRES_PRISMA_URL.substring(0, 10) + "...)" : "MISSING",
             POSTGRES_URL_NON_POOLING: process.env.POSTGRES_URL_NON_POOLING ? "Present" : "MISSING",

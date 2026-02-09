@@ -9,6 +9,10 @@ export async function GET(
 ) {
     const { id } = await context.params;
 
+    if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     try {
         const playlist = await prisma.playlist.findUnique({
             where: { id },
