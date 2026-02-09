@@ -738,19 +738,17 @@ class Player:
                          # Optimization: Check content type here for explicit dispatch
                          has_web = any(x.get('type') == 'web' for x in items)
                          
-                         # Check for custom durations (anything other than default 10s for images)
-                         # If any image has a custom duration, we MUST use the Mixed Loop (Python) 
-                         # because Native Loop has hardcoded 10s.
-                         has_custom_durations = any(
-                             x.get('type') != 'video' and x.get('duration', 10) != 10 
-                             for x in items
-                         )
+                         # Check if playlist has ANY non-video items (images, etc)
+                         # The Native/Optimized Loop uses a global --image-display-duration=10 flag.
+                         # This means it CANNOT support mixed durations for images or durations != 10s.
+                         # To be safe and correct, we only use Native Loop for PURE VIDEO playlists.
+                         has_non_video = any(x.get('type') != 'video' for x in items)
 
-                         if not has_web and not has_custom_durations and len(items) > 0:
-                             logging.info("[PLAYER] Optimized Mode: Native MPV Loop (Media Only, Standard 10s)")
+                         if not has_web and not has_non_video and len(items) > 0:
+                             logging.info("[PLAYER] Optimized Mode: Native MPV Loop (Video Only)")
                              self._play_media_only_native(items, target_id, target_playlist)
                          else:
-                             logging.info("[PLAYER] Standard Mode: Mixed Content Loop (Web + Media)")
+                             logging.info("[PLAYER] Standard Mode: Mixed Content Loop (Web + Images + Video)")
                              self.play_mixed_content_loop(items, target_id, target_playlist)
                          
                          # CRITICAL FIX: If loop returns (crash/end), reset ID so it restarts next check

@@ -33,7 +33,9 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 - **Restart:** `sudo systemctl restart signage-player`.
 
 ## Development Deployment
-- **Script:** `deploy.ps1` automates rsync/scp, dependency installation, and configuration (wallpaper, service restart).
+- **Script:** `deploy.ps1` (in root) automates rsync/scp, dependency installation, and configuration.
+  - **Command:** `powershell .\deploy.ps1 -PlayerIp <IP> -PlayerUser <USER>`
+  - **Verified Example:** `powershell .\deploy.ps1 -PlayerIp 192.168.100.6 -PlayerUser pi4`
   - **Transfers:** `player.py`, `sync.py`, `setup_wallpaper.py`, `setup_device.sh`, `rotation_utils.py`, `config.json`, and dependencies.
 - **Config:** `temp_config_prod.json` (Production) / `temp_config_local.json` (Dev).
 
