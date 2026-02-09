@@ -417,7 +417,7 @@ class Player:
                                     "--disable-software-rasterizer",
                                     "--disable-dev-shm-usage",
                                     "--password-store=basic",
-                                    "--user-data-dir=/home/masal/.config/chromium-signage-temp"
+                                    f"--user-data-dir={os.path.join(os.path.expanduser('~'), '.config/chromium-signage-temp')}"
                                 ]
                                 try:
                                     browser_process = subprocess.Popen(cmd, env=env, stderr=subprocess.DEVNULL) # Reduce log spam

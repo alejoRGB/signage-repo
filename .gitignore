@@ -2,3 +2,10 @@
 player/config.json
 .vercel
 .env*.local
+web/dev.db
+web/prisma/dev.db
+web/public/uploads/*
+playwright-report/
+test-results/
+__pycache__/
+*.pyc
