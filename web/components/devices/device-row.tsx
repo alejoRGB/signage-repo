@@ -69,7 +69,7 @@ export default function DeviceRow({
                     <select
                         value={device.activePlaylist?.id || ""}
                         onChange={(e) => onPlaylistChange(device.activePlaylist?.id || "", e.target.value)}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                     >
                         <option value="">Select Playlist</option>
                         {playlists.map((playlist) => (
