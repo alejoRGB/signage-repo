@@ -78,11 +78,6 @@ export default function DeviceRow({
                             </option>
                         ))}
                     </select>
-                    {shouldShowSyncing && (
-                        <span className="text-xs text-amber-600 animate-pulse font-medium">
-                            Syncing...
-                        </span>
-                    )}
                     {shouldShowReady && (
                         <div className="flex items-center gap-1 text-xs text-green-600">
                             <span className="font-medium">Synced</span>
