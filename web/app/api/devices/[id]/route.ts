@@ -38,9 +38,9 @@ export async function PUT(
         });
 
         return NextResponse.json(device);
-    } catch (error) {
+    } catch (error: any) {
         console.error("[DEVICE_PATCH]", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: error.message || String(error) || "Internal Server Error" }, { status: 500 });
     }
 }
 
