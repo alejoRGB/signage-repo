@@ -73,3 +73,16 @@ export const UpdateUserSchema = z.object({
     name: z.string().optional(),
     role: z.enum(["USER", "ADMIN"]).optional(),
 });
+
+export const CreateMediaItemSchema = z.object({
+    name: z.string().min(1, "Name is required").transform(sanitize),
+    url: z.string().url("Invalid URL").transform(sanitize),
+    type: z.enum(["image", "video"]),
+    filename: z.string().min(1, "Filename is required").transform(sanitize),
+    width: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
+    height: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
+    fps: z.union([z.number(), z.string().transform((val) => parseFloat(val))]).nullable().optional(),
+    size: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
+    duration: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional().default(10),
+    cacheForOffline: z.boolean().optional().default(false),
+});

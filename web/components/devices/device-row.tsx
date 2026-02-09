@@ -83,6 +83,11 @@ export default function DeviceRow({
                             <span className="font-medium">Synced</span>
                         </div>
                     )}
+                    {shouldShowSyncing && !shouldShowReady && (
+                        <div className="flex items-center gap-1 text-xs text-yellow-600 animate-pulse">
+                            <span className="font-medium">Syncing...</span>
+                        </div>
+                    )}
                 </div>
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

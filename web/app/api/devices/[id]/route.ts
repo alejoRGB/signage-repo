@@ -39,6 +39,28 @@ export async function PUT(
             return NextResponse.json({ error: "Unauthorized access to device" }, { status: 403 });
         }
 
+        // Verify foreign keys ownership if provided
+        if (body.activePlaylistId) {
+            const playlist = await prisma.playlist.findFirst({
+                where: { id: body.activePlaylistId, userId: session.user.id }
+            });
+            if (!playlist) return NextResponse.json({ error: "Invalid activePlaylistId" }, { status: 400 });
+        }
+
+        if (body.defaultPlaylistId) {
+            const playlist = await prisma.playlist.findFirst({
+                where: { id: body.defaultPlaylistId, userId: session.user.id }
+            });
+            if (!playlist) return NextResponse.json({ error: "Invalid defaultPlaylistId" }, { status: 400 });
+        }
+
+        if (body.scheduleId) {
+            const schedule = await prisma.schedule.findFirst({
+                where: { id: body.scheduleId, userId: session.user.id }
+            });
+            if (!schedule) return NextResponse.json({ error: "Invalid scheduleId" }, { status: 400 });
+        }
+
         // Clean up IDs: Empty string "" should be treated as null
         const activePlaylistId = body.activePlaylistId === "" ? null : body.activePlaylistId;
         const defaultPlaylistId = body.defaultPlaylistId === "" ? null : body.defaultPlaylistId;
@@ -76,13 +98,18 @@ export async function DELETE(
     try {
         const { id } = await params;
 
-        const device = await prisma.device.delete({
+        const device = await prisma.device.deleteMany({
             where: {
                 id: id,
+                userId: session.user.id,
             },
         });
 
-        return NextResponse.json(device);
+        if (device.count === 0) {
+            return new NextResponse("Device not found or unauthorized", { status: 404 });
+        }
+
+        return NextResponse.json({ success: true });
     } catch (error) {
         console.error("[DEVICE_DELETE]", error);
         return new NextResponse("Internal Error", { status: 500 });
