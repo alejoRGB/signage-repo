@@ -68,10 +68,8 @@ export default function DeviceRow({
                 <div className="flex flex-col gap-1">
                     <select
                         value={device.activePlaylist?.id || ""}
-                        disabled={shouldShowSyncing} // Disable when syncing
                         onChange={(e) => onPlaylistChange(device.activePlaylist?.id || "", e.target.value)}
-                        className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${shouldShowSyncing ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     >
                         <option value="">Select Playlist</option>
                         {playlists.map((playlist) => (

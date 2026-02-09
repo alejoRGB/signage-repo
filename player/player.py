@@ -265,6 +265,13 @@ class Player:
             self._play_media_only_native(items, playlist_id, playlist_obj)
             return
         
+        if not items:
+            logging.warning("[MIXED_PLAYER] Playlist has no items. Nothing to play.")
+            # Send one sync heartbeat so we don't look offline/stuck
+            self.sync_manager.sync(playlist_id)
+            time.sleep(10) 
+            return
+
         # Continue with mixed content loop for playlists with web items
         logging.info("[MIXED_PLAYER] Mixed content detected (has web items). Using item-by-item playback.")
         
