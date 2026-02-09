@@ -738,8 +738,16 @@ class Player:
                          # Optimization: Check content type here for explicit dispatch
                          has_web = any(x.get('type') == 'web' for x in items)
                          
-                         if not has_web and len(items) > 0:
-                             logging.info("[PLAYER] Optimized Mode: Native MPV Loop (Media Only)")
+                         # Check for custom durations (anything other than default 10s for images)
+                         # If any image has a custom duration, we MUST use the Mixed Loop (Python) 
+                         # because Native Loop has hardcoded 10s.
+                         has_custom_durations = any(
+                             x.get('type') != 'video' and x.get('duration', 10) != 10 
+                             for x in items
+                         )
+
+                         if not has_web and not has_custom_durations and len(items) > 0:
+                             logging.info("[PLAYER] Optimized Mode: Native MPV Loop (Media Only, Standard 10s)")
                              self._play_media_only_native(items, target_id, target_playlist)
                          else:
                              logging.info("[PLAYER] Standard Mode: Mixed Content Loop (Web + Media)")
