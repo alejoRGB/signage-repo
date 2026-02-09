@@ -73,7 +73,7 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
                             required
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                             placeholder="e.g. Lobby Morning Loop"
                         />
                     </div>
@@ -86,8 +86,8 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
                                 type="button"
                                 onClick={() => setType("media")}
                                 className={`relative flex flex-col items-center justify-center p-4 border rounded-xl transition-all duration-200 ${type === "media"
-                                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600"
-                                        : "border-gray-200 hover:border-indigo-200 hover:bg-gray-50 text-gray-600"
+                                    ? "border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600"
+                                    : "border-gray-200 hover:border-indigo-200 hover:bg-gray-50 text-gray-600"
                                     }`}
                             >
                                 <ImageIcon className="w-6 h-6 mb-2" />
@@ -99,8 +99,8 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
                                 type="button"
                                 onClick={() => setType("web")}
                                 className={`relative flex flex-col items-center justify-center p-4 border rounded-xl transition-all duration-200 ${type === "web"
-                                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600"
-                                        : "border-gray-200 hover:border-indigo-200 hover:bg-gray-50 text-gray-600"
+                                    ? "border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600"
+                                    : "border-gray-200 hover:border-indigo-200 hover:bg-gray-50 text-gray-600"
                                     }`}
                             >
                                 <Globe className="w-6 h-6 mb-2" />
@@ -125,8 +125,8 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
                                         type="button"
                                         onClick={() => setOrientation(opt.id as any)}
                                         className={`flex flex-col items-center justify-center p-3 border rounded-lg text-center transition-all ${orientation === opt.id
-                                                ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                                            ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                                            : "border-gray-200 hover:border-gray-300 text-gray-600"
                                             }`}
                                     >
                                         <opt.icon className={`w-5 h-5 mb-1 ${opt.className || ""}`} />
