@@ -17,6 +17,11 @@
   - **Admins:** NextAuth against `Admin` table. Separate credentials.
   - **Devices:** Pairing Code (6-digit, expires in 15 mins). Device Token authentication. Token in `config.json` MUST match DB.
 
+## Security
+- **Authorization:** Strict ownership checks on all mutating endpoints (`DELETE`, `PUT`, `PATCH`). Users can only modify their own resources.
+- **Validation:** Zod schemas used for all API inputs. Backend blocking of schedule overlaps.
+- **Hardening:** Debug endpoints (`/api/debug-env`) blocked in Production. Stack traces removed from API errors.
+
 ## Frontend Design & UX
 - **Theme:** "Deep Space Minimal" (Dark, Gradient backgrounds, Glassmorphism elements).
 - **Navigation:** Sidebar with Overview, Devices, Media, Playlists, Schedules.

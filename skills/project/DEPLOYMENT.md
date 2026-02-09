@@ -11,7 +11,7 @@
 
 ## Security & Maintenance
 - **Credentials:** Never commit hardcoded secrets. Use `.env` and environment variables.
-- **Gitignore:** Ensure `playwright-report`, `test-results`, and `.env` are ignored.
+- **Gitignore:** Ensure `playwright-report`, `test-results`, `web/dev.db`, `web/public/uploads`, and `.env` are ignored.
 - **Admin Recovery:** Use `web/scripts/reset_password.js` to reset admin credentials directly in DB.
 - **Device Debugging:** Use `web/scripts/check_devices.js` to verify device tokens and status in DB.
 
@@ -38,6 +38,7 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
   - **Verified Example:** `powershell .\deploy.ps1 -PlayerIp 192.168.100.6 -PlayerUser pi4`
   - **Transfers:** `player.py`, `sync.py`, `setup_wallpaper.py`, `setup_device.sh`, `rotation_utils.py`, `config.json`, and dependencies.
 - **Config:** `temp_config_prod.json` (Production) / `temp_config_local.json` (Dev).
+- **Files Transferred:** `player.py`, `sync.py`, `config.json`, `setup_*.sh/py`, `rotation_utils.py`, `logger_service.py`, `install_dependencies.sh`.
 
 ## Validation
 - **Status Check:** `systemctl status signage-player`.
