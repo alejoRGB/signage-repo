@@ -230,25 +230,59 @@ class SyncManager:
             logging.error(f"[SYNC] Error saving cache: {e}")
             success = False
         
-        # Clean up old media files
+        # Cleanup Strategy: Keep up to 10GB of unused files (LRU)
+        MAX_UNUSED_BYTES = 10 * 1024 * 1024 * 1024  # 10 GB
+        
         try:
+            unused_files = []
+            current_unused_size = 0
+            
+            # 1. Identify unused files and calculate their total size
             for filename in os.listdir(self.media_dir):
                 filepath = os.path.join(self.media_dir, filename)
                 
-                # Skip if it's a directory
-                if os.path.isdir(filepath):
+                # Skip directories and special files
+                if os.path.isdir(filepath) or filename == "pairing.png":
                     continue
                     
-                # Skip if it's the pairing image
-                if filename == "pairing.png":
-                    continue
-                    
-                # Delete if not in current playlist
+                # If file is NOT in the current playlist, it's a candidate for cleanup
                 if filename not in downloaded_filenames:
-                    os.remove(filepath)
-                    logging.info(f"[CLEANUP] Deleted old file: {filename}")
+                    try:
+                        stat = os.stat(filepath)
+                        size = stat.st_size
+                        mtime = stat.st_mtime
+                        unused_files.append({
+                            'path': filepath,
+                            'name': filename,
+                            'size': size,
+                            'mtime': mtime
+                        })
+                        current_unused_size += size
+                    except OSError:
+                        pass # File might have vanished
+
+            # 2. If unused size exceeds limit, delete oldest files first
+            if current_unused_size > MAX_UNUSED_BYTES:
+                logging.info(f"[CLEANUP] Unused media size ({current_unused_size / 1024 / 1024:.2f} MB) exceeds limit ({MAX_UNUSED_BYTES / 1024 / 1024:.2f} MB). Cleaning up...")
+                
+                # Sort by modification time (oldest first)
+                unused_files.sort(key=lambda x: x['mtime'])
+                
+                for file_info in unused_files:
+                    if current_unused_size <= MAX_UNUSED_BYTES:
+                        break
+                        
+                    try:
+                        os.remove(file_info['path'])
+                        current_unused_size -= file_info['size']
+                        logging.info(f"[CLEANUP] Deleted old file: {file_info['name']} ({file_info['size'] / 1024 / 1024:.2f} MB)")
+                    except OSError as e:
+                        logging.error(f"[CLEANUP] Error deleting {file_info['name']}: {e}")
+            else:
+                 logging.info(f"[CLEANUP] Unused media size ({current_unused_size / 1024 / 1024:.2f} MB) is within limit.")
+
         except Exception as e:
-            logging.error(f"[CLEANUP] Error cleaning up files: {e}")
+            logging.error(f"[CLEANUP] Error during cache cleanup: {e}")
         
         return success
     
