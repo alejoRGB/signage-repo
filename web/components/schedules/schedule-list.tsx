@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { format } from "date-fns";
-import { MoreHorizontal, Trash, Edit } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Trash } from "lucide-react";
+import ConfirmModal from "@/components/confirm-modal";
+import { useToast } from "@/components/ui/toast-context";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function ScheduleList() {
     const { data: schedules, error, mutate } = useSWR("/api/schedules", fetcher);
-    const router = useRouter();
+    const { showToast } = useToast();
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     if (error) return <div>Failed to load schedules</div>;
     if (!schedules) return <div>Loading...</div>;
@@ -24,11 +26,23 @@ export default function ScheduleList() {
         );
     }
 
-    const deleteSchedule = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this schedule?")) return;
+    const handleDeleteClick = (id: string) => {
+        setDeleteId(id);
+    };
 
-        await fetch(`/api/schedules/${id}`, { method: "DELETE" });
-        mutate();
+    const confirmDelete = async () => {
+        if (!deleteId) return;
+
+        try {
+            await fetch(`/api/schedules/${deleteId}`, { method: "DELETE" });
+            mutate();
+            showToast("Schedule deleted successfully", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to delete schedule", "error");
+        } finally {
+            setDeleteId(null);
+        }
     };
 
     return (
@@ -69,7 +83,7 @@ export default function ScheduleList() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button
-                                    onClick={() => deleteSchedule(schedule.id)}
+                                    onClick={() => handleDeleteClick(schedule.id)}
                                     className="text-red-600 hover:text-red-900 ml-4"
                                 >
                                     <Trash className="h-4 w-4" />
@@ -79,6 +93,16 @@ export default function ScheduleList() {
                     ))}
                 </tbody>
             </table>
+
+            <ConfirmModal
+                isOpen={!!deleteId}
+                onClose={() => setDeleteId(null)}
+                onConfirm={confirmDelete}
+                title="Delete Schedule"
+                message="Are you sure you want to delete this schedule? This action cannot be undone."
+                confirmText="Delete"
+                isDestructive={true}
+            />
         </div>
     );
 }
