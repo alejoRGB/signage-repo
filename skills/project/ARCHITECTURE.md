@@ -29,11 +29,11 @@
 - **QA:** Playwright/Pytest verification.
 
 ## Architecture Decisions
-1. **Unified Playback Loop:** `player.py` controls the loop.
-   - **Mixed Loop:** Standard mode. Used for Web content, Mixed content, AND Media-only playlists with custom (non-default) durations.
-   - **Native Loop:** Optimization for Media-only playlists where ALL items use the default 10s duration. Generates ephemeral M3U and uses MPV's native infinite loop.
+1. **Unified Playback Loop:** `player.py` controls the loop. See [MPV Context](MPV.md).
+   - **Mixed Loop:** Standard mode. Used for almost ALL playlists (Web + Custom Image Durations + Mixed Types). Uses IPC/Socket for control.
+   - **Native Loop:** Optimized mode strictly for homogenous media playlists where ALL items use the default global duration. Uses MPV native playlist looping.
 2. **Offline First:** Player *must* continue working if network fails.
-3. **No Web sockets:** Communication is polling-based (Heartbeat every 60s) for simplicity and firewall affinity.
-4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`) reported via heartbeat, not just target intent.
+3. **No Web sockets:** Communication is polling-based (Heartbeat every 60s).
+4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`).
 5. **API Security:** Rate limiting (60 req/min) enforced on all Device endpoints (`/api/device/*`) to prevent abuse.
 6. **Manual Deployment:** RPi deployment via `setup_device.sh` curl pipe.

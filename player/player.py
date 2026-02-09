@@ -44,6 +44,7 @@ class Player:
         
         self.media_dir = self.sync_manager.media_dir
         self.playlist_m3u = os.path.join(os.path.dirname(config_path), "playlist.m3u")
+        self.socket_path = os.path.join(os.path.dirname(config_path), "mpv.sock") # Initialize socket_path
         self.rotator = ScreenRotator()
         self.mpv_process = None
         self.running = True
@@ -84,6 +85,15 @@ class Player:
             logging.error(f"[PLAYER] Error generating M3U: {e}")
             return False
 
+    def wait_for_socket(self, timeout=5.0):
+        """Wait for MPV IPC socket to appear"""
+        start = time.time()
+        while time.time() - start < timeout:
+            if os.path.exists(self.socket_path):
+                return True
+            time.sleep(0.1)
+        return False
+
     def send_ipc_command(self, command: List[str]) -> bool:
         """Send a command to the running MPV instance via IPC"""
         import socket
@@ -92,7 +102,7 @@ class Player:
         
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-                client.connect("/tmp/mpv-socket")
+                client.connect(self.socket_path)
                 client.sendall(payload)
                 return True
         except Exception as e:
@@ -107,6 +117,13 @@ class Player:
 
         logging.info("[PLAYER] Starting MPV seamless playback...")
         try:
+            # Remove old socket if exists
+            if os.path.exists(self.socket_path):
+                try:
+                    os.remove(self.socket_path)
+                except Exception as e:
+                    logging.warning(f"[PLAYER] Could not remove old socket {self.socket_path}: {e}")
+
             # See mpv-playback skill for flag justification
             cmd = [
                 "mpv",
@@ -133,9 +150,16 @@ class Player:
             if not ENABLE_AUDIO:
                 cmd.append("--audio=no")
 
-            cmd.append("--input-ipc-server=/tmp/mpv-socket")
+            cmd.append(f"--input-ipc-server={self.socket_path}")
             
             self.mpv_process = subprocess.Popen(cmd)
+            
+            # Wait for socket
+            if self.wait_for_socket():
+                logging.info(f"[PLAYER] MPV started and IPC socket ready at {self.socket_path}")
+            else:
+                logging.warning(f"[PLAYER] MPV started properly but socket not found at {self.socket_path}")
+
         except Exception as e:
             logging.error(f"[PLAYER] Failed to start MPV: {e}")
 
@@ -259,11 +283,6 @@ class Player:
         
         # Check if ALL items are media (video/image) - no web items
         has_web = any(item.get('type') == 'web' for item in items)
-        
-        if not has_web and len(items) > 0:
-            logging.info("[MIXED_PLAYER] Media-only playlist detected. Using native MPV playback for seamless transitions.")
-            self._play_media_only_native(items, playlist_id, playlist_obj)
-            return
         
         if not items:
             logging.warning("[MIXED_PLAYER] Playlist has no items. Nothing to play.")
@@ -468,7 +487,8 @@ class Player:
                             if ipc_success:
                                 logging.info(f"[MIXED_PLAYER] Seamless transition to {filename}")
                             else:
-                                logging.warning("[MIXED_PLAYER] IPC failed. Restarting MPV.")
+                                ret_code = self.mpv_process.poll()
+                                logging.warning(f"[MIXED_PLAYER] IPC failed. Restarting MPV. (Process Status: {ret_code})")
                                 self.stop_mpv()
                         
                         # 2. Start new instance if needed
@@ -476,10 +496,9 @@ class Player:
                             try:
                                 cmd = [
                                     "mpv",
-                                    "--idle=yes",   # Keep open even after file ends
-                                    "--keep-open=always", # ALWAYS keep window open (not just 'yes')
-                                    "--force-window=immediate", # Force window to show immediately
-                                    local_path,
+                                    "--idle",              # Keep running even if playlist empty
+                                    "--keep-open=yes",     # Do not terminate at end of file
+                                    "--force-window=yes",  # Force window to show immediately
                                     "--fullscreen",
                                     "--no-border",
                                     "--no-osc",
@@ -487,13 +506,14 @@ class Player:
                                     "--input-vo-keyboard=no",
                                     "--cursor-autohide=always",
                                     "--no-terminal",
-                                    f"--image-display-duration={duration}" if m_type == 'image' else "",
-                                    "--input-ipc-server=/tmp/mpv-socket",
+                                    f"--loop-file=inf" if m_type == 'image' else "",
+                                    f"--input-ipc-server={self.socket_path}",
                                     "--hwdec=auto-safe",
-                                    "--video-sync=display-resample", # Smoother playback
+                                    "--video-sync=display-resample",
                                     "--cache=yes",
                                     "--cache-secs=10",
                                     "--demuxer-readahead-secs=5",
+                                    local_path
                                 ]
                                 
                                 if ENABLE_AUDIO:
@@ -502,11 +522,27 @@ class Player:
                                     cmd.append("--audio=no")
 
                                 cmd = [c for c in cmd if c]
+                                logging.info(f"[MIXED_PLAYER] Starting MPV with command: {' '.join(cmd)}")
+                                
+                                # Clean up old socket
+                                if os.path.exists(self.socket_path):
+                                    try:
+                                        os.remove(self.socket_path)
+                                    except:
+                                        pass
+                                        
                                 self.mpv_process = subprocess.Popen(cmd)
-                                logging.info(f"[MIXED_PLAYER] Started MPV for {filename}")
+                                
+                                # Wait for socket creation
+                                if self.wait_for_socket():
+                                    logging.info(f"[MIXED_PLAYER] MPV started & socket ready (PID: {self.mpv_process.pid})")
+                                else:
+                                    logging.error(f"[MIXED_PLAYER] MPV started but socket creation failed/timed out!")
+
                             except Exception as e:
                                 logging.error(f"[MIXED_PLAYER] Failed to start MPV: {e}")
                                 continue
+
 
                         # 3. Wait Loop (for Duration & Heartbeats)
                         # We use the same non-blocking logic as before to handle duration

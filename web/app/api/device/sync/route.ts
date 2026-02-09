@@ -173,7 +173,6 @@ export async function POST(request: Request) {
             {
                 error: "Internal server error",
                 details: error?.message || String(error),
-                stack: error?.stack
             },
             { status: 500 }
         );
