@@ -10,6 +10,7 @@
 - **Styling:** Tailwind CSS v4 (Deep Space Theme)
   - Config: Native CSS variables in `globals.css` (No `tailwind.config.ts`)
 - **Auth:** NextAuth.js
+- **Validation:** Zod
 
 ### Edge (Player Client)
 - **Hardware:** Raspberry Pi
@@ -35,5 +36,8 @@
 2. **Offline First:** Player *must* continue working if network fails.
 3. **No Web sockets:** Communication is polling-based (Heartbeat every 60s).
 4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`).
-5. **API Security:** Rate limiting (60 req/min) enforced on all Device endpoints (`/api/device/*`) to prevent abuse.
-6. **Manual Deployment:** RPi deployment via `setup_device.sh` curl pipe.
+5. **API Security:** 
+   - Rate limiting (60 req/min) enforced on all Device endpoints.
+   - **Strict Ownership:** Middleware/Logic ensures users only access their own data.
+   - **Input Validation:** Zod schemas validate all incoming JSON.
+6. **Manual Deployment:** RPi deployment via `deploy.ps1` (PowerShell) or `setup_device.sh`.
