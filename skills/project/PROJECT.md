@@ -28,13 +28,16 @@
     - **Web:** Placeholder + URL + Name.
   - **Playlists:** Expanded card view showing internal "Content Sequence" (list of items with individual durations).
   - **Schedules:** Weekly Calendar view (Grid).
+  - **Modals & Forms:**
+    - **Input/Select:** Must explicitly use `text-gray-900` on white backgrounds to ensure visibility against the tailwind reset.
+    - **Destructive Actions:** Must use `ConfirmModal` + `useToast` pattern (no native `window.confirm`).
 
 ## Constraints
 - **Hardware:** Raspberry Pi 4/5 targeting standard displays.
 - **Operating System:** Raspberry Pi OS / Linux.
 - **Network:** Devices must handle offline playback (cache required).
 - **Multi-Device:** No synchronized playback (Video Wall features NOT supported).
-- **Content:** Images, Videos, Web Pages. No mixed playlists (enforced via UI, handled via Mixed Loop if necessary).
+- **Content:** Images, Videos, Web Pages. Mixed playlists supported via Python Mixed Loop.
 - **Schedule:** Items calculated dynamically (Start = Prev End). Default duration 1h. Capped at 23:59.
 - **Observability:** Dashboard displays assigned Schedule per device (or "No Schedule"). Status reflects connectivity and sync state.
 
