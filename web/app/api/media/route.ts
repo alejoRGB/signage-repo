@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { CreateMediaItemSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
 
@@ -98,27 +99,29 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { name, url, type, filename, width, height, fps, size, duration, cacheForOffline } = body;
 
-        if (!name || !url || !type) {
+        const result = CreateMediaItemSchema.safeParse(body);
+        if (!result.success) {
             return NextResponse.json(
-                { error: "Missing required fields" },
+                { error: result.error.issues[0].message },
                 { status: 400 }
             );
         }
 
+        const data = result.data;
+
         const mediaItem = await prisma.mediaItem.create({
             data: {
-                name,
-                url,
-                type,
-                filename,
-                width: width ? parseInt(width) : null,
-                height: height ? parseInt(height) : null,
-                fps: fps ? parseFloat(fps) : null,
-                size: size ? parseInt(size) : 0,
-                duration: duration ? parseInt(duration) : 10,
-                cacheForOffline: cacheForOffline || false,
+                name: data.name,
+                url: data.url,
+                type: data.type,
+                filename: data.filename,
+                width: data.width ?? undefined,
+                height: data.height ?? undefined,
+                fps: data.fps ?? undefined,
+                size: data.size ?? 0,
+                duration: data.duration ?? 10,
+                cacheForOffline: data.cacheForOffline ?? false,
                 userId: session.user.id,
             },
         });
