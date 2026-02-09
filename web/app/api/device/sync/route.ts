@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         const updateData: any = {
             status: "online",
             lastSeenAt: new Date(),
-            playingPlaylistId: playing_playlist_id || undefined,
+            playingPlaylistId: playing_playlist_id ?? undefined,
         };
 
         await prisma.device.update({
