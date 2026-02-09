@@ -275,7 +275,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                                                                 type="time"
                                                                 value={item.startTime}
                                                                 onChange={(e) => updateItem(globalIndex, 'startTime', e.target.value)}
-                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                                                             />
                                                         </div>
                                                         <span className="text-gray-400 text-xs">-</span>
@@ -287,7 +287,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                                                                 type="time"
                                                                 value={item.endTime}
                                                                 onChange={(e) => updateItem(globalIndex, 'endTime', e.target.value)}
-                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                                className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                                                             />
                                                         </div>
                                                     </div>
@@ -297,7 +297,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                                                         <select
                                                             value={item.playlistId}
                                                             onChange={(e) => updateItem(globalIndex, 'playlistId', e.target.value)}
-                                                            className="w-full text-xs p-2 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 outline-none appearance-none"
+                                                            className="w-full text-xs p-2 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 outline-none appearance-none text-gray-900"
                                                         >
                                                             <option value="">Select Playlist...</option>
                                                             {playlists.map((p: any) => (

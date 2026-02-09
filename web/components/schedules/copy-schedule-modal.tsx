@@ -53,7 +53,7 @@ export default function CopyScheduleModal({ isOpen, onClose, onCopy, sourceDayIn
                     <select
                         value={selectedTarget}
                         onChange={(e) => setSelectedTarget(e.target.value)}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900"
                     >
                         <option value="" disabled>Select a day</option>
                         {DAYS.map((day, index) => (
