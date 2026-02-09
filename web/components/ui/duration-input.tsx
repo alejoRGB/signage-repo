@@ -77,7 +77,7 @@ export default function DurationInput({ value, onChange, disabled }: DurationInp
             }}
             disabled={disabled} // Re-added disabled prop
             placeholder="MM:SS"
-            className="w-20 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-center font-mono disabled:bg-gray-100 disabled:text-gray-500" // Merged new and old classNames
+            className="w-20 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-center font-mono disabled:bg-gray-100 disabled:text-gray-500 text-gray-900" // Merged new and old classNames
         />
     );
 }

@@ -151,7 +151,7 @@ export default function PlaylistEditor({
                         <select
                             value={orientation}
                             onChange={(e) => setOrientation(e.target.value)}
-                            className="text-xs border-gray-300 rounded shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                            className="text-xs border-gray-300 rounded shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-gray-900"
                         >
                             <option value="landscape">Landscape</option>
                             <option value="portrait">Portrait</option>
