@@ -15,7 +15,7 @@
 - **Authentication:**
   - **Users:** NextAuth (Email/Password) against `User` table.
   - **Admins:** NextAuth against `Admin` table. Separate credentials.
-  - **Devices:** Pairing Code (6-digit). Device Token authentication. Token in `config.json` MUST match DB.
+  - **Devices:** Pairing Code (6-digit, expires in 15 mins). Device Token authentication. Token in `config.json` MUST match DB.
 
 ## Frontend Design & UX
 - **Theme:** "Deep Space Minimal" (Dark, Gradient backgrounds, Glassmorphism elements).

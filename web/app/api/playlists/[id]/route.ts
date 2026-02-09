@@ -54,10 +54,7 @@ export async function PUT(
         const json = await request.json();
         const { name, items, orientation } = json;
 
-        // DEBUG LOGGING
-        const fs = require('fs');
-        const logData = `\n[${new Date().toISOString()}] PUT /api/playlists/${id}\nParams ID: ${id}\nPayload: ${JSON.stringify(json, null, 2)}\n`;
-        try { fs.appendFileSync('debug_playlist.txt', logData); } catch (e) { }
+        // Debug logging removed
 
         const playlistId = id;
 
@@ -136,8 +133,7 @@ export async function PUT(
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        const fs = require('fs');
-        try { fs.appendFileSync('debug_playlist.txt', `ERROR: ${error.message}\nStack: ${error.stack}\n`); } catch (e) { }
+
 
         console.error("Update playlist error details:", error);
         return NextResponse.json(

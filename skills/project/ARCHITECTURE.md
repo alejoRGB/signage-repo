@@ -35,4 +35,5 @@
 2. **Offline First:** Player *must* continue working if network fails.
 3. **No Web sockets:** Communication is polling-based (Heartbeat every 60s) for simplicity and firewall affinity.
 4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`) reported via heartbeat, not just target intent.
-5. **Manual Deployment:** RPi deployment via `setup_device.sh` curl pipe.
+5. **API Security:** Rate limiting (60 req/min) enforced on all Device endpoints (`/api/device/*`) to prevent abuse.
+6. **Manual Deployment:** RPi deployment via `setup_device.sh` curl pipe.

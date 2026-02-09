@@ -5,6 +5,7 @@
 - **Environment:**
   - `DATABASE_URL`: Neon Postgres Connection String.
   - `NEXTAUTH_SECRET`: Auth secret.
+  - `NEXT_PUBLIC_APP_URL`: Canonical URL for the app (prevents Host Header Injection in sync).
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
   - `E2E_USERNAME` / `E2E_PASSWORD`: Required for E2E testing (DO NOT hardcode in tests).
 
