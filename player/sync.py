@@ -133,7 +133,7 @@ class SyncManager:
             url = f"{self.server_url}/api/device/sync"
             payload = {"device_token": self.device_token}
             
-            if playing_playlist_id:
+            if playing_playlist_id is not None:
                 payload["playing_playlist_id"] = playing_playlist_id
             
             logging.info(f"[SYNC] Fetching sync data. Sending ID: {playing_playlist_id}")
