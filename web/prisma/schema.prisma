@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_URL_NON_POOLING") // Bypass pooler due to Vercel connectivity issues
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  url       = env("DATABASE_URL_UNPOOLED") // User verified this var has no -pooler
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
