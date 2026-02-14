@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Device, Playlist } from "@/types/device";
 import DeviceListTable from "@/components/devices/device-list-table";
@@ -19,7 +19,6 @@ export default function DeviceManager({
     devices: Device[];
     playlists: Playlist[];
 }) {
-    const router = useRouter();
     const { showToast } = useToast();
     const [devices, setDevices] = useState<Device[]>(initialDevices);
 
@@ -37,18 +36,24 @@ export default function DeviceManager({
         setDevices(initialDevices);
     }, [initialDevices]);
 
-    // Polling State (Refresh list every 10s)
+    const refreshDevices = useCallback(async () => {
+        try {
+            const response = await fetch("/api/devices", { cache: "no-store" });
+            if (!response.ok) return;
+
+            const latestDevices = await response.json();
+            setDevices(latestDevices);
+        } catch (error) {
+            console.error("Auto-refresh failed", error);
+        }
+    }, []);
+
+    // Polling state (refresh list every 10s)
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                router.refresh();
-            } catch (error) {
-                console.error("Auto-refresh failed", error);
-            }
-        }, 10000);
+        const interval = setInterval(refreshDevices, 10000);
 
         return () => clearInterval(interval);
-    }, [router]);
+    }, [refreshDevices]);
 
     // Toast Logic replaced by useToast hook
 
@@ -59,7 +64,7 @@ export default function DeviceManager({
 
     const handleDeviceUpdated = (updatedDevice: Device) => {
         setDevices(devices.map(d => d.id === updatedDevice.id ? { ...d, ...updatedDevice } : d));
-        router.refresh();
+        void refreshDevices();
     };
 
     const handlePlaylistChange = async (deviceId: string, playlistId: string) => {

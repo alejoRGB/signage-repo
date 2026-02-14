@@ -374,7 +374,7 @@ Each schedule item defines:
 **Player Modes:**
 1. **Pairing Mode:** Displays pairing code until device is paired
 2. **Media-Only Mode:** Uses MPV with M3U playlist for seamless video/image playback
-3. **Mixed Content Mode:** Item-by-item playback supporting web pages
+3. **Web-Only Mode:** Item-by-item playback supporting web pages
 
 ### 7.2 Installation
 
@@ -399,17 +399,13 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 - Image display duration: per item or 10s default
 - Video duration: auto-detected from file
 
-**Mixed Playlists (with Web Pages):**
+**Web-Only Playlists:**
 - Item-by-item controller loop
 - For web items:
   - Closes MPV
   - Launches Chromium in kiosk mode (`--kiosk --app=URL`)
   - Waits for duration
   - Reuses browser instance if same URL
-- For media items:
-  - Closes browser
-  - Launches MPV for single file
-  - Waits for completion
 - Checks for playlist changes every 60 seconds (hot-swap support)
 
 ### 7.4 Screen Rotation
@@ -725,8 +721,8 @@ updatedAt: DateTime
 ## 11. Technical Specifications
 
 ### 11.1 Frontend
-- **Framework:** Next.js 14 (App Router)
-- **Styling:** Vanilla CSS (no Tailwind)
+- **Framework:** Next.js 16 (App Router)
+- **Styling:** Tailwind CSS v4
 - **State Management:** React useState, SWR for data fetching
 - **UI Components:** Custom components (buttons, modals, inputs)
 - **Authentication:** NextAuth
