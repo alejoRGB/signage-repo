@@ -2,9 +2,13 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 
 const SCREENSHOT_DIR = path.join(__dirname, '../../docs/screenshots');
-const BASE_URL = 'https://signage-repo-dc5s-k539ahs2i-alejos-projects-7a73f1be.vercel.app';
+const BASE_URL = process.env.E2E_BASE_URL || 'https://signage-repo-dc5s.vercel.app';
+const E2E_USERNAME = process.env.E2E_USERNAME;
+const E2E_PASSWORD = process.env.E2E_PASSWORD;
 
 test('capture production ui screenshots', async ({ page }) => {
+    test.skip(!E2E_USERNAME || !E2E_PASSWORD, 'Skipping screenshots: set E2E_USERNAME and E2E_PASSWORD');
+
     // Use a larger viewport to ensure good screenshots
     await page.setViewportSize({ width: 1280, height: 800 });
 
@@ -16,15 +20,8 @@ test('capture production ui screenshots', async ({ page }) => {
 
     // 2. Login Flow
     console.log('Logging in...');
-    const username = process.env.E2E_USERNAME || 'demo@expanded.com'; // Fallback only for local dev if needed, but better to force env
-    const password = process.env.E2E_PASSWORD;
-
-    if (!password) {
-        throw new Error('E2E_PASSWORD environment variable is not set');
-    }
-
-    await page.fill('input[name="username"]', username);
-    await page.fill('input[name="password"]', password);
+    await page.fill('input[name="username"]', E2E_USERNAME!);
+    await page.fill('input[name="password"]', E2E_PASSWORD!);
     await page.click('button[type="submit"]');
 
     // Wait for navigation to dashboard

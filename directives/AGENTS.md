@@ -2,6 +2,13 @@
 
 This file consolidates the responsibilities, capabilities, and tools for all agents in the framework.
 
+
+---
+
+## Canonical Context
+- **Deployment:** `skills/project/DEPLOYMENT.md`
+- **Architecture:** `skills/project/ARCHITECTURE.md`
+
 ---
 
 ## 1. Coordinator Agent
@@ -64,7 +71,7 @@ This file consolidates the responsibilities, capabilities, and tools for all age
 - **Offline**: Caches content for offline playback.
 
 ### Execution Tools
-- **Deploy**: `powershell execution/deploy.ps1` (Deploys code & config to RPi)
+- **Deploy**: `powershell .\deploy.ps1` (Deploys code & config to RPi; username-agnostic via `~/signage-player`)
 - **Start Local**: `python execution/player_ops.py start`
 - **Remote Control**: `python execution/player_ops.py remote_<action>` (start, stop, restart, status)
 

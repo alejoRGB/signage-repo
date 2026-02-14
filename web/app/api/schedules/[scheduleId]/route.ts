@@ -81,22 +81,43 @@ export async function PATCH(
         const json = await req.json();
         const { name, items } = json;
 
+        const existingSchedule = await prisma.schedule.findUnique({
+            where: { id: scheduleId },
+            select: { userId: true },
+        });
+
+        if (!existingSchedule) {
+            return new NextResponse("Schedule not found", { status: 404 });
+        }
+
+        if (existingSchedule.userId !== session.user.id) {
+            return new NextResponse("Unauthorized access to schedule", { status: 403 });
+        }
+
         // Verify ownership of all playlists and check for overlaps if items are provided
         if (items && Array.isArray(items)) {
-            // 1. Verify Ownership
-            // We can check one by one or batch. Batch is better but let's stick to the previous loop style or improve it.
-            // Using the Set approach for efficiency.
             const playlistIds = [...new Set(items.map((i: any) => i.playlistId).filter(Boolean))];
 
             if (playlistIds.length > 0) {
-                const count = await prisma.playlist.count({
+                const playlists = await prisma.playlist.findMany({
                     where: {
                         id: { in: playlistIds },
-                        userId: session.user.id
-                    }
+                    },
+                    select: {
+                        id: true,
+                        userId: true,
+                    },
                 });
-                if (count !== playlistIds.length) {
-                    return NextResponse.json({ error: "One or more playlists are invalid or unauthorized" }, { status: 400 });
+
+                const foundIds = new Set(playlists.map((p) => p.id));
+                const missing = playlistIds.filter((id: string) => !foundIds.has(id));
+                if (missing.length > 0) {
+                    return NextResponse.json({ error: "One or more playlists were not found" }, { status: 404 });
+                }
+
+                const unauthorized = playlists.some((p) => p.userId !== session.user.id);
+                if (unauthorized) {
+                    return NextResponse.json({ error: "One or more playlists are unauthorized" }, { status: 403 });
                 }
             }
 
@@ -125,7 +146,6 @@ export async function PATCH(
         const schedule = await prisma.schedule.update({
             where: {
                 id: scheduleId,
-                userId: session.user.id,
             },
             data: {
                 name: name,

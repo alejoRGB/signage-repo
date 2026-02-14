@@ -23,41 +23,43 @@ pip3 install requests
 
 ```bash
 # Create player directory
-mkdir -p /home/pi/signage-player/media
-cd /home/pi/signage-player
+mkdir -p ~/signage-player/media
+cd ~/signage-player
 
 # Copy player files (you'll need to transfer these from your PC)
 # - player.py
 # - sync.py
-# - config.json
 # - setup_wallpaper.py
 # - setup_device.sh
 # - rotation_utils.py
 # - logger_service.py
 # - README.md
+#
+# Nota: config.json NO debe venir versionado en git. Se genera/localiza en tu PC
+# y luego se copia a la Raspberry (por ejemplo, vía deploy.ps1 o SCP).
 ```
 
 ### 3. Create Configuration
 
-Create `/home/pi/signage-player/config.json`:
+Create `~/signage-player/config.json` (use an absolute path in `media_dir`; `~` does not expand in JSON):
 
 ```json
 {
   "server_url": "http://192.168.100.4:3000",
   "device_token": "cmkqc23340020n2yxfs987i6h",
   "sync_interval": 300,
-  "media_dir": "/home/pi/signage-player/media"
+  "media_dir": "/home/<USER>/signage-player/media"
 }
 ```
 
 **Replace**:
-- `server_url` with your PC's IP address
-- `device_token` with your device's token from the dashboard
+- `server_url` with your PC's IP address or the production URL (por ejemplo la URL de Vercel).
+- `device_token` with your device's token from the dashboard (o `null` para forzar un nuevo pairing).
 
 ### 4. Test Sync
 
 ```bash
-cd /home/pi/signage-player
+cd ~/signage-player
 python3 sync.py
 ```
 
@@ -89,7 +91,7 @@ Press `Ctrl+C` to stop.
 We have provided a script to automatically verify dependencies and install the systemd service.
 
 1.  **Create the Setup Script**:
-    Create `/home/pi/signage-player/setup_service.sh` and paste the content provided by the assistant.
+    Create `~/signage-player/setup_service.sh` and paste the content provided by the assistant.
 
 2.  **Run the Script**:
     ```bash
@@ -117,9 +119,16 @@ We provide a PowerShell script to handle file transfer, permission fixing, and s
 
 **From your development machine:**
 ```powershell
-.\deploy_player.ps1 -PlayerIp <RPI_IP> -PlayerUser <USER>
-# Example: .\deploy_player.ps1 -PlayerIp 192.168.1.50 -PlayerUser pi
+.\deploy.ps1 -PlayerIp <RPI_IP> -PlayerUser <USER>
+# Example: .\deploy.ps1 -PlayerIp 192.168.1.50 -PlayerUser pi3
 ```
+This script resolves the remote home directory and always targets `~/signage-player`, regardless of username.
+
+> **Tip (entorno local en tu PC)**: Antes de tu primer deploy, ejecutá en la raíz del repo:
+> ```powershell
+> .\setup_env.ps1
+> ```
+> Esto creará `web/.env` y `player/config.json` desde sus archivos de ejemplo **solo si no existen**. Ambos quedan fuera de git y contienen tu configuración local real.
 
 ### 7. Playback Modes
 
@@ -132,17 +141,25 @@ The player automatically selects the best playback strategy:
     *   Manages a mixed loop of MPV (for video) and Chromium (for web).
     *   Slightly higher overhead but higher flexibility.
 
+### Chromium Sandbox Policy
+
+- By default, Chromium is launched with sandbox enabled.
+- `--no-sandbox` is only applied when:
+  - The process runs as `root`, or
+  - `ALLOW_CHROMIUM_NO_SANDBOX=1` is set explicitly.
+- Use `ALLOW_CHROMIUM_NO_SANDBOX` only as a compatibility fallback for environments where Chromium sandboxing fails.
+
 ## Transferring Files to Pi (Manual)
 
 ### Option 1: SCP (from your PC)
 ```bash
-scp -r player.py sync.py config.json scripts/ pi@raspberrypi.local:/home/pi/signage-player/
+scp -r player.py sync.py config.json scripts/ <USER>@raspberrypi.local:~/signage-player/
 ```
 
 ### Option 2: Direct Edit via SSH
 ```bash
-ssh pi@raspberrypi.local
-cd /home/pi/signage-player
+ssh <USER>@raspberrypi.local
+cd ~/signage-player
 nano sync.py  # Paste content
 nano player.py  # Paste content
 nano config.json  # Create config
@@ -150,7 +167,9 @@ nano config.json  # Create config
 
 ### Option 3: Git
 ```bash
-# On PC: commit files to git
+# On PC: commit code to git (NUNCA `config.json` ni secretos)
 # On Pi: clone repo
-git clone <your-repo> /home/pi/signage-player
+git clone <your-repo> ~/signage-player
+
+# Luego, en la Pi, creá/ajusta config.json directamente ahí siguiendo la sección "Create Configuration"
 ```

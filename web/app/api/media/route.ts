@@ -115,7 +115,7 @@ export async function POST(request: Request) {
                 name: data.name,
                 url: data.url,
                 type: data.type,
-                filename: data.filename,
+                filename: data.type === "web" ? null : data.filename ?? null,
                 width: data.width ?? undefined,
                 height: data.height ?? undefined,
                 fps: data.fps ?? undefined,

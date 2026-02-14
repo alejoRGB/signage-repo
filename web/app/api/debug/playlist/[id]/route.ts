@@ -29,7 +29,8 @@ export async function GET(
         });
 
         return NextResponse.json(playlist);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        console.error("[DEBUG_PLAYLIST_GET]", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

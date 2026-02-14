@@ -1,100 +1,21 @@
 #!/bin/bash
+set -e
 
-# Digital Signage Player - One-Line Installer
-# Usage: curl -L https://your-domain.com/install.sh | bash
+# Digital Signage Player - Legacy Installer
+# This file is kept for backward compatibility and now delegates to the
+# canonical installer: player/setup_device.sh in the repo.
 
 echo "==================================================="
-echo "   Digital Signage Player Installer"
+echo "   Digital Signage Player Installer (Legacy)"
 echo "==================================================="
+echo "This installer is deprecated. Redirecting to canonical setup_device.sh..."
 
-# 1. Configuration
-USER_HOME=$(eval echo ~$(whoami))
-INSTALL_DIR="$USER_HOME/signage-player"
-BASE_URL="https://signage-repo-dc5s.vercel.app" # Stable Production URL
+CANONICAL_URL="https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/setup_device.sh"
 
-echo "Installing to: $INSTALL_DIR"
-
-# 2. Install System Dependencies
-echo "[1/5] Installing system dependencies..."
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-requests python3-pil mpv feh git
-
-# 3. Setup Directory
-echo "[2/5] Setting up directories..."
-mkdir -p "$INSTALL_DIR/media"
-
-# 4. Download Player Software
-echo "[3/5] Downloading player software..."
-# Always download the latest optimized player from the public URL
-wget -q "$BASE_URL/player.py" -O "$INSTALL_DIR/player.py"
-wget -q "$BASE_URL/sync.py" -O "$INSTALL_DIR/sync.py"
-
-# Download Service Script Logic (Embedded here to handle service creation)
-SERVICE_FILE="/etc/systemd/system/signage-player.service"
-CURRENT_USER=$(whoami)
-
-# 5. Create Config if missing
-echo "[4/5] Checking configuration..."
-CONFIG_PATH="$INSTALL_DIR/config.json"
-if [ ! -f "$CONFIG_PATH" ]; then
-    echo "Creating default configuration..."
-    cat > "$CONFIG_PATH" <<EOF
-{
-  "server_url": "${BASE_URL}",
-  "device_token": "",
-  "media_dir": "${INSTALL_DIR}/media"
-}
-EOF
-    echo "⚠️  IMPORTANT: You must edit $CONFIG_PATH to add your device token later!"
-else
-    echo "Configuration exists. Skipping."
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl not found. Installing..."
+  sudo apt-get update -y
+  sudo apt-get install -y curl
 fi
 
-# 6. Install Service
-echo "[5/5] Installing auto-start service..."
-sudo bash -c "cat > $SERVICE_FILE" <<EOL
-[Unit]
-Description=Digital Signage Player
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-Environment=DISPLAY=:0
-Environment=XAUTHORITY=$USER_HOME/.Xauthority
-ExecStart=/usr/bin/python3 $INSTALL_DIR/player.py
-WorkingDirectory=$INSTALL_DIR
-User=$CURRENT_USER
-Group=$CURRENT_USER
-
-# Restart configuration
-Restart=always
-RestartSec=10
-StartLimitInterval=300
-StartLimitBurst=5
-
-# Watchdog configuration
-WatchdogSec=120
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=graphical.target
-EOL
-
-sudo systemctl unmask signage-player
-sudo systemctl daemon-reload
-sudo systemctl enable signage-player.service
-sudo systemctl restart signage-player
-
-echo "==================================================="
-echo "✅ Installation Complete!"
-echo "==================================================="
-echo "The player is now starting..."
-echo "1. Look at your TV/Monitor attached to this Pi."
-echo "2. You should see a 'Pairing Code' appear shortly."
-echo "3. Go to your Dashboard > Devices > Pair Device."
-echo "4. Enter the code shown on the screen."
-echo "==================================================="
+curl -sLf "$CANONICAL_URL" | bash
