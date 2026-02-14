@@ -81,7 +81,7 @@ export default function PairDeviceModal({ isOpen, onClose, onDevicePaired, showT
                                 value={pairingCode}
                                 onChange={(e) => setPairingCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                 placeholder="000000"
-                                className="w-full px-4 py-3 text-2xl text-center tracking-widest border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 font-mono"
+                                className="w-full px-4 py-3 text-2xl text-center tracking-widest border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 font-mono bg-white text-gray-900 placeholder:text-gray-400"
                                 autoFocus
                             />
                         </div>
@@ -94,7 +94,7 @@ export default function PairDeviceModal({ isOpen, onClose, onDevicePaired, showT
                                 value={pairingName}
                                 onChange={(e) => setPairingName(e.target.value)}
                                 placeholder="e.g. Lobby Screen"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 placeholder:text-gray-400"
                             />
                         </div>
                         <div className="flex gap-3 mt-6">

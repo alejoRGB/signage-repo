@@ -2,18 +2,21 @@
 
 ## Cloud Deployment (Vercel)
 - **Repo:** GitHub connected.
+- **Canonical Production URL:** `https://signage-repo-dc5s.vercel.app`
 - **Environment:**
   - `DATABASE_URL_UNPOOLED`: Neon Postgres **non-pooler** connection string (required by Prisma; must NOT include `-pooler`).
   - `NEXTAUTH_SECRET`: Auth secret.
   - `NEXT_PUBLIC_APP_URL`: Canonical URL for the app (prevents Host Header Injection in sync).
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
-  - `E2E_USERNAME` / `E2E_PASSWORD`: Required for E2E testing (DO NOT hardcode in tests).
+  - `E2E_USERNAME` / `E2E_PASSWORD`: Required for credentialed E2E testing (DO NOT hardcode in tests).
+  - `E2E_BASE_URL`: Optional override for Playwright; defaults to canonical production URL.
 
 ## Security & Maintenance
 - **Credentials:** 
   - Never commit hardcoded secrets. `git rm --cached` used to enforce this.
   - Rotated credentials (Feb 2026) due to historic exposure.
 - **Gitignore:** Ensure `web/dev.db`, `web/public/uploads`, `playwright-report`, `test-results`, and `.env*` are ignored.
+- **QA Artifacts:** Also ignore `qa_automation/playwright-report` and `qa_automation/test-results`.
 - **Admin Recovery:** Use `web/scripts/reset_password.js` to reset admin credentials directly in DB.
 - **Device Debugging:** Use `web/scripts/check_devices.js` to verify device tokens and status in DB.
 
@@ -33,9 +36,8 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 1. SSH into the Pi and run `sudo apt update && sudo apt upgrade -y`.
 2. From the repo root on your PC:
    - `powershell .\deploy.ps1 -PlayerIp <IP> -PlayerUser <USER>`
-3. Ensure `~/signage-player/config.json` has `device_token: null` for new pairing.
+3. Ensure `~/signage-player/config.json` has empty/unset token for new pairing (`device_token: null` or `device_token: ""`).
 4. After a successful deploy and restart, the pairing code should appear on screen.
-4. After service restart, a pairing code should appear on screen.
 
 ### Updates
 - **Code:** `git pull` in `~/signage-player`.
@@ -70,6 +72,6 @@ date
 ### Force Pairing Reset
 If code is invalid/expired:
 1. Stop service.
-2. Create config with ONLY `server_url` (remove `device_token`).
+2. Create config with ONLY `server_url` (remove `device_token`) or set `device_token` to `null`/`""`.
 3. Restart service.
 4. Check logs for NEW code.

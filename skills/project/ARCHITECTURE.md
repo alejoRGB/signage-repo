@@ -40,4 +40,8 @@
    - Rate limiting (60 req/min) enforced on all Device endpoints.
    - **Strict Ownership:** Middleware/Logic ensures users only access their own data.
    - **Input Validation:** Zod schemas validate all incoming JSON.
-6. **Manual Deployment:** RPi deployment via `deploy.ps1` (PowerShell) or `setup_device.sh`.
+   - **Error Hygiene:** Production API responses must not include stack traces or internal exception details.
+6. **Chromium Security Policy (Player):**
+   - Default execution is sandbox-enabled.
+   - `--no-sandbox` is allowed only as compatibility fallback (explicit override) or when the process is running as root.
+7. **Manual Deployment:** RPi deployment via `deploy.ps1` (PowerShell) or `setup_device.sh`.

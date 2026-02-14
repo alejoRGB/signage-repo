@@ -20,7 +20,7 @@
 ## Security
 - **Authorization:** Strict ownership checks on all mutating endpoints (`DELETE`, `PUT`, `PATCH`). Users can only modify their own resources.
 - **Validation:** Zod schemas used for all API inputs. Backend blocking of schedule overlaps.
-- **Hardening:** Debug endpoints (`/api/debug-env`) blocked in Production. Stack traces removed from API errors.
+- **Hardening:** Debug endpoints (`/api/debug-env`, `/api/debug/playlist/[id]`) blocked in Production. Public API errors must not expose stack traces or internal details.
 
 ## Frontend Design & UX
 - **Theme:** "Deep Space Minimal" (Dark, Gradient backgrounds, Glassmorphism elements).
