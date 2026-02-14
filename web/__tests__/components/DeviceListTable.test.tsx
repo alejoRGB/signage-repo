@@ -81,4 +81,22 @@ describe('DeviceListTable', () => {
         const syncingElements = screen.getAllByText('Syncing...');
         expect(syncingElements).toHaveLength(1);
     });
+
+    it('does not show syncing when playback id is not reported yet', () => {
+        const devicesWithoutPlaybackId = [
+            {
+                id: 'd4',
+                name: 'Device 4',
+                status: 'paired',
+                token: 't4',
+                createdAt: new Date().toISOString(),
+                lastSeenAt: new Date().toISOString(),
+                activePlaylist: { id: 'p2', name: 'Playlist 2' },
+                playingPlaylistId: null
+            }
+        ];
+
+        render(<DeviceListTable devices={devicesWithoutPlaybackId} playlists={mockPlaylists} {...mockHandlers} />);
+        expect(screen.queryByText('Syncing...')).not.toBeInTheDocument();
+    });
 });

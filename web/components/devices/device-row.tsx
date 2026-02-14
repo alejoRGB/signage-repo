@@ -28,9 +28,12 @@ export default function DeviceRow({
     // Logic for True Sync
     const isOptimisticUpdating = updatingDeviceId === device.id;
     const hasActivePlaylist = !!device.activePlaylist?.id;
-    // It's synced if the reported playing ID matches the active ID
-    // We treat null playingPlaylistId as not synced if there IS an active playlist
-    const isSynced = device.activePlaylist?.id === device.playingPlaylistId;
+    const hasReportedPlayback = typeof device.playingPlaylistId === "string" && device.playingPlaylistId.length > 0;
+    // It's synced if the reported playing ID matches the selected active playlist.
+    // If playback isn't reported yet, avoid showing a stuck syncing state.
+    const isSynced = hasActivePlaylist && hasReportedPlayback
+        ? device.activePlaylist?.id === device.playingPlaylistId
+        : false;
 
     const prevSynced = useRef(isSynced);
 
@@ -46,7 +49,7 @@ export default function DeviceRow({
 
     // Don't show "Ready" if we are currently updating (optimistic)
     const shouldShowReady = showReady && !isOptimisticUpdating;
-    const shouldShowSyncing = isOptimisticUpdating || (hasActivePlaylist && !isSynced);
+    const shouldShowSyncing = isOptimisticUpdating || (hasActivePlaylist && hasReportedPlayback && !isSynced);
 
     return (
         <tr className="hover:bg-gray-50">

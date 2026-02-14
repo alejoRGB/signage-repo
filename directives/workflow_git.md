@@ -39,7 +39,7 @@ The project is configured for **Continuous Deployment** via Vercel.
 *   **Trigger**: Pushing to the `master` branch on GitHub automatically triggers a new deployment on Vercel.
 *   **Verification**:
     *   After pushing, check the Vercel dashboard or the project URL to ensure the build succeeded.
-    *   **Project URL**: `https://signage-repo.vercel.app` (or similar, check `config.json` for the specific endpoint being used).
+    *   **Project URL**: `https://signage-repo-dc5s.vercel.app` (canonical production URL).
 
 ### Standard Operating Procedure (SOP)
 **After any successful verification of code changes:**
