@@ -10,8 +10,8 @@ export async function GET() {
         }
 
         const envCheck = {
-            POSTGRES_PRISMA_URL: process.env.POSTGRES_PRISMA_URL ? "Present (Starts with " + process.env.POSTGRES_PRISMA_URL.substring(0, 10) + "...)" : "MISSING",
-            POSTGRES_URL_NON_POOLING: process.env.POSTGRES_URL_NON_POOLING ? "Present" : "MISSING",
+            DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED ? "Present (Starts with " + process.env.DATABASE_URL_UNPOOLED.substring(0, 10) + "...)" : "MISSING",
+            DATABASE_URL: process.env.DATABASE_URL ? "Present (Starts with " + process.env.DATABASE_URL.substring(0, 10) + "...)" : "MISSING",
             NODE_ENV: process.env.NODE_ENV,
         };
 
@@ -29,11 +29,10 @@ export async function GET() {
             env: envCheck,
             dbStatus
         });
-    } catch (error: any) {
+    } catch (error) {
+        console.error("[DEBUG_ENV_GET]", error);
         return NextResponse.json({
-            error: "Fatal Error",
-            message: error.message,
-            stack: error.stack
+            error: "Internal server error",
         }, { status: 500 });
     }
 }

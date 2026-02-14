@@ -9,57 +9,67 @@ Follow these instructions to program a **NEW** Raspberry Pi from scratch.
     *   **OS:** Choose "Raspberry Pi OS (Legacy, 64-bit)" or "Raspberry Pi OS with Desktop". (Desktop is required for video playback).
     *   **Settings (Gear Icon):**
         *   Enable SSH (Password authentication).
-        *   Set User: `masal` (or `pi`).
+        *   Set User: `<USER>` (any username).
         *   Set Password: `raspberry` (or your choice).
         *   Configure WiFi (SSID & Password).
 3.  **Boot:** Insert SD card into Pi, connect to screen, and power on.
 
 ## 2. Initial Configuration (On the Pi)
 
-You can do this directly on the Pi or via SSH (`ssh masal@<PI_IP>`).
+You can do this directly on the Pi or via SSH (`ssh <USER>@<PI_IP>`).
 
-1.  **Update System:**
+1.  **Update System (required):**
     ```bash
     sudo apt update
     sudo apt upgrade -y
     ```
 
-2.  **Install Dependencies:**
-    Copy and run this single command to install everything needed:
-    ```bash
-    sudo apt install -y python3 python3-pip python3-requests python3-pil mpv feh git unclutter
-    ```
-
-3.  **Prepare Directory:**
-    ```bash
-    mkdir -p ~/signage-player/media
-    ```
+2.  **Ensure the Pi is online and SSH is working.**
 
 ## 3. Deploy Code (From PC)
 
 Use the deployment script to upload the code from your Windows PC to the Pi.
 
-1.  Open VS Code Terminal.
-2.  Run the deploy script (replace IP and User if different):
+> **First‑time setup on your PC:** from the repo root, run:
+> ```powershell
+> .\setup_env.ps1
+> ```
+> This will create `web/.env` and `player/config.json` from their example files **only if they do not exist**. These files contain local secrets/config and are ignored by git.
+
+1.  Open a terminal in the repo root.
+2.  Run the deploy script (replace IP and User):
     ```powershell
-    .\deploy.ps1 -PiUser masal -PiHost 192.168.100.6
+    .\deploy.ps1 -PlayerUser <USER> -PlayerIp <PI_IP>
     ```
     *Enter the Pi's password when prompted.*
+3.  This script:
+    - Resolves the remote home directory (`~/signage-player`) so it is username-agnostic.
+    - Copies the player files (including `config.json` generated on your PC).
+    - Installs dependencies and sets the wallpaper.
+    - Restarts or installs the systemd service.
 
 ## 4. Final Setup (On the Pi)
 
-Now that the files are uploaded, run the setup script to make it start automatically.
+After deploy, verify config and pairing.
 
 1.  SSH into the Pi again.
-2.  Make scripts executable:
+2.  **IMPORTANT: Configure Server URL & Identity**
+    Edit the config file to ensure it points to the correct server and has no previous identity:
     ```bash
-    chmod +x ~/signage-player/*.sh
+    nano ~/signage-player/config.json
     ```
-3.  Run the Service Setup:
+    Ensure the content looks like this (replace URL if needed, but ensure `device_token` is `null`):
+    ```json
+    {
+        "server_url": "https://signage-repo-dc5s.vercel.app",
+        "device_token": null
+    }
+    ```
+    *Note: `device_token` must be `null` for a new pairing code to be generated.*
+3.  Restart the service:
     ```bash
-    sudo bash ~/signage-player/setup_service.sh
+    sudo systemctl restart signage-player
     ```
-    *(This will configure the player to auto-start on boot).*
 
 ## 5. Verify & Pair
 
@@ -79,4 +89,4 @@ Now that the files are uploaded, run the setup script to make it start automatic
 *   **Video not seamless?**
     Ensure using `mpv` version 0.35+ (default in standard Bookworm OS).
 *   **Deployment fails?**
-    Check SSH connection: `ssh masal@<IP>` from your PC.
+    Check SSH connection: `ssh <USER>@<PI_IP>` from your PC.

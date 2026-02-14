@@ -41,24 +41,42 @@ export async function PUT(
 
         // Verify foreign keys ownership if provided
         if (body.activePlaylistId) {
-            const playlist = await prisma.playlist.findFirst({
-                where: { id: body.activePlaylistId, userId: session.user.id }
+            const playlist = await prisma.playlist.findUnique({
+                where: { id: body.activePlaylistId },
+                select: { userId: true },
             });
-            if (!playlist) return NextResponse.json({ error: "Invalid activePlaylistId" }, { status: 400 });
+            if (!playlist) {
+                return NextResponse.json({ error: "activePlaylistId not found" }, { status: 404 });
+            }
+            if (playlist.userId !== session.user.id) {
+                return NextResponse.json({ error: "Unauthorized activePlaylistId" }, { status: 403 });
+            }
         }
 
         if (body.defaultPlaylistId) {
-            const playlist = await prisma.playlist.findFirst({
-                where: { id: body.defaultPlaylistId, userId: session.user.id }
+            const playlist = await prisma.playlist.findUnique({
+                where: { id: body.defaultPlaylistId },
+                select: { userId: true },
             });
-            if (!playlist) return NextResponse.json({ error: "Invalid defaultPlaylistId" }, { status: 400 });
+            if (!playlist) {
+                return NextResponse.json({ error: "defaultPlaylistId not found" }, { status: 404 });
+            }
+            if (playlist.userId !== session.user.id) {
+                return NextResponse.json({ error: "Unauthorized defaultPlaylistId" }, { status: 403 });
+            }
         }
 
         if (body.scheduleId) {
-            const schedule = await prisma.schedule.findFirst({
-                where: { id: body.scheduleId, userId: session.user.id }
+            const schedule = await prisma.schedule.findUnique({
+                where: { id: body.scheduleId },
+                select: { userId: true },
             });
-            if (!schedule) return NextResponse.json({ error: "Invalid scheduleId" }, { status: 400 });
+            if (!schedule) {
+                return NextResponse.json({ error: "scheduleId not found" }, { status: 404 });
+            }
+            if (schedule.userId !== session.user.id) {
+                return NextResponse.json({ error: "Unauthorized scheduleId" }, { status: 403 });
+            }
         }
 
         // Clean up IDs: Empty string "" should be treated as null
@@ -98,16 +116,20 @@ export async function DELETE(
     try {
         const { id } = await params;
 
-        const device = await prisma.device.deleteMany({
-            where: {
-                id: id,
-                userId: session.user.id,
-            },
+        const existingDevice = await prisma.device.findUnique({
+            where: { id },
+            select: { userId: true },
         });
 
-        if (device.count === 0) {
-            return new NextResponse("Device not found or unauthorized", { status: 404 });
+        if (!existingDevice) {
+            return new NextResponse("Device not found", { status: 404 });
         }
+
+        if (existingDevice.userId !== session.user.id) {
+            return new NextResponse("Unauthorized access to device", { status: 403 });
+        }
+
+        await prisma.device.delete({ where: { id } });
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -77,12 +77,20 @@ export const UpdateUserSchema = z.object({
 export const CreateMediaItemSchema = z.object({
     name: z.string().min(1, "Name is required").transform(sanitize),
     url: z.string().url("Invalid URL").transform(sanitize),
-    type: z.enum(["image", "video"]),
-    filename: z.string().min(1, "Filename is required").transform(sanitize),
+    type: z.enum(["image", "video", "web"]),
+    filename: z.string().min(1, "Filename is required").transform(sanitize).optional().nullable(),
     width: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
     height: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
     fps: z.union([z.number(), z.string().transform((val) => parseFloat(val))]).nullable().optional(),
     size: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
     duration: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional().default(10),
     cacheForOffline: z.boolean().optional().default(false),
+}).superRefine((data, ctx) => {
+    if (data.type !== "web" && !data.filename) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Filename is required for image/video",
+            path: ["filename"],
+        });
+    }
 });

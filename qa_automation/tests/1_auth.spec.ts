@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Credentials provided by user
-const TEST_USER = 'test@admin.com';
-const TEST_PASS = '123456';
+const TEST_USER = process.env.E2E_USERNAME;
+const TEST_PASS = process.env.E2E_PASSWORD;
 
-test.describe('Phase 1: Core & Authentication', () => {
+test.describe('Phase 1: Core & Authentication (No Credentials Required)', () => {
 
     test('[AUTH-04] Redirect Check: Protected route should redirect to login', async ({ page }) => {
         // Go to a protected route (e.g., /dashboard)
@@ -18,12 +17,16 @@ test.describe('Phase 1: Core & Authentication', () => {
         await expect(page.locator('input[name="username"]')).toBeVisible();
         await expect(page.locator('input[name="password"]')).toBeVisible();
     });
+});
+
+test.describe('Phase 1: Core & Authentication (Credentialed)', () => {
+    test.skip(!TEST_USER || !TEST_PASS, 'Skipping credentialed auth tests: set E2E_USERNAME and E2E_PASSWORD');
 
     test('[AUTH-02] Invalid Login', async ({ page }) => {
         await page.goto('/login');
 
         // Fill credentials
-        await page.fill('input[name="username"]', TEST_USER);
+        await page.fill('input[name="username"]', TEST_USER!);
         await page.fill('input[name="password"]', 'wrongpassword_123');
 
         // Submit
@@ -42,8 +45,8 @@ test.describe('Phase 1: Core & Authentication', () => {
         await page.goto('/login');
 
         // Fill credentials
-        await page.fill('input[name="username"]', TEST_USER);
-        await page.fill('input[name="password"]', TEST_PASS);
+        await page.fill('input[name="username"]', TEST_USER!);
+        await page.fill('input[name="password"]', TEST_PASS!);
         await page.click('button[type="submit"]');
 
         // Verification: URL should change to /dashboard
@@ -57,8 +60,8 @@ test.describe('Phase 1: Core & Authentication', () => {
     test('[AUTH-03] Logout', async ({ page }) => {
         // 1. Perform Login First
         await page.goto('/login');
-        await page.fill('input[name="username"]', TEST_USER);
-        await page.fill('input[name="password"]', TEST_PASS);
+        await page.fill('input[name="username"]', TEST_USER!);
+        await page.fill('input[name="password"]', TEST_PASS!);
         await page.click('button[type="submit"]');
         await expect(page).toHaveURL(/.*dashboard/, { timeout: 15000 });
 

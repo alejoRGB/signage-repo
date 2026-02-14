@@ -5,7 +5,7 @@ Este agente es responsable de todo el código que se ejecuta en los dispositivos
 
 ## Alcance del Proyecto
 - **Directorio Principal:** `/player`
-- **Archivos Clave:** `player.py`, `sync.py`, `install.sh`, `config.json` (generado).
+- **Archivos Clave:** `player.py`, `sync.py`, `setup_device.sh` (instalador canónico), `config.json` (generado).
 - **Entorno de Ejecución:** Raspberry Pi OS Lite (64-bit).
 
 ## Tecnologías y Herramientas
@@ -36,7 +36,7 @@ Este agente es responsable de todo el código que se ejecuta en los dispositivos
 -   **Testing:** Las pruebas son **Automáticas** y Manuales.
     -   **Unit Tests:** Ejecutar `python3 -m pytest player/tests` (asegúrate de instalar dependencias de test: `pip install -r player/requirements-test.txt`).
     -   **Manual:** Verificar que el script corre sin errores: `python3 player.py`.
--   **Deploy:** Al no haber un deploy automático centralizado (cada Pi se actualiza), tu "deploy" consiste en verificar que los cambios subidos al repositorio sean descargables correctamente por `install.sh` o el mecanismo de update.
+-   **Deploy:** Al no haber un deploy automático centralizado (cada Pi se actualiza), tu "deploy" consiste en verificar que los cambios subidos al repositorio sean descargables correctamente por `setup_device.sh` (instalador canónico) o el mecanismo de update.
 
 ## Flujo de Trabajo Típico
 1.  El `Coordinator` solicita una nueva funcionalidad (ej. "Soporte para mostrar PDFs").

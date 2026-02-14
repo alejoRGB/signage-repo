@@ -404,6 +404,10 @@ class Player:
                                      uid = os.getuid()
                                      env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path=/run/user/{uid}/bus"
 
+                                is_root = hasattr(os, "geteuid") and os.geteuid() == 0
+                                no_sandbox_override = os.getenv("ALLOW_CHROMIUM_NO_SANDBOX", "").lower() in {"1", "true", "yes"}
+                                use_no_sandbox = is_root or no_sandbox_override
+
                                 cmd = [
                                     browser_exec,
                                     "--kiosk",
@@ -411,14 +415,19 @@ class Player:
                                     "--noerrdialogs",
                                     "--disable-infobars",
                                     "--check-for-update-interval=31536000",
-                                    "--no-sandbox",
-                                    "--disable-setuid-sandbox",
                                     "--disable-gpu",
                                     "--disable-software-rasterizer",
                                     "--disable-dev-shm-usage",
                                     "--password-store=basic",
                                     f"--user-data-dir={os.path.join(os.path.expanduser('~'), '.config/chromium-signage-temp')}"
                                 ]
+
+                                if use_no_sandbox:
+                                    cmd.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+                                    logging.warning("[MIXED_PLAYER] Chromium launched with --no-sandbox (reduced security).")
+                                else:
+                                    logging.info("[MIXED_PLAYER] Chromium launched with sandbox enabled.")
+
                                 try:
                                     browser_process = subprocess.Popen(cmd, env=env, stderr=subprocess.DEVNULL) # Reduce log spam
                                     current_browser_url = url

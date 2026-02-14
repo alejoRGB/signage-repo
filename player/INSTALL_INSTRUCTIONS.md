@@ -17,13 +17,45 @@ Este documento detalla los pasos para configurar una nueva Raspberry Pi desde ce
 
 ## 2. Instalación del Software
 
+### 2.1 Método recomendado (deploy desde otra PC con `deploy.ps1`)
+
+> **Antes de desplegar desde tu PC:** desde la raíz del repo, ejecutá una vez:
+> ```powershell
+> .\setup_env.ps1
+> ```
+> Esto creará `web/.env` y `player/config.json` a partir de sus archivos de ejemplo **solo si no existen**. Ambos archivos contienen configuración/secrets locales y están ignorados por git.
+
+1.  Conectá la Pi a internet y verificá que SSH esté habilitado.
+2.  Conectate por SSH y actualizá el sistema:
+    ```bash
+    sudo apt update
+    sudo apt upgrade -y
+    ```
+3.  Desde tu PC (en la raíz del repo), ejecutá:
+    ```powershell
+    .\deploy.ps1 -PlayerIp <PI_IP> -PlayerUser <USER>
+    ```
+    Este script:
+    - Usa el home del usuario remoto (`~/signage-player`), sin hardcodear `/home/pi`.
+    - Copia archivos, instala dependencias y deja el servicio activo.
+4.  En la Pi, asegurate de que `config.json` tenga `device_token` en `null` para pairing. El archivo `~/signage-player/config.json` llega desde `player/config.json` de tu PC (generado por `setup_env.ps1`) y podés editarlo directamente en la Raspberry:
+    ```bash
+    nano ~/signage-player/config.json
+    ```
+5.  Reiniciá el servicio si hiciste cambios:
+    ```bash
+    sudo systemctl restart signage-player
+    ```
+
+### 2.2 Método alternativo (one‑line install)
+
 Una vez que la Pi haya arrancado y esté conectada a internet (puedes verificarlo con `ping google.com`), abre una terminal (o conéctate por SSH) y ejecuta el siguiente **comando mágico**:
 
 ```bash
 curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/setup_device.sh | bash
 ```
 
-### ¿Qué hace este script?
+**¿Qué hace este script?**
 1.  Actualiza el sistema (`apt-get update`).
 2.  Instala dependencias críticas: `mpv`, `chromium`, `git`, `python3-pip`, `feh`, `unclutter`.
 3.  Descarga los archivos del reproductor **directamente** (sin git clone, para evitar errores).
@@ -33,7 +65,7 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 7.  Inicializa la configuración en **Modo Pairing**.
 8.  **Configuración de Zona Horaria (Arg)**: Se establece automáticamente a Buenos Aires.
 
-### 2.1 Configuración de Zona Horaria
+### 2.3 Configuración de Zona Horaria
 
 Para asegurar que los horarios de la cartelería funcionen correctamente, es recomendable establecer la zona horaria explícitamente si el script no lo hizo.
 
@@ -56,6 +88,7 @@ sudo reboot
 *   El escritorio se verá **negro** (sin fondo predeterminado).
 *   No verás el cursor del mouse.
 *   En unos segundos, aparecerá un **Código de Pairing** (QR o Texto) en pantalla completa.
+    *   Requiere `device_token: null` en `~/signage-player/config.json` y `server_url` correcto.
 
 ## 4. Vincular el Dispositivo
 1.  Ve al **Dashboard Web** (PC o Móvil).
