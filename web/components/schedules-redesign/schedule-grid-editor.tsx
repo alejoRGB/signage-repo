@@ -357,12 +357,6 @@ export default function ScheduleGridEditor({ scheduleId }: { scheduleId: string 
                     })}
                   </tr>
                 ))}
-                <tr>
-                  <td className="sticky left-0 z-10 border-r bg-gray-100 px-1 py-0.5 text-[10px] font-semibold text-gray-700">24:00</td>
-                  {Array.from({ length: 7 }).map((_, day) => (
-                    <td key={`end-${day}`} className="h-3 border-r bg-gray-100" />
-                  ))}
-                </tr>
               </tbody>
             </table>
           </div>
@@ -398,10 +392,6 @@ export default function ScheduleGridEditor({ scheduleId }: { scheduleId: string 
                     </tr>
                   );
                 })}
-                <tr>
-                  <td className="sticky left-0 z-10 border-r bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">24:00</td>
-                  <td className="h-3 border-r bg-gray-100" />
-                </tr>
               </tbody>
             </table>
           </div>
