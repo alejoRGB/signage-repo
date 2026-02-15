@@ -208,7 +208,7 @@ export default function ScheduleGridEditor({ scheduleId }: { scheduleId: string 
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b bg-gray-50 px-6 py-4">
         <div className="flex min-w-0 flex-col">
           <input
@@ -233,8 +233,8 @@ export default function ScheduleGridEditor({ scheduleId }: { scheduleId: string 
         </button>
       </div>
 
-      <div className="grid flex-1 grid-cols-1 gap-0 overflow-hidden xl:grid-cols-[260px_1fr]">
-        <aside className="border-r bg-white p-4 lg:p-5">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[220px_1fr]">
+        <aside className="min-h-0 overflow-y-auto border-r bg-white p-4 lg:p-5">
           <div className="mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Playlists</h3>
             <p className="text-xs text-gray-500">Click a playlist, then click + drag on the calendar.</p>
@@ -296,7 +296,7 @@ export default function ScheduleGridEditor({ scheduleId }: { scheduleId: string 
           </div>
         </aside>
 
-        <section className="overflow-y-auto overflow-x-hidden bg-gray-100 p-2 lg:p-3">
+        <section className="min-h-0 overflow-y-auto overflow-x-hidden bg-gray-100 p-2 lg:p-3">
           <div className="mb-3 flex items-center gap-2 lg:hidden">
             <label htmlFor="mobile-day" className="text-xs font-medium text-gray-700">
               Day
