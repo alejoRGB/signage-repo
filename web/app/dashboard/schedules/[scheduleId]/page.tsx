@@ -2,6 +2,9 @@
 
 import { use } from "react";
 import ScheduleEditor from "@/components/schedules/schedule-editor";
+import ScheduleGridEditor from "@/components/schedules-redesign/schedule-grid-editor";
+
+const schedulesRedesignEnabled = process.env.NEXT_PUBLIC_SCHEDULES_REDESIGN_ENABLED === "true";
 
 export default function ScheduleEditorPage({ params }: { params: Promise<{ scheduleId: string }> }) {
     const { scheduleId } = use(params);
@@ -13,7 +16,11 @@ export default function ScheduleEditorPage({ params }: { params: Promise<{ sched
             </div>
 
             <div className="flex-1 bg-white shadow rounded-lg overflow-hidden flex flex-col">
-                <ScheduleEditor scheduleId={scheduleId} />
+                {schedulesRedesignEnabled ? (
+                    <ScheduleGridEditor scheduleId={scheduleId} />
+                ) : (
+                    <ScheduleEditor scheduleId={scheduleId} />
+                )}
             </div>
         </div>
     );
