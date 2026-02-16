@@ -2,16 +2,44 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Monitor, HardDrive, PlaySquare } from "lucide-react";
+import DevicePreviewGrid from "@/components/dashboard/device-preview-grid";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
     if (!session) return null;
 
-    const [deviceCount, mediaCount, playlistCount] = await Promise.all([
+    const [deviceCount, mediaCount, playlistCount, previewDevices] = await Promise.all([
         prisma.device.count({ where: { userId: session.user.id } }),
         prisma.mediaItem.count({ where: { userId: session.user.id } }),
         prisma.playlist.count({ where: { userId: session.user.id } }),
+        prisma.device.findMany({
+            where: { userId: session.user.id },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                lastSeenAt: true,
+                currentContentName: true,
+                previewImageUrl: true,
+                previewCapturedAt: true,
+                playingPlaylist: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+                schedule: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "asc",
+            },
+        }),
     ]);
 
     const stats = [
@@ -48,6 +76,13 @@ export default async function DashboardPage() {
                     </div>
                 ))}
             </div>
+
+            <DevicePreviewGrid initialDevices={previewDevices.map((device) => ({
+                ...device,
+                createdAt: device.createdAt.toISOString(),
+                lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
+                previewCapturedAt: device.previewCapturedAt ? device.previewCapturedAt.toISOString() : null,
+            }))} />
         </div>
     );
 }

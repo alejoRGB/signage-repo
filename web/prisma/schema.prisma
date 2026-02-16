@@ -39,8 +39,12 @@ model Device {
   defaultPlaylistId    String?
   scheduleId           String?
   playingPlaylistId    String?     // The playlist currently playing on the device
+  currentContentName   String?
+  previewImageUrl      String?
+  previewCapturedAt    DateTime?
   activePlaylist       Playlist?   @relation(fields: [activePlaylistId], references: [id])
   defaultPlaylist      Playlist?   @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
+  playingPlaylist      Playlist?   @relation("PlayingPlaylist", fields: [playingPlaylistId], references: [id])
   schedule             Schedule?   @relation(fields: [scheduleId], references: [id])
   user                 User?       @relation(fields: [userId], references: [id])
   logs                 DeviceLog[]
@@ -108,6 +112,7 @@ model Playlist {
   type              String         @default("media")
   devices           Device[]
   defaultForDevices Device[]       @relation("DefaultPlaylist")
+  playingForDevices Device[]       @relation("PlayingPlaylist")
   user              User           @relation(fields: [userId], references: [id])
   items             PlaylistItem[]
   scheduleItems     ScheduleItem[]

@@ -9,6 +9,10 @@ export type Device = {
     defaultPlaylistId?: string | null;
     scheduleId?: string | null;
     playingPlaylistId?: string | null;
+    playingPlaylist?: { id: string; name: string } | null;
+    currentContentName?: string | null;
+    previewImageUrl?: string | null;
+    previewCapturedAt?: string | Date | null;
     connectivityStatus?: string;
     schedule?: { id: string; name: string } | null;
     createdAt: string;

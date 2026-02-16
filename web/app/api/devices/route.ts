@@ -11,6 +11,9 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const isAscendingOrder = searchParams.get("order") === "created_asc";
+
     const devices = await prisma.device.findMany({
         where: {
             userId: session.user.id,
@@ -28,9 +31,15 @@ export async function GET(request: Request) {
                     name: true,
                 },
             },
+            playingPlaylist: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
         },
         orderBy: {
-            createdAt: "desc",
+            createdAt: isAscendingOrder ? "asc" : "desc",
         },
     });
 

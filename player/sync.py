@@ -128,17 +128,17 @@ class SyncManager:
         if not self.device_token:
             logging.warning("[SYNC] No device token. Cannot fetch playlist.")
             return None
-            
+
         try:
             url = f"{self.server_url}/api/device/sync"
             payload = {"device_token": self.device_token}
-            
+
             if playing_playlist_id is not None:
                 payload["playing_playlist_id"] = playing_playlist_id
-            
+
             logging.info(f"[SYNC] Fetching sync data. Sending ID: {playing_playlist_id}")
             response = requests.post(url, json=payload, timeout=10)
-            
+
             if response.status_code == 200:
                 try:
                     data = response.json()
@@ -155,10 +155,51 @@ class SyncManager:
             else:
                 logging.error(f"[SYNC] Error: {response.status_code} - {response.text}")
                 return None
-                
+
         except requests.exceptions.RequestException as e:
             logging.error(f"[SYNC] Connection error: {e}")
             return None
+
+    def report_playback_state(
+        self,
+        playing_playlist_id: Optional[str] = None,
+        current_content_name: Optional[str] = None,
+        preview_path: Optional[str] = None,
+    ) -> bool:
+        """Report current playback metadata and optional preview JPEG."""
+        if not self.device_token:
+            return False
+
+        try:
+            url = f"{self.server_url}/api/device/preview"
+            data: Dict[str, str] = {
+                "device_token": self.device_token,
+                "playing_playlist_id": playing_playlist_id or "",
+                "current_content_name": current_content_name or "",
+            }
+
+            files = None
+            if preview_path and os.path.exists(preview_path):
+                files = {
+                    "preview": ("latest.jpg", open(preview_path, "rb"), "image/jpeg")
+                }
+
+            try:
+                response = requests.post(url, data=data, files=files, timeout=10)
+            finally:
+                if files and files["preview"][1]:
+                    files["preview"][1].close()
+
+            if response.status_code == 200:
+                return True
+
+            logging.warning(
+                f"[SYNC] Preview report failed: {response.status_code} - {response.text[:120]}"
+            )
+            return False
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"[SYNC] Preview report connection error: {e}")
+            return False
     
     def download_media(self, item: Dict) -> bool:
         """Download a media file if not already present"""

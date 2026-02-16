@@ -9,6 +9,7 @@ import json
 import subprocess
 import time
 import signal
+import threading
 from typing import Dict, List, Optional
 from sync import SyncManager
 
@@ -48,12 +49,75 @@ class Player:
         self.rotator = ScreenRotator()
         self.mpv_process = None
         self.running = True
+        self.preview_path = os.path.join(os.path.dirname(config_path), "preview.jpg")
+        self.preview_interval = 5
+        self.current_playlist_id_for_preview = None
+        self.current_content_name_for_preview = None
+        self.preview_thread = None
         
         # Ensure DISPLAY is set
         if "DISPLAY" not in os.environ:
             os.environ["DISPLAY"] = ":0"
             
         self.start_unclutter()
+
+    def update_now_playing(self, media: Optional[Dict], playlist_id: Optional[str]):
+        """Update playback metadata used by preview reporter."""
+        self.current_playlist_id_for_preview = playlist_id
+
+        if not media:
+            self.current_content_name_for_preview = None
+            return
+
+        media_type = media.get("type")
+        if media_type == "web":
+            self.current_content_name_for_preview = media.get("name")
+            return
+
+        filename = media.get("filename")
+        self.current_content_name_for_preview = filename or media.get("name")
+
+    def capture_preview(self) -> Optional[str]:
+        """Capture a JPG screenshot of current display state."""
+        commands = [
+            ["scrot", "-q", "60", self.preview_path],
+            ["import", "-window", "root", "-quality", "60", self.preview_path],
+            ["ffmpeg", "-y", "-f", "x11grab", "-i", ":0.0", "-frames:v", "1", "-q:v", "8", self.preview_path],
+        ]
+
+        for cmd in commands:
+            try:
+                result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=6,
+                    check=False,
+                )
+                if result.returncode == 0 and os.path.exists(self.preview_path):
+                    return self.preview_path
+            except Exception:
+                continue
+
+        return None
+
+    def preview_report_loop(self):
+        """Send now-playing metadata + preview every 5 seconds."""
+        while self.running:
+            try:
+                preview = self.capture_preview()
+                self.sync_manager.report_playback_state(
+                    playing_playlist_id=self.current_playlist_id_for_preview,
+                    current_content_name=self.current_content_name_for_preview,
+                    preview_path=preview,
+                )
+            except Exception as e:
+                logging.warning(f"[PREVIEW] Reporting failed: {e}")
+
+            for _ in range(self.preview_interval):
+                if not self.running:
+                    break
+                time.sleep(1)
 
     def start_unclutter(self):
         """Start unclutter to hide mouse cursor"""
@@ -246,6 +310,9 @@ class Player:
         sync_interval = 60
         
         while self.running:
+            if items:
+                self.update_now_playing(items[0], playlist_id)
+
             # Check if MPV is still running
             if self.mpv_process and self.mpv_process.poll() is not None:
                 logging.warning("[NATIVE_MPV] MPV process died unexpectedly. Will restart on next loop.")
@@ -312,6 +379,7 @@ class Player:
                 item = items[idx]
                 media = item
                 m_type = media.get('type')
+                self.update_now_playing(media, playlist_id)
                 
                 # Duration Logic: Try item -> playlist default -> hard default
                 duration = media.get('duration')
@@ -353,6 +421,7 @@ class Player:
                     
                     if not should_play:
                         logging.warning(f"[MIXED_PLAYER] Skipping web item (Offline & No Cache Mode): {url}")
+                        self.update_now_playing(None, playlist_id)
                         # If we skip, we should probably close the browser if it was open on this URL?
                         # Or just hold previous? Let's close to be safe.
                         if browser_process:
@@ -733,6 +802,10 @@ class Player:
         # 2. Initial Sync
         logging.info("[PLAYER] Performing initial sync...")
         self.sync_manager.sync()
+
+        if not self.preview_thread:
+            self.preview_thread = threading.Thread(target=self.preview_report_loop, daemon=True)
+            self.preview_thread.start()
         
         # 3. Main Loop
         current_playlist_id = None
@@ -767,6 +840,7 @@ class Player:
                      
                      if target_id != current_playlist_id:
                          logging.info(f"[PLAYER] Playlist changed! New: {target_playlist.get('name')} ({target_id})")
+                         self.current_playlist_id_for_preview = target_id
                          
                          items = target_playlist.get('items', [])
                          
@@ -803,6 +877,7 @@ class Player:
                 elif self.mpv_process:
                     # No playlist should be playing
                     logging.info("[PLAYER] No target playlist. Stopping playback.")
+                    self.update_now_playing(None, None)
                     self.stop_mpv()
                     current_playlist_id = None
 
