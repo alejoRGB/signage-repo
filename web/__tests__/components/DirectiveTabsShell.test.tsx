@@ -14,27 +14,58 @@ describe("DirectiveTabsShell", () => {
         vi.clearAllMocks();
         vi.stubGlobal(
             "fetch",
-            vi.fn(async () => ({
-                ok: true,
-                json: async () => ({ activeDirectiveTab: "SYNC_VIDEOWALL" }),
-            })) as unknown as typeof fetch
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => [{ id: "device-1", name: "Lobby Screen", connectivityStatus: "online" }],
+                    } as Response;
+                }
+
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => [{ id: "media-1", name: "Promo A", type: "video", duration: 30 }],
+                    } as Response;
+                }
+
+                if (url.includes("/api/dashboard/directive-tab") && init?.method === "PATCH") {
+                    return {
+                        ok: true,
+                        json: async () => ({ activeDirectiveTab: "SYNC_VIDEOWALL" }),
+                    } as Response;
+                }
+
+                return {
+                    ok: true,
+                    json: async () => ({}),
+                } as Response;
+            }) as unknown as typeof fetch
         );
     });
 
     it("renders schedules content when SCHEDULES is active", () => {
         render(
-            <DirectiveTabsShell initialActiveDirectiveTab={DIRECTIVE_TAB.SCHEDULES}>
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={DIRECTIVE_TAB.SCHEDULES}
+                isSyncVideowallEnabled={true}
+            >
                 <div>Existing Dashboard Content</div>
             </DirectiveTabsShell>
         );
 
         expect(screen.getByText("Existing Dashboard Content")).toBeInTheDocument();
-        expect(screen.queryByTestId("directive-sync-empty-panel")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("directive-sync-videowall-panel")).not.toBeInTheDocument();
     });
 
-    it("renders empty Sync/VideoWall panel when SYNC_VIDEOWALL is active", () => {
+    it("renders Sync checkbox as active when SYNC_VIDEOWALL is active", () => {
         render(
-            <DirectiveTabsShell initialActiveDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL}>
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL}
+                isSyncVideowallEnabled={true}
+            >
                 <div>Existing Dashboard Content</div>
             </DirectiveTabsShell>
         );
@@ -47,22 +78,30 @@ describe("DirectiveTabsShell", () => {
         ).toBe(true);
     });
 
-    it("switches visible panel when clicking tab title", () => {
+    it("switches visible panel when clicking tab title", async () => {
         render(
-            <DirectiveTabsShell initialActiveDirectiveTab={DIRECTIVE_TAB.SCHEDULES}>
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={DIRECTIVE_TAB.SCHEDULES}
+                isSyncVideowallEnabled={true}
+            >
                 <div>Existing Dashboard Content</div>
             </DirectiveTabsShell>
         );
 
-        fireEvent.click(screen.getByText("Sync/VideoWall"));
+        fireEvent.click(screen.getByText("Sync"));
 
-        expect(screen.getByTestId("directive-sync-empty-panel")).toBeInTheDocument();
-        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(await screen.findByTestId("directive-sync-videowall-panel")).toBeInTheDocument();
+        expect(
+            screen.getByText("Los videos a reproducirse en sync deben durar exactamente lo mismo")
+        ).toBeInTheDocument();
     });
 
     it("checkbox click updates active directive only and keeps current visible tab", async () => {
         render(
-            <DirectiveTabsShell initialActiveDirectiveTab={DIRECTIVE_TAB.SCHEDULES}>
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={DIRECTIVE_TAB.SCHEDULES}
+                isSyncVideowallEnabled={true}
+            >
                 <div>Existing Dashboard Content</div>
             </DirectiveTabsShell>
         );
@@ -84,9 +123,12 @@ describe("DirectiveTabsShell", () => {
         expect(screen.getByTestId("directive-schedules-panel")).toBeInTheDocument();
     });
 
-    it("keeps checkbox selection when navigating between tabs", () => {
+    it("keeps checkbox selection when navigating between tabs", async () => {
         render(
-            <DirectiveTabsShell initialActiveDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL}>
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL}
+                isSyncVideowallEnabled={true}
+            >
                 <div>Existing Dashboard Content</div>
             </DirectiveTabsShell>
         );
@@ -95,7 +137,22 @@ describe("DirectiveTabsShell", () => {
         expect(syncCheckbox.checked).toBe(true);
 
         fireEvent.click(screen.getByTestId("directive-tab-SYNC_VIDEOWALL"));
-        expect(screen.getByTestId("directive-sync-empty-panel")).toBeInTheDocument();
+        expect(await screen.findByTestId("directive-sync-videowall-panel")).toBeInTheDocument();
         expect(syncCheckbox.checked).toBe(true);
+    });
+
+    it("hides Sync tab and falls back to Schedules when feature flag is disabled", () => {
+        render(
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL}
+                isSyncVideowallEnabled={false}
+            >
+                <div>Existing Dashboard Content</div>
+            </DirectiveTabsShell>
+        );
+
+        expect(screen.getByTestId("directive-schedules-panel")).toBeInTheDocument();
+        expect(screen.queryByTestId("directive-tab-SYNC_VIDEOWALL")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("directive-checkbox-SYNC_VIDEOWALL")).not.toBeInTheDocument();
     });
 });

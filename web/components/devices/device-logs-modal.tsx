@@ -12,6 +12,9 @@ type LogEntry = {
     id: string;
     level: string;
     message: string;
+    event?: string | null;
+    sessionId?: string | null;
+    data?: Record<string, unknown> | null;
     timestamp: string;
 };
 
@@ -100,6 +103,21 @@ export default function DeviceLogsModal({ device, isOpen, onClose }: DeviceLogsM
                                         </span>
                                         <div className="text-gray-900 break-all whitespace-pre-wrap">
                                             {log.message}
+                                            {log.event ? (
+                                                <div className="mt-1 text-xs text-indigo-700">
+                                                    event: {log.event}
+                                                </div>
+                                            ) : null}
+                                            {log.sessionId ? (
+                                                <div className="mt-1 text-xs text-gray-500">
+                                                    session: {log.sessionId}
+                                                </div>
+                                            ) : null}
+                                            {log.data && Object.keys(log.data).length > 0 ? (
+                                                <pre className="mt-2 overflow-x-auto rounded bg-slate-100 p-2 text-xs text-slate-700">
+                                                    {JSON.stringify(log.data, null, 2)}
+                                                </pre>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>

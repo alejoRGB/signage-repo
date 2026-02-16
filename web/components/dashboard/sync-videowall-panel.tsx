@@ -1,0 +1,916 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { GripVertical, Monitor, Play, Plus, Save, Square, Trash2, Video } from "lucide-react";
+import { useToast } from "@/components/ui/toast-context";
+import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
+import { SYNC_PRESET_MODE, type SyncPresetMode } from "@/types/sync";
+
+type SyncDevice = {
+    id: string;
+    name: string;
+    connectivityStatus?: string;
+    status?: string;
+};
+
+type SyncMediaItem = {
+    id: string;
+    name: string;
+    type: "image" | "video" | "web";
+    durationMs?: number | null;
+};
+
+type SyncPresetDevice = {
+    deviceId: string;
+    mediaItemId?: string | null;
+};
+
+type SyncPreset = {
+    id: string;
+    name: string;
+    mode: SyncPresetMode;
+    durationMs: number;
+    presetMediaId?: string | null;
+    devices: SyncPresetDevice[];
+};
+
+type ActiveSessionDevice = {
+    id: string;
+    deviceId: string;
+    status: string;
+    resyncCount?: number | null;
+    clockOffsetMs?: number | null;
+    healthScore?: number | null;
+    avgDriftMs?: number | null;
+    maxDriftMs?: number | null;
+    resyncRate?: number | null;
+    device: {
+        id: string;
+        name: string;
+        status?: string | null;
+    };
+};
+
+type ActiveSession = {
+    id: string;
+    status: string;
+    presetId: string;
+    masterDeviceId?: string | null;
+    devices: ActiveSessionDevice[];
+};
+
+type DragOrigin = "available" | "sync";
+
+type ValidationResult =
+    | { valid: false; error: string }
+    | { valid: true; durationMs: number };
+
+type SyncVideowallPanelProps = {
+    activeDirectiveTab: DirectiveTab;
+};
+
+const SYNC_STATUS_LABELS: Record<string, string> = {
+    ASSIGNED: "assigned",
+    PRELOADING: "preloading",
+    READY: "ready",
+    WARMING_UP: "warming_up",
+    PLAYING: "playing",
+    ERRORED: "errored",
+    DISCONNECTED: "disconnected",
+};
+
+function statusClass(status: string) {
+    switch (status) {
+        case "PLAYING":
+            return "bg-emerald-100 text-emerald-900";
+        case "READY":
+        case "WARMING_UP":
+        case "PRELOADING":
+            return "bg-cyan-100 text-cyan-900";
+        case "ERRORED":
+            return "bg-rose-100 text-rose-900";
+        case "DISCONNECTED":
+            return "bg-slate-200 text-slate-700";
+        default:
+            return "bg-slate-100 text-slate-700";
+    }
+}
+
+function msToSecondsLabel(ms: number) {
+    if (ms % 1000 === 0) {
+        return `${ms / 1000}s`;
+    }
+    return `${(ms / 1000).toFixed(2)}s`;
+}
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(url, init);
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+        const errorMessage =
+            (payload && typeof payload === "object" && "error" in payload
+                ? (payload as { error?: string }).error
+                : null) ?? "Request failed";
+        throw new Error(errorMessage);
+    }
+    return payload as T;
+}
+
+export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelProps) {
+    const { showToast } = useToast();
+    const [devices, setDevices] = useState<SyncDevice[]>([]);
+    const [mediaItems, setMediaItems] = useState<SyncMediaItem[]>([]);
+    const [presets, setPresets] = useState<SyncPreset[]>([]);
+    const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
+
+    const [presetName, setPresetName] = useState("");
+    const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+    const [mode, setMode] = useState<SyncPresetMode>(SYNC_PRESET_MODE.COMMON);
+    const [commonMediaId, setCommonMediaId] = useState<string>("");
+    const [syncDeviceIds, setSyncDeviceIds] = useState<string[]>([]);
+    const [assignedMediaByDevice, setAssignedMediaByDevice] = useState<Record<string, string>>({});
+    const [draggedDeviceId, setDraggedDeviceId] = useState<string | null>(null);
+    const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSavingPreset, setIsSavingPreset] = useState(false);
+    const [isDeletingPreset, setIsDeletingPreset] = useState(false);
+    const [isStartingSession, setIsStartingSession] = useState(false);
+    const [isStoppingSession, setIsStoppingSession] = useState(false);
+
+    const deviceById = useMemo(
+        () =>
+            devices.reduce<Record<string, SyncDevice>>((acc, device) => {
+                acc[device.id] = device;
+                return acc;
+            }, {}),
+        [devices]
+    );
+
+    const videoMediaItems = useMemo(
+        () => mediaItems.filter((media) => media.type === "video"),
+        [mediaItems]
+    );
+
+    const videoMediaById = useMemo(
+        () =>
+            videoMediaItems.reduce<Record<string, SyncMediaItem>>((acc, media) => {
+                acc[media.id] = media;
+                return acc;
+            }, {}),
+        [videoMediaItems]
+    );
+
+    const availableDevices = useMemo(
+        () => devices.filter((device) => !syncDeviceIds.includes(device.id)),
+        [devices, syncDeviceIds]
+    );
+
+    const syncDevices = useMemo(
+        () => syncDeviceIds.map((id) => deviceById[id]).filter(Boolean) as SyncDevice[],
+        [syncDeviceIds, deviceById]
+    );
+
+    const groupedVideos = useMemo(() => {
+        const groups = new Map<number, SyncMediaItem[]>();
+        for (const media of videoMediaItems) {
+            if (typeof media.durationMs !== "number") {
+                continue;
+            }
+            if (!groups.has(media.durationMs)) {
+                groups.set(media.durationMs, []);
+            }
+            groups.get(media.durationMs)?.push(media);
+        }
+        return Array.from(groups.entries())
+            .sort((a, b) => a[0] - b[0])
+            .map(([durationMs, items]) => ({ durationMs, items }));
+    }, [videoMediaItems]);
+
+    const selectedPreset = useMemo(
+        () => presets.find((preset) => preset.id === selectedPresetId) ?? null,
+        [presets, selectedPresetId]
+    );
+
+    const isDirectiveActive = activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL;
+
+    const refreshActiveSession = async () => {
+        try {
+            const active = await fetchJson<{ session: ActiveSession | null }>("/api/sync/session/active");
+            setActiveSession(active.session ?? null);
+        } catch {
+            setActiveSession(null);
+        }
+    };
+
+    const refreshBuilderData = async () => {
+        setIsLoading(true);
+        try {
+            const [devicesData, mediaData, presetsData] = await Promise.all([
+                fetchJson<SyncDevice[]>("/api/devices?order=created_asc"),
+                fetchJson<SyncMediaItem[]>("/api/media"),
+                fetchJson<SyncPreset[]>("/api/sync/presets"),
+            ]);
+
+            setDevices(Array.isArray(devicesData) ? devicesData : []);
+            setMediaItems(Array.isArray(mediaData) ? mediaData : []);
+            setPresets(Array.isArray(presetsData) ? presetsData : []);
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Failed to load Sync panel data");
+            setDevices([]);
+            setMediaItems([]);
+            setPresets([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        let disposed = false;
+
+        const load = async () => {
+            await Promise.all([refreshBuilderData(), refreshActiveSession()]);
+        };
+
+        void load().catch(() => undefined);
+
+        const intervalId = window.setInterval(() => {
+            if (!disposed) {
+                void refreshActiveSession();
+            }
+        }, 1500);
+
+        return () => {
+            disposed = true;
+            window.clearInterval(intervalId);
+        };
+    }, []);
+
+    const hydrateEditorFromPreset = (preset: SyncPreset | null) => {
+        if (!preset) {
+            setPresetName("");
+            setMode(SYNC_PRESET_MODE.COMMON);
+            setCommonMediaId("");
+            setSyncDeviceIds([]);
+            setAssignedMediaByDevice({});
+            return;
+        }
+
+        setPresetName(preset.name);
+        setMode(preset.mode);
+        setCommonMediaId(preset.presetMediaId ?? "");
+        setSyncDeviceIds(preset.devices.map((item) => item.deviceId));
+        setAssignedMediaByDevice(
+            preset.devices.reduce<Record<string, string>>((acc, item) => {
+                if (item.mediaItemId) {
+                    acc[item.deviceId] = item.mediaItemId;
+                }
+                return acc;
+            }, {})
+        );
+    };
+
+    useEffect(() => {
+        if (presets.length === 0) {
+            if (selectedPresetId !== "") {
+                setSelectedPresetId("");
+            }
+            return;
+        }
+
+        if (!selectedPresetId || !presets.some((preset) => preset.id === selectedPresetId)) {
+            setSelectedPresetId(presets[0].id);
+        }
+    }, [presets, selectedPresetId]);
+
+    useEffect(() => {
+        hydrateEditorFromPreset(selectedPreset);
+    }, [selectedPresetId, selectedPreset]);
+
+    const getDeviceStatus = (device: SyncDevice) => {
+        const status = device.connectivityStatus ?? device.status ?? "offline";
+        return status === "online" ? "Online" : "Offline";
+    };
+
+    const addDeviceToSync = (deviceId: string) => {
+        setSyncDeviceIds((current) => (current.includes(deviceId) ? current : [...current, deviceId]));
+    };
+
+    const removeDeviceFromSync = (deviceId: string) => {
+        setSyncDeviceIds((current) => current.filter((id) => id !== deviceId));
+        setAssignedMediaByDevice((current) => {
+            const next = { ...current };
+            delete next[deviceId];
+            return next;
+        });
+    };
+
+    const handleDropOnSync = () => {
+        if (!draggedDeviceId) {
+            return;
+        }
+        if (dragOrigin === "available") {
+            addDeviceToSync(draggedDeviceId);
+        }
+        setDraggedDeviceId(null);
+        setDragOrigin(null);
+    };
+
+    const handleDropOnAvailable = () => {
+        if (!draggedDeviceId) {
+            return;
+        }
+        if (dragOrigin === "sync") {
+            removeDeviceFromSync(draggedDeviceId);
+        }
+        setDraggedDeviceId(null);
+        setDragOrigin(null);
+    };
+
+    const validatePresetDraft = (): ValidationResult => {
+        const trimmedName = presetName.trim();
+        if (!trimmedName) {
+            return { valid: false, error: "Preset name is required" };
+        }
+
+        if (syncDeviceIds.length === 0) {
+            return { valid: false, error: "At least one synchronized device is required" };
+        }
+
+        if (mode === SYNC_PRESET_MODE.COMMON) {
+            if (!commonMediaId) {
+                return { valid: false, error: "Select the common video for all devices" };
+            }
+            const media = videoMediaById[commonMediaId];
+            if (!media || media.type !== "video") {
+                return { valid: false, error: "Sync only supports video media" };
+            }
+            if (typeof media.durationMs !== "number") {
+                return { valid: false, error: "Selected video must include durationMs" };
+            }
+            return { valid: true, durationMs: media.durationMs };
+        }
+
+        const durations = new Set<number>();
+        for (const deviceId of syncDeviceIds) {
+            const assignedMediaId = assignedMediaByDevice[deviceId];
+            if (!assignedMediaId) {
+                const deviceName = deviceById[deviceId]?.name ?? deviceId;
+                return { valid: false, error: `Assign a video for ${deviceName}` };
+            }
+
+            const media = videoMediaById[assignedMediaId];
+            if (!media || media.type !== "video") {
+                return { valid: false, error: "Sync only supports video media" };
+            }
+
+            if (typeof media.durationMs !== "number") {
+                return { valid: false, error: "All assigned videos must include durationMs" };
+            }
+
+            durations.add(media.durationMs);
+        }
+
+        if (durations.size !== 1) {
+            return { valid: false, error: "All per-device videos must have exactly the same durationMs" };
+        }
+
+        return { valid: true, durationMs: [...durations][0] };
+    };
+
+    const savePreset = async () => {
+        setErrorMessage(null);
+        const validation = validatePresetDraft();
+        if (!validation.valid) {
+            setErrorMessage(validation.error);
+            showToast(validation.error, "error");
+            return;
+        }
+
+        const payload = {
+            name: presetName.trim(),
+            mode,
+            durationMs: validation.durationMs,
+            presetMediaId: mode === SYNC_PRESET_MODE.COMMON ? commonMediaId : null,
+            devices: syncDeviceIds.map((deviceId) => ({
+                deviceId,
+                mediaItemId: mode === SYNC_PRESET_MODE.PER_DEVICE ? assignedMediaByDevice[deviceId] : null,
+            })),
+        };
+
+        setIsSavingPreset(true);
+        try {
+            if (selectedPresetId) {
+                const updated = await fetchJson<SyncPreset>(`/api/sync/presets/${selectedPresetId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                setPresets((current) => current.map((preset) => (preset.id === updated.id ? updated : preset)));
+                showToast("Sync preset updated", "success");
+            } else {
+                const created = await fetchJson<SyncPreset>("/api/sync/presets", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                setPresets((current) => [created, ...current]);
+                setSelectedPresetId(created.id);
+                showToast("Sync preset created", "success");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to save preset";
+            setErrorMessage(message);
+            showToast(message, "error");
+        } finally {
+            setIsSavingPreset(false);
+        }
+    };
+
+    const createNewPresetDraft = () => {
+        setSelectedPresetId("");
+        hydrateEditorFromPreset(null);
+        setErrorMessage(null);
+    };
+
+    const deletePreset = async () => {
+        if (!selectedPresetId) {
+            return;
+        }
+
+        setIsDeletingPreset(true);
+        setErrorMessage(null);
+        try {
+            await fetchJson<{ success: boolean }>(`/api/sync/presets/${selectedPresetId}`, {
+                method: "DELETE",
+            });
+
+            setPresets((current) => current.filter((preset) => preset.id !== selectedPresetId));
+            setSelectedPresetId("");
+            hydrateEditorFromPreset(null);
+            showToast("Sync preset deleted", "success");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to delete preset";
+            setErrorMessage(message);
+            showToast(message, "error");
+        } finally {
+            setIsDeletingPreset(false);
+        }
+    };
+
+    const startSession = async () => {
+        if (!selectedPresetId) {
+            const message = "Select a preset before starting a session";
+            setErrorMessage(message);
+            showToast(message, "error");
+            return;
+        }
+
+        if (!isDirectiveActive) {
+            const message = "Start is blocked unless active directive tab is Sync";
+            setErrorMessage(message);
+            showToast(message, "error");
+            return;
+        }
+
+        setIsStartingSession(true);
+        setErrorMessage(null);
+        try {
+            const data = await fetchJson<{ session: ActiveSession }>("/api/sync/session/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ presetId: selectedPresetId }),
+            });
+            setActiveSession(data.session);
+            showToast("Sync session started", "success");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to start sync session";
+            setErrorMessage(message);
+            showToast(message, "error");
+        } finally {
+            setIsStartingSession(false);
+            void refreshActiveSession();
+        }
+    };
+
+    const stopSession = async () => {
+        if (!activeSession) {
+            return;
+        }
+
+        setIsStoppingSession(true);
+        setErrorMessage(null);
+        try {
+            await fetchJson<{ session: ActiveSession }>("/api/sync/session/stop", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId: activeSession.id, reason: "USER_STOP" }),
+            });
+            setActiveSession(null);
+            showToast("Sync session stopped", "info");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to stop sync session";
+            setErrorMessage(message);
+            showToast(message, "error");
+        } finally {
+            setIsStoppingSession(false);
+            void refreshActiveSession();
+        }
+    };
+
+    const startDisabled =
+        !selectedPresetId ||
+        !!activeSession ||
+        isStartingSession ||
+        isSavingPreset ||
+        isDeletingPreset ||
+        !isDirectiveActive;
+
+    return (
+        <div
+            data-testid="directive-sync-videowall-panel"
+            className="m-4 min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.35)]"
+        >
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+                <div className="rounded-2xl border border-amber-300 bg-[linear-gradient(90deg,rgba(252,211,77,0.14),rgba(251,191,36,0.07))] px-4 py-3">
+                    <p className="text-sm font-semibold tracking-wide text-amber-900">
+                        Los videos a reproducirse en sync deben durar exactamente lo mismo
+                    </p>
+                    {!isDirectiveActive ? (
+                        <p className="mt-1 text-xs text-amber-800">
+                            Start bloqueado: activá el checkbox de la directiva Sync para permitir inicio.
+                        </p>
+                    ) : null}
+                </div>
+
+                <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
+                    <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
+                        <select
+                            data-testid="sync-preset-select"
+                            value={selectedPresetId}
+                            onChange={(event) => setSelectedPresetId(event.target.value)}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                        >
+                            <option value="">New preset draft</option>
+                            {presets.map((preset) => (
+                                <option key={preset.id} value={preset.id}>
+                                    {preset.name} ({preset.mode})
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            data-testid="sync-new-preset-btn"
+                            onClick={createNewPresetDraft}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                        >
+                            New
+                        </button>
+                        <button
+                            type="button"
+                            data-testid="sync-save-preset-btn"
+                            onClick={savePreset}
+                            disabled={isSavingPreset || isLoading}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <Save className="h-4 w-4" />
+                            {isSavingPreset ? "Saving..." : "Save Preset"}
+                        </button>
+                        <button
+                            type="button"
+                            data-testid="sync-delete-preset-btn"
+                            onClick={deletePreset}
+                            disabled={!selectedPresetId || isDeletingPreset}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                        </button>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 lg:grid-cols-[1.2fr_1fr]">
+                        <div>
+                            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                Preset name
+                            </label>
+                            <input
+                                data-testid="sync-preset-name-input"
+                                value={presetName}
+                                onChange={(event) => setPresetName(event.target.value)}
+                                placeholder="Video Wall Main Hall"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                            />
+                        </div>
+
+                        <div>
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                Mode
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                                    <input
+                                        type="radio"
+                                        name="sync-mode"
+                                        value={SYNC_PRESET_MODE.COMMON}
+                                        checked={mode === SYNC_PRESET_MODE.COMMON}
+                                        onChange={() => setMode(SYNC_PRESET_MODE.COMMON)}
+                                    />
+                                    Common media
+                                </label>
+                                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                                    <input
+                                        type="radio"
+                                        name="sync-mode"
+                                        value={SYNC_PRESET_MODE.PER_DEVICE}
+                                        checked={mode === SYNC_PRESET_MODE.PER_DEVICE}
+                                        onChange={() => setMode(SYNC_PRESET_MODE.PER_DEVICE)}
+                                    />
+                                    Per device media
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {mode === SYNC_PRESET_MODE.COMMON ? (
+                        <div className="mt-3">
+                            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                Common media for all devices
+                            </label>
+                            <select
+                                data-testid="sync-common-media-select"
+                                value={commonMediaId}
+                                onChange={(event) => setCommonMediaId(event.target.value)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                            >
+                                <option value="">Select common video</option>
+                                {videoMediaItems.map((media) => (
+                                    <option key={media.id} value={media.id}>
+                                        {media.name} ({typeof media.durationMs === "number" ? msToSecondsLabel(media.durationMs) : "no durationMs"})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : null}
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            data-testid="sync-start-session-btn"
+                            onClick={startSession}
+                            disabled={startDisabled}
+                            className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Play className="h-4 w-4" />
+                            {isStartingSession ? "Starting..." : "Start"}
+                        </button>
+                        <button
+                            type="button"
+                            data-testid="sync-stop-session-btn"
+                            onClick={stopSession}
+                            disabled={!activeSession || isStoppingSession}
+                            className="inline-flex items-center gap-2 rounded-lg border border-slate-400 bg-slate-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Square className="h-4 w-4" />
+                            {isStoppingSession ? "Stopping..." : "Stop"}
+                        </button>
+                        <span
+                            data-testid="sync-session-status"
+                            className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                activeSession ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-slate-700"
+                            }`}
+                        >
+                            {activeSession ? `Active: ${activeSession.status}` : "No active session"}
+                        </span>
+                        {activeSession?.masterDeviceId ? (
+                            <span className="rounded-full bg-cyan-100 px-2 py-1 text-xs font-semibold text-cyan-900">
+                                Master: {deviceById[activeSession.masterDeviceId]?.name ?? activeSession.masterDeviceId}
+                            </span>
+                        ) : null}
+                    </div>
+                </section>
+
+                {errorMessage ? (
+                    <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                        {errorMessage}
+                    </div>
+                ) : null}
+
+                <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+                    <section
+                        className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={handleDropOnAvailable}
+                    >
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">
+                                Available Devices
+                            </h3>
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                                {availableDevices.length}
+                            </span>
+                        </div>
+
+                        <div className="space-y-2">
+                            {isLoading ? (
+                                <p className="text-sm text-slate-500">Loading devices...</p>
+                            ) : availableDevices.length === 0 ? (
+                                <p className="text-sm text-slate-500">All devices are already in synchronized devices.</p>
+                            ) : (
+                                availableDevices.map((device) => (
+                                    <article
+                                        key={device.id}
+                                        draggable
+                                        onDragStart={() => {
+                                            setDraggedDeviceId(device.id);
+                                            setDragOrigin("available");
+                                        }}
+                                        onDragEnd={() => {
+                                            setDraggedDeviceId(null);
+                                            setDragOrigin(null);
+                                        }}
+                                        className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:border-cyan-300 hover:bg-cyan-50/50"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <GripVertical className="h-4 w-4 text-slate-400" />
+                                            <Monitor className="h-4 w-4 text-slate-500" />
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-900">{device.name}</p>
+                                                <p className="text-xs text-slate-500">{getDeviceStatus(device)}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => addDeviceToSync(device.id)}
+                                            className="rounded-md border border-slate-300 p-1.5 text-slate-600 transition hover:border-cyan-400 hover:text-cyan-700"
+                                            aria-label={`Add ${device.name} to synchronized devices`}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </button>
+                                    </article>
+                                ))
+                            )}
+                        </div>
+                    </section>
+
+                    <section
+                        className="rounded-2xl border border-cyan-300 bg-[linear-gradient(135deg,rgba(6,182,212,0.07),rgba(14,165,233,0.12))] p-4 shadow-[0_16px_36px_-24px_rgba(6,182,212,0.55)]"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={handleDropOnSync}
+                    >
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-cyan-900">
+                                Synchronized Devices
+                            </h3>
+                            <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-semibold text-cyan-900">
+                                {syncDevices.length}
+                            </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            {syncDevices.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-cyan-300 bg-white/80 px-4 py-8 text-center">
+                                    <p className="text-sm font-medium text-slate-700">Drag devices here to build your synchronized wall.</p>
+                                    <p className="mt-1 text-xs text-slate-500">You can also use the + button from available devices.</p>
+                                </div>
+                            ) : (
+                                syncDevices.map((device) => (
+                                    <article
+                                        key={device.id}
+                                        draggable
+                                        onDragStart={() => {
+                                            setDraggedDeviceId(device.id);
+                                            setDragOrigin("sync");
+                                        }}
+                                        onDragEnd={() => {
+                                            setDraggedDeviceId(null);
+                                            setDragOrigin(null);
+                                        }}
+                                        className="rounded-xl border border-cyan-200 bg-white/90 p-3"
+                                    >
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <GripVertical className="h-4 w-4 text-slate-400" />
+                                                <Monitor className="h-4 w-4 text-cyan-700" />
+                                                <p className="text-sm font-semibold text-slate-900">{device.name}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeDeviceFromSync(device.id)}
+                                                className="rounded-md border border-rose-200 p-1.5 text-rose-600 transition hover:bg-rose-50"
+                                                aria-label={`Remove ${device.name} from synchronized devices`}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        {mode === SYNC_PRESET_MODE.PER_DEVICE ? (
+                                            <>
+                                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                                    Assigned Media
+                                                </label>
+                                                <select
+                                                    value={assignedMediaByDevice[device.id] ?? ""}
+                                                    onChange={(event) =>
+                                                        setAssignedMediaByDevice((current) => ({
+                                                            ...current,
+                                                            [device.id]: event.target.value,
+                                                        }))
+                                                    }
+                                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                                                >
+                                                    <option value="">Select media file</option>
+                                                    {videoMediaItems.map((media) => (
+                                                        <option key={media.id} value={media.id}>
+                                                            {media.name} ({typeof media.durationMs === "number" ? msToSecondsLabel(media.durationMs) : "no durationMs"})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </>
+                                        ) : (
+                                            <p className="text-xs text-slate-500">Uses common media selection for all devices.</p>
+                                        )}
+                                    </article>
+                                ))
+                            )}
+                        </div>
+                    </section>
+                </div>
+
+                <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">Media</h3>
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                            {videoMediaItems.length}
+                        </span>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {isLoading ? (
+                            <p className="text-sm text-slate-500">Loading media...</p>
+                        ) : groupedVideos.length === 0 ? (
+                            <p className="text-sm text-slate-500">No video files with durationMs found.</p>
+                        ) : (
+                            groupedVideos.map((group) => (
+                                <div key={group.durationMs} className="rounded-xl border border-cyan-200 bg-cyan-50/60 px-3 py-2">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-800">
+                                        {msToSecondsLabel(group.durationMs)} duration group
+                                    </p>
+                                    <div className="space-y-2">
+                                        {group.items.map((media) => (
+                                            <div key={media.id} className="rounded-lg border border-cyan-100 bg-white px-2 py-1.5">
+                                                <div className="mb-1 flex items-center gap-2">
+                                                    <Video className="h-4 w-4 text-slate-500" />
+                                                    <p className="truncate text-sm font-medium text-slate-900">{media.name}</p>
+                                                </div>
+                                                <p className="text-xs uppercase tracking-[0.08em] text-slate-500">{media.type}</p>
+                                                <p className="mt-1 text-xs text-slate-500">Duration: {msToSecondsLabel(group.durationMs)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </section>
+
+                <section data-testid="sync-health-panel" className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">Session Health</h3>
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                            {activeSession?.devices.length ?? 0} devices
+                        </span>
+                    </div>
+
+                    {!activeSession ? (
+                        <p className="text-sm text-slate-500">No active sync session.</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {activeSession.devices.map((device) => (
+                                <div
+                                    key={device.id}
+                                    data-testid={`sync-device-health-${device.deviceId}`}
+                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                                >
+                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                        <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass(device.status)}`}>
+                                            {SYNC_STATUS_LABELS[device.status] ?? device.status.toLowerCase()}
+                                        </span>
+                                    </div>
+                                    <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
+                                        <p>drift avg: {typeof device.avgDriftMs === "number" ? `${device.avgDriftMs.toFixed(1)}ms` : "n/a"}</p>
+                                        <p>drift max: {typeof device.maxDriftMs === "number" ? `${device.maxDriftMs.toFixed(1)}ms` : "n/a"}</p>
+                                        <p>clock offset: {typeof device.clockOffsetMs === "number" ? `${device.clockOffsetMs.toFixed(1)}ms` : "n/a"}</p>
+                                        <p>health: {typeof device.healthScore === "number" ? device.healthScore.toFixed(2) : "n/a"}</p>
+                                        <p>resync count: {device.resyncCount ?? 0}</p>
+                                        <p>resync rate: {typeof device.resyncRate === "number" ? device.resyncRate.toFixed(2) : "n/a"}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            </div>
+        </div>
+    );
+}

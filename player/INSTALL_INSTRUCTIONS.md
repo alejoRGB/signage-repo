@@ -63,7 +63,9 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 5.  Configura el "Stealth Mode" (Fondo negro, oculta íconos y cursor).
 6.  Crea el servicio `systemd` para arranque automático.
 7.  Inicializa la configuración en **Modo Pairing**.
-8.  **Configuración de Zona Horaria (Arg)**: Se establece automáticamente a Buenos Aires.
+8.  Instala y habilita **chrony** para sincronización de reloj.
+9.  Ejecuta `chronyc tracking` al iniciar para diagnóstico de salud del reloj.
+10. **Configuración de Zona Horaria (Arg)**: Se establece automáticamente a Buenos Aires.
 
 ### 2.3 Configuración de Zona Horaria
 
@@ -89,6 +91,7 @@ sudo reboot
 *   No verás el cursor del mouse.
 *   En unos segundos, aparecerá un **Código de Pairing** (QR o Texto) en pantalla completa.
     *   Requiere `device_token: null` en `~/signage-player/config.json` y `server_url` correcto.
+*   En modo Sync/Videowall, el player solo entra en `READY` si la salud del reloj es correcta (`chronyc tracking`).
 
 ## 4. Vincular el Dispositivo
 1.  Ve al **Dashboard Web** (PC o Móvil).
@@ -115,4 +118,8 @@ Si el código no aparece o la pantalla se queda en el escritorio de Raspberry Pi
 3.  **Forzar reinicio del servicio:**
     ```bash
     sudo systemctl restart signage-player
+    ```
+4.  **Verificar sincronización de reloj (Sync/Videowall):**
+    ```bash
+    chronyc tracking
     ```

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
 
 
-export async function GET(request: Request) {
+export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session) {
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         });
 
         return NextResponse.json(mediaItems);
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to fetch media" },
             { status: 500 }
@@ -110,6 +110,12 @@ export async function POST(request: Request) {
 
         const data = result.data;
 
+        const normalizedDuration = data.duration ?? 10;
+        const normalizedDurationMs =
+            data.type === "video"
+                ? data.durationMs ?? Math.max(1, Math.round(normalizedDuration * 1000))
+                : null;
+
         const mediaItem = await prisma.mediaItem.create({
             data: {
                 name: data.name,
@@ -120,7 +126,8 @@ export async function POST(request: Request) {
                 height: data.height ?? undefined,
                 fps: data.fps ?? undefined,
                 size: data.size ?? 0,
-                duration: data.duration ?? 10,
+                duration: normalizedDuration,
+                durationMs: normalizedDurationMs,
                 cacheForOffline: data.cacheForOffline ?? false,
                 userId: session.user.id,
             },

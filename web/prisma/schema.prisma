@@ -9,46 +9,52 @@ datasource db {
 }
 
 model User {
-  id        String      @id @default(cuid())
-  email     String      @unique
-  password  String
-  name      String?
-  activeDirectiveTab DirectiveTab @default(SCHEDULES)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  isActive  Boolean     @default(true)
-  role      Role        @default(USER)
-  username  String?     @unique
-  devices   Device[]
-  media     MediaItem[]
-  playlists Playlist[]
-  schedules Schedule[]
+  id                 String        @id @default(cuid())
+  email              String        @unique
+  password           String
+  name               String?
+  activeDirectiveTab DirectiveTab  @default(SCHEDULES)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  isActive           Boolean       @default(true)
+  role               Role          @default(USER)
+  username           String?       @unique
+  devices            Device[]
+  media              MediaItem[]
+  playlists          Playlist[]
+  schedules          Schedule[]
+  syncPresets        SyncPreset[]
+  syncSessions       SyncSession[]
 }
 
 model Device {
-  id                   String      @id @default(cuid())
+  id                   String              @id @default(cuid())
   name                 String?
-  token                String      @unique @default(cuid())
-  status               String      @default("unpaired")
+  token                String              @unique @default(cuid())
+  status               String              @default("unpaired")
   lastSeenAt           DateTime?
   userId               String?
   activePlaylistId     String?
-  pairingCode          String?     @unique
+  pairingCode          String?             @unique
   pairingCodeExpiresAt DateTime?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
   defaultPlaylistId    String?
   scheduleId           String?
-  playingPlaylistId    String?     // The playlist currently playing on the device
+  playingPlaylistId    String? // The playlist currently playing on the device
   currentContentName   String?
   previewImageUrl      String?
   previewCapturedAt    DateTime?
-  activePlaylist       Playlist?   @relation(fields: [activePlaylistId], references: [id])
-  defaultPlaylist      Playlist?   @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
-  playingPlaylist      Playlist?   @relation("PlayingPlaylist", fields: [playingPlaylistId], references: [id])
-  schedule             Schedule?   @relation(fields: [scheduleId], references: [id])
-  user                 User?       @relation(fields: [userId], references: [id])
+  activePlaylist       Playlist?           @relation(fields: [activePlaylistId], references: [id])
+  defaultPlaylist      Playlist?           @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
+  playingPlaylist      Playlist?           @relation("PlayingPlaylist", fields: [playingPlaylistId], references: [id])
+  schedule             Schedule?           @relation(fields: [scheduleId], references: [id])
+  user                 User?               @relation(fields: [userId], references: [id])
   logs                 DeviceLog[]
+  syncPresetDevices    SyncPresetDevice[]
+  syncSessionDevices   SyncSessionDevice[]
+  syncDeviceCommands   SyncDeviceCommand[]
+  masteredSyncSessions SyncSession[]       @relation("SyncSessionMasterDevice")
 }
 
 model Schedule {
@@ -77,30 +83,39 @@ model DeviceLog {
   id        String   @id @default(cuid())
   level     String
   message   String
+  event     String?
+  sessionId String?
+  data      Json?
   deviceId  String
   createdAt DateTime @default(now())
   device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId])
+  @@index([deviceId, createdAt])
+  @@index([deviceId, sessionId, createdAt])
+  @@index([deviceId, event, createdAt])
 }
 
 model MediaItem {
-  id              String         @id @default(cuid())
-  name            String
-  type            String
-  url             String
-  filename        String?
-  duration        Int            @default(10)
-  userId          String
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  fps             Float?
-  height          Int?
-  width           Int?
-  size            Int            @default(0)
-  cacheForOffline Boolean        @default(false)
-  user            User           @relation(fields: [userId], references: [id])
-  playlistItems   PlaylistItem[]
+  id                   String             @id @default(cuid())
+  name                 String
+  type                 String
+  url                  String
+  filename             String?
+  duration             Int                @default(10)
+  durationMs           Int?
+  userId               String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  fps                  Float?
+  height               Int?
+  width                Int?
+  size                 Int                @default(0)
+  cacheForOffline      Boolean            @default(false)
+  user                 User               @relation(fields: [userId], references: [id])
+  playlistItems        PlaylistItem[]
+  commonForSyncPresets SyncPreset[]       @relation("SyncPresetCommonMedia")
+  syncPresetDevices    SyncPresetDevice[]
 }
 
 model Playlist {
@@ -138,6 +153,120 @@ model Admin {
   updatedAt DateTime @updatedAt
 }
 
+model SyncPreset {
+  id              String             @id @default(cuid())
+  userId          String
+  name            String
+  mode            SyncPresetMode     @default(COMMON)
+  durationMs      Int
+  presetMediaId   String?
+  maxResolution   String?
+  motionIntensity String?
+  hasText         Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  presetMedia     MediaItem?         @relation("SyncPresetCommonMedia", fields: [presetMediaId], references: [id], onDelete: SetNull)
+  devices         SyncPresetDevice[]
+  sessions        SyncSession[]
+
+  @@index([userId])
+  @@index([presetMediaId])
+}
+
+model SyncPresetDevice {
+  id          String     @id @default(cuid())
+  presetId    String
+  deviceId    String
+  mediaItemId String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  preset      SyncPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  device      Device     @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  mediaItem   MediaItem? @relation(fields: [mediaItemId], references: [id], onDelete: SetNull)
+
+  @@unique([presetId, deviceId])
+  @@index([deviceId])
+  @@index([mediaItemId])
+}
+
+model SyncSession {
+  id                  String              @id @default(cuid())
+  presetId            String
+  userId              String
+  status              SyncSessionStatus   @default(CREATED)
+  startAtMs           BigInt?
+  startedAtMs         BigInt?
+  durationMs          Int
+  preparationBufferMs Int                 @default(10000)
+  masterDeviceId      String?
+  avgDriftMs          Float?
+  p50DriftMs          Float?
+  p90DriftMs          Float?
+  p95DriftMs          Float?
+  p99DriftMs          Float?
+  maxDriftMs          Float?
+  totalResyncs        Int                 @default(0)
+  devicesWithIssues   Int                 @default(0)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  stoppedAt           DateTime?
+  preset              SyncPreset          @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  masterDevice        Device?             @relation("SyncSessionMasterDevice", fields: [masterDeviceId], references: [id], onDelete: SetNull)
+  devices             SyncSessionDevice[]
+  commands            SyncDeviceCommand[]
+
+  @@index([presetId])
+  @@index([userId, status])
+  @@index([masterDeviceId])
+}
+
+model SyncSessionDevice {
+  id            String                  @id @default(cuid())
+  sessionId     String
+  deviceId      String
+  status        SyncSessionDeviceStatus @default(ASSIGNED)
+  lastSeenAt    DateTime?
+  driftHistory  Json?
+  resyncCount   Int                     @default(0)
+  avgDriftMs    Float?
+  maxDriftMs    Float?
+  resyncRate    Float?
+  clockOffsetMs Float?
+  cpuTemp       Float?
+  throttled     Boolean                 @default(false)
+  healthScore   Float?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  session       SyncSession             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  device        Device                  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, deviceId])
+  @@index([deviceId, status])
+  @@index([status])
+}
+
+model SyncDeviceCommand {
+  id        String                  @id @default(cuid())
+  deviceId  String
+  sessionId String
+  type      SyncDeviceCommandType
+  payload   Json
+  status    SyncDeviceCommandStatus @default(PENDING)
+  dedupeKey String?
+  error     String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  ackedAt   DateTime?
+  device    Device                  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  session   SyncSession             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, dedupeKey])
+  @@index([deviceId, status, createdAt])
+  @@index([sessionId, status])
+}
+
 enum Role {
   USER
   ADMIN
@@ -146,4 +275,39 @@ enum Role {
 enum DirectiveTab {
   SCHEDULES
   SYNC_VIDEOWALL
+}
+
+enum SyncPresetMode {
+  COMMON
+  PER_DEVICE
+}
+
+enum SyncSessionStatus {
+  CREATED
+  STARTING
+  WARMING_UP
+  RUNNING
+  STOPPED
+  ABORTED
+}
+
+enum SyncSessionDeviceStatus {
+  ASSIGNED
+  PRELOADING
+  READY
+  WARMING_UP
+  PLAYING
+  ERRORED
+  DISCONNECTED
+}
+
+enum SyncDeviceCommandType {
+  SYNC_PREPARE
+  SYNC_STOP
+}
+
+enum SyncDeviceCommandStatus {
+  PENDING
+  ACKED
+  FAILED
 }

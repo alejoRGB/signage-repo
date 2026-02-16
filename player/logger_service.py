@@ -5,7 +5,41 @@ import time
 import requests
 import queue
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import Dict, Optional
+
+SYNC_LOG_EVENTS = {
+    "READY",
+    "STARTED",
+    "SOFT_CORRECTION",
+    "HARD_RESYNC",
+    "REJOIN",
+    "MPV_CRASH",
+    "THERMAL_THROTTLE",
+}
+
+
+def log_sync_event(
+    event: str,
+    *,
+    session_id: Optional[str] = None,
+    data: Optional[Dict[str, object]] = None,
+    level: int = logging.INFO,
+):
+    normalized_event = (event or "").strip().upper()
+    if normalized_event not in SYNC_LOG_EVENTS:
+        logging.getLogger(__name__).warning("Ignoring unknown sync log event: %s", event)
+        return
+
+    message = f"[SYNC_EVENT] {normalized_event}"
+    logging.getLogger().log(
+        level,
+        message,
+        extra={
+            "sync_event": normalized_event,
+            "sync_session_id": session_id,
+            "sync_data": data or {},
+        },
+    )
 
 class LoggerService(logging.Handler):
     def __init__(self, sync_manager):
@@ -23,11 +57,25 @@ class LoggerService(logging.Handler):
 
     def emit(self, record):
         try:
+            sync_event = getattr(record, "sync_event", None)
+            sync_session_id = getattr(record, "sync_session_id", None)
+            sync_data = getattr(record, "sync_data", None)
+
             log_entry = {
                 "level": record.levelname.lower(),
                 "message": self.format(record),
                 "timestamp": datetime.fromtimestamp(record.created).isoformat()
             }
+
+            if isinstance(sync_event, str) and sync_event.strip().upper() in SYNC_LOG_EVENTS:
+                log_entry["event"] = sync_event.strip().upper()
+
+            if isinstance(sync_session_id, str) and sync_session_id.strip():
+                log_entry["session_id"] = sync_session_id.strip()
+
+            if isinstance(sync_data, dict) and sync_data:
+                log_entry["data"] = sync_data
+
             self.log_queue.put(log_entry)
             
             # REMOVED: Do not flush synchronously from the main thread

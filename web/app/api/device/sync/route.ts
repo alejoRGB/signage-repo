@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { extractSyncRuntimeFromJson, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
     try {
         const json = await request.json();
         const { device_token, playing_playlist_id } = json;
+        const syncRuntime = extractSyncRuntimeFromJson(json);
 
         if (!device_token || typeof device_token !== "string") {
             return NextResponse.json(
@@ -104,6 +106,8 @@ export async function POST(request: Request) {
             where: { id: device.id },
             data: updateData,
         });
+
+        await persistDeviceSyncRuntime(device.id, syncRuntime);
 
         // Helper to format a playlist
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

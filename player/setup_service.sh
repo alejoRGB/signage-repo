@@ -16,13 +16,15 @@ echo "Player directory: $DIR"
 sudo bash -c "cat > $SERVICE_FILE" <<EOL
 [Unit]
 Description=Digital Signage Player
-After=network-online.target
-Wants=network-online.target
+After=network-online.target chrony.service
+Wants=network-online.target chrony.service
 
 [Service]
 Type=simple
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=$HOME_DIR/.Xauthority
+Environment=SYNC_CLOCK_MAX_OFFSET_MS=50
+ExecStartPre=/bin/bash -c '/usr/bin/chronyc tracking >/tmp/signage-chrony-startup.log 2>&1 || true'
 ExecStart=/usr/bin/python3 $DIR/player.py
 WorkingDirectory=$DIR
 Restart=always
@@ -33,6 +35,15 @@ Group=$CURRENT_USER
 [Install]
 WantedBy=graphical.target
 EOL
+
+# Ensure chrony exists and is enabled
+echo "Ensuring chrony is installed and enabled..."
+if ! command -v chronyc >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y chrony
+fi
+sudo systemctl enable chrony
+sudo systemctl restart chrony || true
 
 # Reload daemon and enable service
 echo "Reloading systemd..."

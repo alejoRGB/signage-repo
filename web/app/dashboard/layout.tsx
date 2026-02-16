@@ -5,6 +5,7 @@ import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
 import { DirectiveTabsShell } from "@/components/dashboard/directive-tabs-shell";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
+import { isSyncVideowallEnabled } from "@/lib/env";
 
 export default async function DashboardLayout({
     children,
@@ -21,14 +22,20 @@ export default async function DashboardLayout({
             select: { activeDirectiveTab: true },
         });
 
-        if (user?.activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL) {
+        if (
+            isSyncVideowallEnabled &&
+            user?.activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL
+        ) {
             initialActiveDirectiveTab = DIRECTIVE_TAB.SYNC_VIDEOWALL;
         }
     }
 
     return (
         <div className="h-screen overflow-hidden bg-gray-100">
-            <DirectiveTabsShell initialActiveDirectiveTab={initialActiveDirectiveTab}>
+            <DirectiveTabsShell
+                initialActiveDirectiveTab={initialActiveDirectiveTab}
+                isSyncVideowallEnabled={isSyncVideowallEnabled}
+            >
                 <div className="flex h-full min-h-0 bg-gray-100 flex-col md:flex-row">
                     {/* Mobile Header */}
                     <MobileNav />

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
+import { extractSyncRuntimeFromFormData, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
+import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export async function POST(request: Request) {
         const playingPlaylistIdValue = formData.get("playing_playlist_id");
         const currentContentNameValue = formData.get("current_content_name");
         const previewFile = formData.get("preview");
+        const syncRuntime = extractSyncRuntimeFromFormData(formData);
 
         if (!deviceToken || typeof deviceToken !== "string") {
             return NextResponse.json({ error: "device_token is required" }, { status: 400 });
@@ -93,6 +96,15 @@ export async function POST(request: Request) {
             where: { id: device.id },
             data: updateData,
         });
+
+        await persistDeviceSyncRuntime(device.id, syncRuntime);
+        if (syncRuntime?.sessionId) {
+            try {
+                await maybeReelectMasterForSession(syncRuntime.sessionId);
+            } catch (error) {
+                console.error("[SYNC_MASTER_FAILOVER]", error);
+            }
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

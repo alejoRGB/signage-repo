@@ -12,6 +12,8 @@ import signal
 import threading
 from typing import Dict, List, Optional
 from sync import SyncManager
+from state_machine import SyncSessionContext, SyncStateMachine
+from videowall_controller import VideowallController
 
 import logging
 from logger_service import LoggerService
@@ -60,6 +62,40 @@ class Player:
             os.environ["DISPLAY"] = ":0"
             
         self.start_unclutter()
+        self.sync_state_machine = SyncStateMachine()
+        self.videowall_controller = VideowallController(
+            sync_manager=self.sync_manager,
+            state_machine=self.sync_state_machine,
+            start_sync_playback=self.start_sync_mpv,
+            stop_playback=self.stop_mpv,
+            seek_to_phase_ms=self.seek_mpv_to_phase_ms,
+            set_pause=self.set_mpv_paused,
+            is_playback_alive=self.is_mpv_alive,
+        )
+        try:
+            self.videowall_controller.clock_max_offset_ms = float(
+                os.getenv("SYNC_CLOCK_MAX_OFFSET_MS", "50")
+            )
+        except ValueError:
+            self.videowall_controller.clock_max_offset_ms = 50.0
+        self.log_clock_health_on_startup()
+
+    def log_clock_health_on_startup(self):
+        """Log chrony tracking status during startup for sync diagnostics."""
+        max_offset_ms = self.videowall_controller.clock_max_offset_ms
+        clock_health = self.sync_manager.get_clock_sync_health(max_offset_ms=max_offset_ms)
+        if bool(clock_health.get("healthy")):
+            logging.info(
+                "[CLOCK] chrony healthy (offset_ms=%s, leap_status=%s)",
+                clock_health.get("offset_ms"),
+                clock_health.get("leap_status"),
+            )
+        else:
+            logging.warning(
+                "[CLOCK] chrony not healthy at startup (offset_ms=%s, leap_status=%s)",
+                clock_health.get("offset_ms"),
+                clock_health.get("leap_status"),
+            )
 
     def update_now_playing(self, media: Optional[Dict], playlist_id: Optional[str]):
         """Update playback metadata used by preview reporter."""
@@ -171,6 +207,93 @@ class Player:
         except Exception as e:
             # It's normal to fail if mpv isn't running or socket doesn't exist yet
             logging.warning(f"[PLAYER] IPC Command failed: {e}")
+            return False
+
+    def is_mpv_alive(self) -> bool:
+        return self.mpv_process is not None and self.mpv_process.poll() is None
+
+    def set_mpv_paused(self, paused: bool) -> bool:
+        if not self.is_mpv_alive():
+            return False
+        return self.send_ipc_command(["set_property", "pause", bool(paused)])
+
+    def seek_mpv_to_phase_ms(self, phase_ms: int) -> bool:
+        if not self.is_mpv_alive():
+            return False
+        target_seconds = max(0.0, float(phase_ms) / 1000.0)
+        return self.send_ipc_command(["seek", target_seconds, "absolute", "exact"])
+
+    def start_sync_mpv(self, context: SyncSessionContext) -> bool:
+        """Start MPV for videowall sync prepare flow with pause=yes."""
+        local_path = context.local_path
+        session_id = context.session_id
+        if not os.path.exists(local_path):
+            logging.error("[VIDEOWALL] Local media not found: %s", local_path)
+            return False
+
+        self.stop_mpv()
+
+        if os.path.exists(self.socket_path):
+            try:
+                os.remove(self.socket_path)
+            except Exception as error:
+                logging.warning("[VIDEOWALL] Failed to remove old socket: %s", error)
+
+        cmd = [
+            "mpv",
+            local_path,
+            "--fullscreen",
+            "--no-border",
+            "--no-osc",
+            "--no-input-default-bindings",
+            "--input-vo-keyboard=no",
+            "--cursor-autohide=always",
+            "--hwdec=auto-safe",
+            "--loop-file=inf",
+            "--pause=yes",
+            "--force-window=immediate",
+            "--cache=yes",
+            "--hr-seek=yes",
+            "--really-quiet",
+            f"--input-ipc-server={self.socket_path}",
+        ]
+
+        if not ENABLE_AUDIO:
+            cmd.append("--audio=no")
+
+        videowall_conf = os.path.join(os.path.dirname(__file__), "mpv-videowall.conf")
+        if os.path.exists(videowall_conf):
+            cmd.append(f"--include={videowall_conf}")
+
+        lua_script = os.path.join(os.path.dirname(__file__), "lua", "videowall_sync.lua")
+        if os.path.exists(lua_script):
+            cmd.append(f"--script={lua_script}")
+            cmd.append(
+                "--script-opts="
+                f"videowall-session_id={context.session_id},"
+                f"videowall-start_at_ms={context.start_at_ms},"
+                f"videowall-duration_ms={context.duration_ms},"
+                "videowall-hard_resync_threshold_ms=500,"
+                "videowall-soft_min_ms=25,"
+                "videowall-soft_max_ms=500,"
+                "videowall-deadband_ms=25,"
+                "videowall-warmup_loops=3"
+            )
+
+        try:
+            self.mpv_process = subprocess.Popen(cmd)
+            if not self.wait_for_socket(timeout=8.0):
+                logging.error("[VIDEOWALL] MPV socket was not created for session %s", session_id)
+                self.stop_mpv()
+                return False
+
+            self.current_playlist_id_for_preview = None
+            self.current_content_name_for_preview = os.path.basename(local_path)
+            logging.info("[VIDEOWALL] MPV prepared for session %s", session_id)
+            return True
+        except Exception as error:
+            logging.error("[VIDEOWALL] Failed to start MPV for session %s: %s", session_id, error)
+            self.stop_mpv()
             return False
 
     def start_mpv(self):
@@ -816,6 +939,11 @@ class Player:
         while self.running:
             time.sleep(1)
             now_ts = time.time()
+            self.videowall_controller.tick()
+
+            if self.videowall_controller.is_active():
+                current_playlist_id = None
+                continue
             
             # A. SYNC TASK
             if now_ts - last_sync_time > sync_interval:

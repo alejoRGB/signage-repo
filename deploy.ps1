@@ -1,6 +1,7 @@
 param(
     [string]$PlayerIp,
-    [string]$PlayerUser
+    [string]$PlayerUser,
+    [switch]$ForceConfigSync
 )
 
 
@@ -78,11 +79,56 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Copy files
-scp .\player\player.py .\player\sync.py .\player\setup_timezone.sh .\player\debug_player.py .\player\rotation_utils.py .\player\fix_rotation_boot.sh .\player\setup_service.sh .\player\logger_service.py .\player\config.json .\player\install_dependencies.sh .\player\setup_wallpaper.py .\player\setup_device.sh .\player\README.md "$User@$PlayerIp`:$TargetDir"
+# Copy files (preserve remote config.json by default to avoid resetting pairing)
+$FilesToCopy = @(
+    ".\player\player.py",
+    ".\player\sync.py",
+    ".\player\videowall_controller.py",
+    ".\player\state_machine.py",
+    ".\player\videowall_drift.py",
+    ".\player\mpv-videowall.conf",
+    ".\player\setup_timezone.sh",
+    ".\player\debug_player.py",
+    ".\player\rotation_utils.py",
+    ".\player\fix_rotation_boot.sh",
+    ".\player\setup_service.sh",
+    ".\player\logger_service.py",
+    ".\player\install_dependencies.sh",
+    ".\player\setup_wallpaper.py",
+    ".\player\setup_device.sh",
+    ".\player\README.md"
+)
+
+$RemoteConfigPath = "$TargetDir/config.json"
+$RemoteConfigExists = $false
+ssh "$User@$PlayerIp" "test -f $RemoteConfigPath"
+if ($LASTEXITCODE -eq 0) {
+    $RemoteConfigExists = $true
+}
+
+if ($ForceConfigSync -or -not $RemoteConfigExists) {
+    $FilesToCopy += ".\player\config.json"
+    if ($ForceConfigSync) {
+        Write-Host "ForceConfigSync enabled: remote config.json will be overwritten." -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "Remote config.json not found. Copying local config.json." -ForegroundColor DarkGray
+    }
+}
+else {
+    Write-Host "Remote config.json exists. Preserving it to keep current pairing." -ForegroundColor Green
+}
+
+scp $FilesToCopy "$User@$PlayerIp`:$TargetDir"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Files transferred successfully." -ForegroundColor Green
+
+    # Ensure Lua scripts folder exists and sync videowall Lua script
+    ssh "$User@$PlayerIp" "mkdir -p $TargetDir/lua"
+    if (Test-Path ".\player\lua\videowall_sync.lua") {
+        scp ".\player\lua\videowall_sync.lua" "$User@$PlayerIp`:$TargetDir/lua/"
+    }
     
     # Make scripts executable
     ssh "$User@$PlayerIp" "chmod +x $TargetDir/setup_service.sh $TargetDir/install_dependencies.sh"

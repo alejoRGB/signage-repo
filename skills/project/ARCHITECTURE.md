@@ -59,7 +59,14 @@
    - Global tabs are rendered at `/dashboard/*` layout level and control two independent states:
      - **Viewed tab:** Which panel is shown (`Schedules` or `Sync/VideoWall`).
      - **Active directive tab:** Which mode is marked active for directives.
+   - Feature gate: `SYNC_VIDEOWALL_ENABLED` controls whether Sync tab is exposed.
+   - If Sync is disabled, UI falls back to `Schedules` and does not render Sync controls.
    - Active directive tab is persisted per user in DB (`User.activeDirectiveTab`) through authenticated endpoint `/api/dashboard/directive-tab`.
    - Checkbox interaction updates persisted active directive tab (exclusive selection).
    - Tab click updates viewed panel only.
-   - `Schedules` panel renders full existing dashboard shell; `Sync/VideoWall` remains placeholder-only.
+   - `Schedules` panel renders full existing dashboard shell; `Sync/VideoWall` hosts operational videowall controls when enabled.
+11. **Sync Rollout Guardrails (Ops):**
+   - Rollout order: `3 devices` pilot -> `10 devices` -> `20 devices`.
+   - Progress to next stage only if drift/health KPIs remain within runbook thresholds.
+   - Rollback path is fast and reversible: set `SYNC_VIDEOWALL_ENABLED=false` and redeploy.
+   - Rollback must preserve existing Schedules behavior with no schema or playlist migration required.

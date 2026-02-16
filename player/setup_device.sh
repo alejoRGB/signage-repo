@@ -33,7 +33,7 @@ mkdir -p "$APP_DIR/media"
 # 2. System Dependencies
 echo "[INSTALLER] Installing dependencies..."
 sudo apt-get update -y
-COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7"
+COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7 chrony"
 sudo apt-get install -y $COMMON_DEPS
 
 # Browser check
@@ -50,13 +50,14 @@ fi
 echo "[INSTALLER] Downloading player files directly..."
 
 BASE_URL="https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player"
-FILES="player.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py fix_rotation_boot.sh setup_timezone.sh"
+FILES="player.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py videowall_controller.py state_machine.py videowall_drift.py mpv-videowall.conf lua/videowall_sync.lua fix_rotation_boot.sh setup_timezone.sh"
 
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
 for FILE in $FILES; do
     echo "[INSTALLER] Downloading $FILE..."
+    mkdir -p "$(dirname "$FILE")"
     if curl -sLf "$BASE_URL/$FILE" -o "$FILE"; then
         echo "   -> OK"
     else
@@ -99,22 +100,34 @@ fi
 echo "[INSTALLER] Installing Python libs..."
 pip3 install requests python-socketio "Pillow" --break-system-packages || pip3 install requests python-socketio "Pillow"
 
+# 6.1 Chrony service
+echo "[INSTALLER] Enabling chrony..."
+sudo systemctl enable chrony
+sudo systemctl restart chrony || true
+if chronyc tracking >/dev/null 2>&1; then
+    echo "[INSTALLER] chronyc tracking OK"
+else
+    echo "[INSTALLER] WARNING: chronyc tracking failed. Sync mode will not enter READY while clock is critical."
+fi
+
 # 7. Setup Service
 echo "[INSTALLER] Configuring Systemd..."
 cat <<EOF | sudo tee /etc/systemd/system/signage-player.service
 [Unit]
 Description=Digital Signage Player
-After=network-online.target graphical.target
-Wants=network-online.target
+After=network-online.target graphical.target chrony.service
+Wants=network-online.target chrony.service
 
 [Service]
 User=$(whoami)
 WorkingDirectory=$APP_DIR
+ExecStartPre=/bin/bash -c '/usr/bin/chronyc tracking >/tmp/signage-chrony-startup.log 2>&1 || true'
 ExecStart=/usr/bin/python3 $APP_DIR/player.py
 Restart=always
 RestartSec=10
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=$USER_HOME/.Xauthority
+Environment=SYNC_CLOCK_MAX_OFFSET_MS=50
 
 [Install]
 WantedBy=graphical.target

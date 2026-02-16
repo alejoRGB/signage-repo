@@ -1,6 +1,8 @@
 import logging
 import json
 import os
+import re
+import subprocess
 import requests
 from typing import Dict, List, Optional, Any
 
@@ -165,6 +167,7 @@ class SyncManager:
         playing_playlist_id: Optional[str] = None,
         current_content_name: Optional[str] = None,
         preview_path: Optional[str] = None,
+        sync_runtime: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Report current playback metadata and optional preview JPEG."""
         if not self.device_token:
@@ -177,6 +180,27 @@ class SyncManager:
                 "playing_playlist_id": playing_playlist_id or "",
                 "current_content_name": current_content_name or "",
             }
+            if sync_runtime:
+                data["sync_session_id"] = str(sync_runtime.get("session_id", ""))
+                data["sync_status"] = str(sync_runtime.get("status", ""))
+                if sync_runtime.get("drift_ms") is not None:
+                    data["sync_drift_ms"] = str(sync_runtime.get("drift_ms"))
+                if sync_runtime.get("resync_count") is not None:
+                    data["sync_resync_count"] = str(sync_runtime.get("resync_count"))
+                if sync_runtime.get("clock_offset_ms") is not None:
+                    data["sync_clock_offset_ms"] = str(sync_runtime.get("clock_offset_ms"))
+                if sync_runtime.get("cpu_temp") is not None:
+                    data["sync_cpu_temp"] = str(sync_runtime.get("cpu_temp"))
+                if sync_runtime.get("throttled") is not None:
+                    data["sync_throttled"] = "true" if bool(sync_runtime.get("throttled")) else "false"
+                if sync_runtime.get("health_score") is not None:
+                    data["sync_health_score"] = str(sync_runtime.get("health_score"))
+                if sync_runtime.get("avg_drift_ms") is not None:
+                    data["sync_avg_drift_ms"] = str(sync_runtime.get("avg_drift_ms"))
+                if sync_runtime.get("max_drift_ms") is not None:
+                    data["sync_max_drift_ms"] = str(sync_runtime.get("max_drift_ms"))
+                if sync_runtime.get("resync_rate") is not None:
+                    data["sync_resync_rate"] = str(sync_runtime.get("resync_rate"))
 
             files = None
             if preview_path and os.path.exists(preview_path):
@@ -200,6 +224,197 @@ class SyncManager:
         except requests.exceptions.RequestException as e:
             logging.warning(f"[SYNC] Preview report connection error: {e}")
             return False
+
+    def poll_device_commands(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Poll queued device commands from backend."""
+        if not self.device_token:
+            return []
+
+        try:
+            url = f"{self.server_url}/api/device/commands"
+            params = {
+                "device_token": self.device_token,
+                "limit": str(limit),
+            }
+            response = requests.get(url, params=params, timeout=10)
+            if response.status_code != 200:
+                logging.debug(
+                    "[SYNC] Command poll failed: %s %s",
+                    response.status_code,
+                    response.text[:120],
+                )
+                return []
+
+            payload = response.json()
+            commands = payload.get("commands")
+            if not isinstance(commands, list):
+                return []
+
+            return commands
+        except requests.exceptions.RequestException as error:
+            logging.debug("[SYNC] Command poll connection error: %s", error)
+            return []
+        except ValueError as error:
+            logging.warning("[SYNC] Invalid JSON from command poll: %s", error)
+            return []
+
+    def ack_device_command(
+        self,
+        command_id: str,
+        status: str = "ACKED",
+        error: Optional[str] = None,
+        sync_runtime: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Acknowledge command execution result to backend."""
+        if not self.device_token:
+            return False
+
+        try:
+            url = f"{self.server_url}/api/device/ack"
+            payload: Dict[str, Any] = {
+                "device_token": self.device_token,
+                "command_id": command_id,
+                "status": status,
+            }
+            if error:
+                payload["error"] = error[:1000]
+            if sync_runtime:
+                runtime_payload = {
+                    "session_id": sync_runtime.get("session_id"),
+                    "status": sync_runtime.get("status"),
+                    "drift_ms": sync_runtime.get("drift_ms"),
+                    "resync_count": sync_runtime.get("resync_count"),
+                    "clock_offset_ms": sync_runtime.get("clock_offset_ms"),
+                    "cpu_temp": sync_runtime.get("cpu_temp"),
+                    "throttled": sync_runtime.get("throttled"),
+                    "health_score": sync_runtime.get("health_score"),
+                    "avg_drift_ms": sync_runtime.get("avg_drift_ms"),
+                    "max_drift_ms": sync_runtime.get("max_drift_ms"),
+                    "resync_rate": sync_runtime.get("resync_rate"),
+                }
+                payload["sync_runtime"] = {
+                    key: value for key, value in runtime_payload.items() if value is not None
+                }
+
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                return True
+
+            logging.warning(
+                "[SYNC] Command ack failed: %s %s",
+                response.status_code,
+                response.text[:160],
+            )
+            return False
+        except requests.exceptions.RequestException as error:
+            logging.warning("[SYNC] Command ack connection error: %s", error)
+            return False
+
+    @staticmethod
+    def _parse_seconds_to_ms(raw_value: str) -> Optional[float]:
+        match = re.search(r"([-+]?\d+(?:\.\d+)?)", raw_value)
+        if not match:
+            return None
+
+        try:
+            seconds_value = float(match.group(1))
+        except ValueError:
+            return None
+
+        return seconds_value * 1000.0
+
+    def get_clock_sync_health(self, max_offset_ms: float = 50.0) -> Dict[str, Any]:
+        """
+        Check local clock sync quality via chronyc tracking.
+        Returns a dict with healthy/critical booleans and current offset in ms.
+        """
+        try:
+            result = subprocess.run(
+                ["chronyc", "tracking"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                return {
+                    "healthy": False,
+                    "critical": True,
+                    "offset_ms": None,
+                    "raw": result.stdout + result.stderr,
+                    "throttled": False,
+                    "health_score": 0.0,
+                }
+
+            tracking_output = result.stdout
+            leap_status = None
+            offset_ms = None
+
+            for line in tracking_output.splitlines():
+                if ":" not in line:
+                    continue
+                key, value = [part.strip() for part in line.split(":", 1)]
+                lowered = key.lower()
+                if lowered == "leap status":
+                    leap_status = value
+                elif lowered in {"last offset", "rms offset", "system time"}:
+                    parsed = self._parse_seconds_to_ms(value)
+                    if parsed is not None:
+                        offset_ms = parsed
+                        if lowered == "last offset":
+                            break
+
+            throttled = False
+            try:
+                throttled_result = subprocess.run(
+                    ["vcgencmd", "get_throttled"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                    check=False,
+                )
+                if throttled_result.returncode == 0 and "=" in throttled_result.stdout:
+                    raw_hex = throttled_result.stdout.split("=", 1)[1].strip()
+                    throttled_value = int(raw_hex, 16)
+                    throttled = bool(throttled_value & 0x4)
+            except Exception:
+                throttled = False
+
+            healthy_leap = (leap_status or "").lower() == "normal"
+            healthy_offset = offset_ms is not None and abs(offset_ms) <= max_offset_ms
+            healthy = healthy_leap and healthy_offset and not throttled
+
+            health_score = 0.2
+            if healthy_leap:
+                health_score += 0.4
+            if offset_ms is not None:
+                if abs(offset_ms) <= max_offset_ms:
+                    health_score += 0.4
+                elif abs(offset_ms) <= max_offset_ms * 2:
+                    health_score += 0.2
+            if throttled:
+                health_score -= 0.3
+
+            return {
+                "healthy": healthy,
+                "critical": not healthy,
+                "offset_ms": offset_ms,
+                "leap_status": leap_status,
+                "raw": tracking_output,
+                "throttled": throttled,
+                "health_score": round(min(max(health_score, 0.0), 1.0), 3),
+            }
+        except Exception as error:
+            logging.warning("[SYNC] Failed to run chronyc tracking: %s", error)
+            return {
+                "healthy": False,
+                "critical": True,
+                "offset_ms": None,
+                "error": str(error),
+                "throttled": False,
+                "health_score": 0.0,
+            }
     
     def download_media(self, item: Dict) -> bool:
         """Download a media file if not already present"""

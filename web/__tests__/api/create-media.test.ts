@@ -92,4 +92,39 @@ describe("POST /api/media", () => {
             }),
         });
     });
+
+    it("persists durationMs for valid video item", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+        (prisma.mediaItem.create as jest.Mock).mockResolvedValue({
+            id: "media-video-1",
+            name: "Video Item",
+            type: "video",
+            durationMs: 12500,
+        });
+
+        const req = new Request("http://localhost/api/media", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Video Item",
+                url: "https://example.com/video.mp4",
+                type: "video",
+                filename: "video.mp4",
+                duration: 13,
+                durationMs: 12500,
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await POST(req);
+
+        expect(res.status).toBe(200);
+        expect(prisma.mediaItem.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+                type: "video",
+                duration: 13,
+                durationMs: 12500,
+                userId: "user1",
+            }),
+        });
+    });
 });

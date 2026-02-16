@@ -27,7 +27,7 @@
 - **Navigation:** Sidebar with Overview, Devices, Media, Playlists, Schedules.
 - **Dashboard Global Tabs:** Top-level tabs `Schedules` and `Sync/VideoWall` wrap all `/dashboard/*` views.
   - `Schedules` contains the full existing dashboard shell (mobile header, sidebar, and all dashboard pages).
-  - `Sync/VideoWall` is a placeholder panel with no functional content yet.
+  - `Sync/VideoWall` is available only when feature flag `SYNC_VIDEOWALL_ENABLED=true`.
   - Tab view and active-directive selection are independent states.
   - Active-directive selection uses exclusive checkbox logic and is persisted per user.
 - **Tab Specifications:**
@@ -54,7 +54,7 @@
 - **Hardware:** Raspberry Pi 4/5 targeting standard displays.
 - **Operating System:** Raspberry Pi OS / Linux.
 - **Network:** Devices must handle offline playback (cache required).
-- **Multi-Device:** No synchronized playback (Video Wall features NOT supported).
+- **Multi-Device:** Sync/VideoWall support is feature-flagged (`SYNC_VIDEOWALL_ENABLED`).
 - **Content:** Images, Videos, Web Pages. Mixed playlists are NOT supported (only `media` or `web` playlists).
 - **Schedule:** Canonical editing model is slot-based (30-minute cells). Persisted API payload remains `dayOfWeek`, `startTime`, `endTime`, `playlistId`.
 - **Observability:** Dashboard displays assigned Schedule per device (or "No Schedule"). Status reflects connectivity and sync state.
@@ -77,6 +77,19 @@
 - **Directive Selection Persistence:** Active directive is persisted in DB per user (`User.activeDirectiveTab`) and updates on checkbox interaction.
 - **Decoupled UX Rule:** Opening a tab view must not change active-directive checkbox state, and changing active-directive checkbox must not force a view switch.
 
+## Canonical Notes (2026-02-17)
+- **Sync Feature Gate:** `SYNC_VIDEOWALL_ENABLED=false` hides Sync tab and forces dashboard directive fallback to `Schedules` without touching schedule behavior.
+- **Rollout Plan:** Incremental enablement in staging/prod: pilot `3 devices` -> `10 devices` -> `20 devices`.
+- **Rollback Rule:** Disable Sync by setting `SYNC_VIDEOWALL_ENABLED=false` and redeploy. This must immediately remove Sync entry points while preserving Schedules operations.
+- **Staging Checklist (required):**
+  - Baseline with flag OFF: dashboard shows `Schedules` only; no Sync controls visible.
+  - Flag ON in staging: run `python execution/run_tests.py sync`.
+  - Execute `docs/sync_qa_runbook.md` for 3-device pilot before scaling.
+- **Production Smoke Checklist (required):**
+  - Enable flag for pilot tenant/fleet and validate start/stop + readiness.
+  - Confirm no regressions in Schedules flows.
+  - Keep rollback ready: set `SYNC_VIDEOWALL_ENABLED=false` and redeploy if health KPIs degrade.
+
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
 2. **Sync:** Device heartbeats (60s) -> Receives JSON payload -> Downloads media -> Reports `playingPlaylistId` -> Plays.
@@ -84,3 +97,7 @@
    - Media: MPV loop.
    - Web: Chromium Kiosk.
    - Mixed: Python controller orchestrating MPV/Chromium handoff.
+4. **Sync/VideoWall (feature-flagged):**
+   - Enabled only when `SYNC_VIDEOWALL_ENABLED=true`.
+   - Session control from Sync tab (`start/stop`, readiness, health panel).
+   - Disabled state must keep the full Schedules flow unaffected.

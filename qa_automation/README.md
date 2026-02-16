@@ -1,37 +1,48 @@
 # QA Automation Suite
 
-Este directorio contiene la suite de pruebas automatizadas para el proyecto Digital Signage.
+Este directorio contiene la suite de QA automatizada (Playwright) y referencias para validaciones manuales del modulo Sync.
 
 ## Estructura
-- `tests/1_auth.spec.ts`: Pruebas de autenticación (Fase 1).
-- `package.json`: Definición de dependencias.
-- `playwright.config.ts`: Configuración global de Playwright.
+- `tests/1_auth.spec.ts`: pruebas actuales de autenticacion.
+- `package.json`: dependencias y scripts de Playwright.
+- `playwright.config.ts`: configuracion global de Playwright.
+- `../docs/sync_qa_runbook.md`: runbook manual de carga y caos para Sync (2/5/10/20 devices).
 
-## Instalación
+## Instalacion
+1. Abrir terminal en este directorio:
+```powershell
+cd qa_automation
+```
+2. Instalar dependencias:
+```powershell
+npm install
+npx playwright install --with-deps
+```
 
-1.  Abre una terminal en este directorio:
-    ```powershell
-    cd qa_automation
-    ```
-2.  Instala las dependencias:
-    ```powershell
-    npm install
-    npx playwright install --with-deps
-    ```
+## Ejecucion
 
-## Ejecución
-
-Para correr las pruebas de la Fase 1:
-
+### QA E2E (Playwright)
 ```powershell
 npx playwright test
 ```
 
-Para ver el reporte visual (HTML):
-
+Reporte HTML:
 ```powershell
 npx playwright show-report
 ```
 
+### Suite Sync (API + UI + player)
+Desde la raiz del proyecto:
+```powershell
+python execution/run_tests.py sync
+```
+
+## Flujo recomendado para QA de Sync
+1. Ejecutar `python execution/run_tests.py sync`.
+2. Ejecutar pruebas manuales del runbook:
+   - `docs/sync_qa_runbook.md`
+3. Adjuntar evidencia y consolidar resultado PASS/FAIL por escala.
+
 ## Credenciales
-Las pruebas utilizan las credenciales hardcodeadas en `tests/1_auth.spec.ts`. Si cambian, actualízalas allí.
+Las pruebas Playwright actuales usan credenciales definidas en `tests/1_auth.spec.ts`.
+Si cambian, actualizar ese archivo.

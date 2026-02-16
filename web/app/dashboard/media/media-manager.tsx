@@ -33,7 +33,9 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         }
     };
 
-    const extractMetadata = (file: File): Promise<{ width: number; height: number; fps?: number; duration?: number }> => {
+    const extractMetadata = (
+        file: File
+    ): Promise<{ width: number; height: number; fps?: number; duration?: number; durationMs?: number }> => {
         return new Promise((resolve) => {
             const url = URL.createObjectURL(file);
             if (file.type.startsWith("image")) {
@@ -65,7 +67,8 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                         width: video.videoWidth,
                         height: video.videoHeight,
                         fps: 30,
-                        duration: Math.ceil(duration) || 0 // Use ceil to avoid 0.99s becoming 0s
+                        duration: Math.ceil(duration) || 0, // Use ceil to avoid 0.99s becoming 0s
+                        durationMs: Number.isFinite(duration) ? Math.max(1, Math.round(duration * 1000)) : 0,
                     });
                     URL.revokeObjectURL(url);
                 };
@@ -86,7 +89,8 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                                 width: video.videoWidth,
                                 height: video.videoHeight,
                                 fps: 30,
-                                duration: Math.ceil(d)
+                                duration: Math.ceil(d),
+                                durationMs: Number.isFinite(d) ? Math.max(1, Math.round(d * 1000)) : 0,
                             });
                             URL.revokeObjectURL(url);
                         };
@@ -171,7 +175,8 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                     height: metadata.height,
                     fps: metadata.fps,
                     size: file.size,
-                    duration: metadata.duration
+                    duration: metadata.duration,
+                    durationMs: type === "video" ? metadata.durationMs : undefined,
                 }),
             });
 
@@ -203,7 +208,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                 throw new Error("Failed to delete media");
             }
             router.refresh();
-        } catch (error) {
+        } catch {
             showToast("Error deleting file", "error");
         } finally {
             setDeleteId(null);

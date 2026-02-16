@@ -7,5 +7,5 @@ export type DirectiveTab = (typeof DIRECTIVE_TAB)[keyof typeof DIRECTIVE_TAB];
 
 export const DIRECTIVE_TAB_LABEL: Record<DirectiveTab, string> = {
     [DIRECTIVE_TAB.SCHEDULES]: "Schedules",
-    [DIRECTIVE_TAB.SYNC_VIDEOWALL]: "Sync/VideoWall",
+    [DIRECTIVE_TAB.SYNC_VIDEOWALL]: "Sync",
 };

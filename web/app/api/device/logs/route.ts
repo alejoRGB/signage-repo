@@ -1,5 +1,84 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { SYNC_LOG_EVENT, type SyncLogEvent } from "@/types/sync";
+
+const ALLOWED_SYNC_LOG_EVENTS = new Set<string>(Object.values(SYNC_LOG_EVENT));
+
+type IncomingLog = {
+    level?: string;
+    message?: string;
+    timestamp?: string | number;
+    event?: string;
+    session_id?: string;
+    sessionId?: string;
+    data?: unknown;
+};
+
+function normalizeLevel(level: unknown) {
+    if (typeof level !== "string") {
+        return "info";
+    }
+    const normalized = level.trim().toLowerCase();
+    if (!normalized) {
+        return "info";
+    }
+    return normalized.slice(0, 20);
+}
+
+function normalizeMessage(message: unknown, event?: string) {
+    if (typeof message === "string" && message.trim().length > 0) {
+        return message.trim().slice(0, 4000);
+    }
+
+    if (event) {
+        return `[SYNC_EVENT] ${event}`;
+    }
+
+    return "device-log";
+}
+
+function normalizeTimestamp(timestamp: unknown) {
+    if (typeof timestamp === "string" || typeof timestamp === "number") {
+        const parsed = new Date(timestamp);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+    return new Date();
+}
+
+function normalizeSessionId(value: unknown) {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed.slice(0, 191) : null;
+}
+
+function normalizeSyncEvent(value: unknown): SyncLogEvent | null {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (!normalized) {
+        return null;
+    }
+
+    if (!ALLOWED_SYNC_LOG_EVENTS.has(normalized)) {
+        return null;
+    }
+
+    return normalized as SyncLogEvent;
+}
+
+function normalizeData(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    return value as Record<string, unknown>;
+}
 
 export async function POST(request: Request) {
     try {
@@ -42,13 +121,37 @@ export async function POST(request: Request) {
             );
         }
 
+        const incomingLogs = logs as IncomingLog[];
+        const hasInvalidSyncEvent = incomingLogs.some((log) => {
+            if (typeof log?.event !== "string") {
+                return false;
+            }
+            return !ALLOWED_SYNC_LOG_EVENTS.has(log.event.trim().toUpperCase());
+        });
+
+        if (hasInvalidSyncEvent) {
+            return NextResponse.json(
+                { error: "Invalid sync log event in logs payload" },
+                { status: 400 }
+            );
+        }
+
         // Limit logs to prevent spam (max 50 logs per batch)
-        const logsToSave = logs.slice(0, 50).map((log: any) => ({
-            deviceId: device.id,
-            level: log.level || "info",
-            message: log.message || "",
-            createdAt: log.timestamp ? new Date(log.timestamp) : new Date(),
-        }));
+        const logsToSave = incomingLogs.slice(0, 50).map((log) => {
+            const event = normalizeSyncEvent(log.event);
+            const sessionId = normalizeSessionId(log.session_id ?? log.sessionId);
+            const data = normalizeData(log.data);
+
+            return {
+                deviceId: device.id,
+                level: normalizeLevel(log.level),
+                message: normalizeMessage(log.message, event ?? undefined),
+                event,
+                sessionId,
+                data,
+                createdAt: normalizeTimestamp(log.timestamp),
+            };
+        });
 
         if (logsToSave.length > 0) {
             await prisma.deviceLog.createMany({

@@ -3,28 +3,47 @@
 import { useEffect, useState, useTransition } from "react";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, DIRECTIVE_TAB_LABEL, type DirectiveTab } from "@/lib/directive-tabs";
+import { SyncVideowallPanel } from "@/components/dashboard/sync-videowall-panel";
 
 const TAB_ORDER: DirectiveTab[] = [DIRECTIVE_TAB.SCHEDULES, DIRECTIVE_TAB.SYNC_VIDEOWALL];
+const SCHEDULES_ONLY_TAB_ORDER: DirectiveTab[] = [DIRECTIVE_TAB.SCHEDULES];
 
 type DirectiveTabsShellProps = {
     children: React.ReactNode;
     initialActiveDirectiveTab: DirectiveTab;
+    isSyncVideowallEnabled: boolean;
 };
 
 export function DirectiveTabsShell({
     children,
     initialActiveDirectiveTab,
+    isSyncVideowallEnabled,
 }: DirectiveTabsShellProps) {
     const { showToast } = useToast();
-    const [activeDirectiveTab, setActiveDirectiveTab] = useState<DirectiveTab>(initialActiveDirectiveTab);
+    const availableTabs = isSyncVideowallEnabled ? TAB_ORDER : SCHEDULES_ONLY_TAB_ORDER;
+    const normalizedInitialDirectiveTab =
+        isSyncVideowallEnabled || initialActiveDirectiveTab === DIRECTIVE_TAB.SCHEDULES
+            ? initialActiveDirectiveTab
+            : DIRECTIVE_TAB.SCHEDULES;
+    const [activeDirectiveTab, setActiveDirectiveTab] = useState<DirectiveTab>(normalizedInitialDirectiveTab);
     const [viewTab, setViewTab] = useState<DirectiveTab>(DIRECTIVE_TAB.SCHEDULES);
     const [isSaving, startSaving] = useTransition();
 
     useEffect(() => {
-        setActiveDirectiveTab(initialActiveDirectiveTab);
-    }, [initialActiveDirectiveTab]);
+        setActiveDirectiveTab(normalizedInitialDirectiveTab);
+    }, [normalizedInitialDirectiveTab]);
+
+    useEffect(() => {
+        if (!isSyncVideowallEnabled && viewTab === DIRECTIVE_TAB.SYNC_VIDEOWALL) {
+            setViewTab(DIRECTIVE_TAB.SCHEDULES);
+        }
+    }, [isSyncVideowallEnabled, viewTab]);
 
     const handleCheckboxChange = (tab: DirectiveTab, checked: boolean) => {
+        if (!availableTabs.includes(tab)) {
+            return;
+        }
+
         if (!checked || tab === activeDirectiveTab) {
             return;
         }
@@ -55,7 +74,7 @@ export function DirectiveTabsShell({
         <div className="flex h-full min-h-0 flex-col">
             <div className="border-b border-slate-700/80 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-4 pt-3 shadow-[0_10px_35px_-25px_rgba(2,6,23,0.9)]">
                 <div className="flex items-end justify-center gap-2">
-                    {TAB_ORDER.map((tab) => {
+                    {availableTabs.map((tab) => {
                         const isActiveDirectiveTab = activeDirectiveTab === tab;
                         const isViewingTab = viewTab === tab;
                         return (
@@ -88,19 +107,12 @@ export function DirectiveTabsShell({
                 </div>
             </div>
 
-            {viewTab === DIRECTIVE_TAB.SCHEDULES ? (
+            {!isSyncVideowallEnabled || viewTab === DIRECTIVE_TAB.SCHEDULES ? (
                 <div data-testid="directive-schedules-panel" className="min-h-0 flex-1 overflow-hidden">
                     {children}
                 </div>
             ) : (
-                <div
-                    data-testid="directive-sync-empty-panel"
-                    className="m-4 flex min-h-0 flex-1 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_20px_45px_-30px_rgba(15,23,42,0.35)]"
-                >
-                    <div className="relative h-full w-full overflow-hidden rounded-2xl">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.08),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(14,165,233,0.08),transparent_40%)]" />
-                    </div>
-                </div>
+                <SyncVideowallPanel activeDirectiveTab={activeDirectiveTab} />
             )}
         </div>
     );

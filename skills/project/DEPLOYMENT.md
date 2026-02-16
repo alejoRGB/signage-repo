@@ -53,7 +53,7 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
   - **Comando:** `powershell .\deploy.ps1 -PlayerIp <IP> -PlayerUser <USER>`
   - **Ejemplo verificado:** `powershell .\deploy.ps1 -PlayerIp 192.168.100.6 -PlayerUser pi4`
   - **Ruta destino:** Siempre usa el home del usuario remoto (`~/signage-player`). Nunca hardcodear `/home/pi` o `/root`.
-  - **Flujo de config:** Si `player/config.json` no existe en tu PC, `deploy.ps1` llama primero a `setup_env.ps1` para generarlo y luego lo copia a la Raspberry.
+  - **Flujo de config:** Si `player/config.json` no existe en tu PC, `deploy.ps1` llama primero a `setup_env.ps1` para generarlo. En deploy normal, el script preserva `~/signage-player/config.json` remoto si ya existe (evita resetear pairing). Para sobrescribirlo explícitamente usar `-ForceConfigSync`.
   - **Transfers:** `player.py`, `sync.py`, `setup_wallpaper.py`, `setup_device.sh`, `rotation_utils.py`, `config.json`, y dependencias.
 - **Template de config:** `player/config.example.json` (Template) -> Se usa como base para generar `player/config.json` local vía `setup_env.ps1`. En la Raspberry, `~/signage-player/config.json` puede editarse directamente para ajustar `server_url` y `device_token` (por ejemplo, poner `device_token: null` para un nuevo pairing).
 
@@ -68,6 +68,12 @@ If pairing fails or logs show wrong dates:
 sudo systemctl restart systemd-timesyncd
 date
 ```
+For Sync/Videowall sessions use chrony health check:
+```bash
+sudo systemctl status chrony
+chronyc tracking
+```
+If `chronyc tracking` is unhealthy, devices will not transition to `READY` in sync mode.
 
 ### Force Pairing Reset
 If code is invalid/expired:

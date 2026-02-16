@@ -51,7 +51,7 @@ if __name__ == "__main__":
         sys.exit(run_command(cmd, cwd=player_dir))
 
     elif command == "test":
-        cmd = ["pytest"] + extra_args
+        cmd = [sys.executable, "-m", "pytest"] + extra_args
         sys.exit(run_command(cmd, cwd=player_dir))
 
     elif command == "deploy":

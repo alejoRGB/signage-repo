@@ -10,7 +10,7 @@ echo "[INSTALLER] Checking and Installing Dependencies..."
 echo "[INSTALLER] Updating apt..."
 sudo apt-get update -y
 
-COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7 python3-pil python3-requests"
+COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7 python3-pil python3-requests chrony"
 echo "[INSTALLER] Installing: $COMMON_DEPS"
 sudo apt-get install -y $COMMON_DEPS
 
@@ -38,3 +38,10 @@ pip3 install requests python-socketio Pillow --break-system-packages || \
 pip3 install requests python-socketio Pillow
 
 echo "[INSTALLER] Dependencies installed successfully."
+sudo systemctl enable chrony
+sudo systemctl restart chrony || true
+if chronyc tracking >/dev/null 2>&1; then
+    echo "[INSTALLER] chrony tracking is available."
+else
+    echo "[INSTALLER] WARNING: chronyc tracking unavailable. Sync readiness will fail while clock is critical."
+fi

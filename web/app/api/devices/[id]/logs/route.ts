@@ -17,6 +17,13 @@ export async function GET(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get("sessionId")?.trim() || null;
+    const event = searchParams.get("event")?.trim().toUpperCase() || null;
+    const limitParam = Number(searchParams.get("limit") ?? "100");
+    const limit = Number.isFinite(limitParam)
+        ? Math.min(Math.max(Math.trunc(limitParam), 1), 500)
+        : 100;
 
     try {
         // Verify user owns device
@@ -38,11 +45,13 @@ export async function GET(
         const logs = await prisma.deviceLog.findMany({
             where: {
                 deviceId: id,
+                ...(sessionId ? { sessionId } : {}),
+                ...(event ? { event } : {}),
             },
             orderBy: {
                 createdAt: "desc",
             },
-            take: 100, // Limit to last 100 logs
+            take: limit,
         });
 
         return NextResponse.json({
@@ -50,6 +59,9 @@ export async function GET(
                 id: log.id,
                 level: log.level,
                 message: log.message,
+                event: log.event,
+                sessionId: log.sessionId,
+                data: log.data,
                 timestamp: log.createdAt.toISOString()
             }))
         });
