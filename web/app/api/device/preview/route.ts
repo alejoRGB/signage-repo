@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const MAX_PREVIEW_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_PREVIEW_SIZE_BYTES = 8 * 1024 * 1024;
 
 export async function POST(request: Request) {
     try {
@@ -62,31 +62,32 @@ export async function POST(request: Request) {
         }
 
         if (previewFile instanceof File) {
-            if (previewFile.type !== "image/jpeg") {
-                return NextResponse.json({ error: "preview must be image/jpeg" }, { status: 400 });
+            const isImageFile = previewFile.type.startsWith("image/");
+
+            if (!isImageFile) {
+                console.warn(`[DEVICE_PREVIEW_POST] Ignoring non-image preview (${previewFile.type}) for device ${device.id}`);
+            } else if (previewFile.size > MAX_PREVIEW_SIZE_BYTES) {
+                console.warn(`[DEVICE_PREVIEW_POST] Ignoring oversized preview (${previewFile.size} bytes) for device ${device.id}`);
+            } else {
+                try {
+                    const blob = await put(
+                        `device-previews/${device.id}/latest.jpg`,
+                        previewFile,
+                        {
+                            access: "public",
+                            addRandomSuffix: false,
+                            contentType: "image/jpeg",
+                            cacheControlMaxAge: 5,
+                        }
+                    );
+
+                    updateData.previewImageUrl = blob.url;
+                    updateData.previewCapturedAt = new Date();
+                } catch (blobError) {
+                    console.error("[DEVICE_PREVIEW_UPLOAD]", blobError);
+                }
             }
 
-            if (previewFile.size > MAX_PREVIEW_SIZE_BYTES) {
-                return NextResponse.json({ error: "preview is too large" }, { status: 400 });
-            }
-
-            try {
-                const blob = await put(
-                    `device-previews/${device.id}/latest.jpg`,
-                    previewFile,
-                    {
-                        access: "public",
-                        addRandomSuffix: false,
-                        contentType: "image/jpeg",
-                        cacheControlMaxAge: 5,
-                    }
-                );
-
-                updateData.previewImageUrl = blob.url;
-                updateData.previewCapturedAt = new Date();
-            } catch (blobError) {
-                console.error("[DEVICE_PREVIEW_UPLOAD]", blobError);
-            }
         }
 
         await prisma.device.update({

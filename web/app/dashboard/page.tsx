@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { Monitor, HardDrive, PlaySquare } from "lucide-react";
 import DevicePreviewGrid from "@/components/dashboard/device-preview-grid";
 
+const ONLINE_STALE_MS = 5 * 60_000;
+
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
 
@@ -23,6 +25,12 @@ export default async function DashboardPage() {
                 currentContentName: true,
                 previewImageUrl: true,
                 previewCapturedAt: true,
+                activePlaylist: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
                 playingPlaylist: {
                     select: {
                         id: true,
@@ -82,6 +90,7 @@ export default async function DashboardPage() {
                 createdAt: device.createdAt.toISOString(),
                 lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
                 previewCapturedAt: device.previewCapturedAt ? device.previewCapturedAt.toISOString() : null,
+                connectivityStatus: device.lastSeenAt && (Date.now() - device.lastSeenAt.getTime()) < ONLINE_STALE_MS ? "online" : "offline",
             }))} />
         </div>
     );
