@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { type SyncDeviceCommandType } from "@/types/sync";
 
 type PrepareMedia = {
@@ -38,7 +39,8 @@ function mediaLocalPath(filename: string | null) {
 }
 
 export function buildPreparePayload(input: PrepareCommandInput) {
-    return {
+    return JSON.parse(
+        JSON.stringify({
         type: "sync.prepare",
         session_id: input.sessionId,
         preset_id: input.presetId,
@@ -65,15 +67,18 @@ export function buildPreparePayload(input: PrepareCommandInput) {
             deadband_ms: 25,
             warmup_loops: 3,
         },
-    };
+        })
+    ) as Prisma.InputJsonValue;
 }
 
 export function buildStopPayload(sessionId: string, reason: string) {
-    return {
-        type: "sync.stop",
-        session_id: sessionId,
-        reason: reason.toLowerCase(),
-    };
+    return JSON.parse(
+        JSON.stringify({
+            type: "sync.stop",
+            session_id: sessionId,
+            reason: reason.toLowerCase(),
+        })
+    ) as Prisma.InputJsonValue;
 }
 
 export async function enqueueSyncCommands(
@@ -81,7 +86,7 @@ export async function enqueueSyncCommands(
         deviceId: string;
         sessionId: string;
         type: SyncDeviceCommandType;
-        payload: Record<string, unknown>;
+        payload: Prisma.InputJsonValue;
         dedupeKey: string;
     }>
 ) {

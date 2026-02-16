@@ -539,7 +539,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     </p>
                     {!isDirectiveActive ? (
                         <p className="mt-1 text-xs text-amber-800">
-                            Start bloqueado: activ· el checkbox de la directiva Sync para permitir inicio.
+                            Start bloqueado: activ√° el checkbox de la directiva Sync para permitir inicio.
                         </p>
                     ) : null}
                 </div>

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { SyncSessionDeviceStatus, SyncSessionStatus } from "@prisma/client";
+import { Prisma, SyncSessionDeviceStatus, SyncSessionStatus } from "@prisma/client";
 
 type SyncRuntimeInput = {
     sessionId?: string | null;
@@ -24,6 +24,17 @@ const syncStatusMap: Record<string, SyncSessionDeviceStatus> = {
     ERRORED: SyncSessionDeviceStatus.ERRORED,
     DISCONNECTED: SyncSessionDeviceStatus.DISCONNECTED,
 };
+
+const SESSION_STATUSES_BEFORE_RUNNING: SyncSessionStatus[] = [
+    SyncSessionStatus.STARTING,
+    SyncSessionStatus.WARMING_UP,
+    SyncSessionStatus.CREATED,
+];
+
+const SESSION_STATUSES_BEFORE_WARMUP: SyncSessionStatus[] = [
+    SyncSessionStatus.STARTING,
+    SyncSessionStatus.CREATED,
+];
 
 function normalizeSyncStatus(value?: string | null): SyncSessionDeviceStatus | null {
     if (!value) {
@@ -116,9 +127,9 @@ function nextDriftHistory(
     currentHistory: unknown,
     driftMs: number | null | undefined,
     status: SyncSessionDeviceStatus | null
-) {
+): Prisma.InputJsonValue | undefined {
     if (driftMs === null || driftMs === undefined) {
-        return currentHistory ?? null;
+        return undefined;
     }
 
     const previous = Array.isArray(currentHistory) ? currentHistory : [];
@@ -131,7 +142,7 @@ function nextDriftHistory(
         },
     ];
 
-    return next.slice(-300);
+    return next.slice(-300) as Prisma.InputJsonValue;
 }
 
 export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRuntimeInput | null) {
@@ -160,30 +171,21 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
         return;
     }
 
-    const updateData: {
-        lastSeenAt: Date;
-        status?: SyncSessionDeviceStatus;
-        driftHistory?: unknown;
-        resyncCount?: number;
-        avgDriftMs?: number;
-        maxDriftMs?: number;
-        resyncRate?: number;
-        clockOffsetMs?: number;
-        cpuTemp?: number;
-        throttled?: boolean;
-        healthScore?: number;
-    } = {
+    const updateData: Prisma.SyncSessionDeviceUpdateInput = {
         lastSeenAt: new Date(),
     };
 
     if (normalizedStatus) {
         updateData.status = normalizedStatus;
     }
-    updateData.driftHistory = nextDriftHistory(
+    const driftHistory = nextDriftHistory(
         sessionDevice.driftHistory,
         runtime.driftMs,
         normalizedStatus
     );
+    if (driftHistory !== undefined) {
+        updateData.driftHistory = driftHistory;
+    }
 
     if (runtime.resyncCount !== null && runtime.resyncCount !== undefined) {
         updateData.resyncCount = Math.max(0, Math.round(runtime.resyncCount));
@@ -204,9 +206,7 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
     const sessionStatus = sessionDevice.session.status;
     if (
         normalizedStatus === SyncSessionDeviceStatus.PLAYING &&
-        [SyncSessionStatus.STARTING, SyncSessionStatus.WARMING_UP, SyncSessionStatus.CREATED].includes(
-            sessionStatus
-        )
+        SESSION_STATUSES_BEFORE_RUNNING.includes(sessionStatus)
     ) {
         await prisma.syncSession.update({
             where: { id: sessionDevice.sessionId },
@@ -220,7 +220,7 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
 
     if (
         normalizedStatus === SyncSessionDeviceStatus.READY &&
-        [SyncSessionStatus.STARTING, SyncSessionStatus.CREATED].includes(sessionStatus)
+        SESSION_STATUSES_BEFORE_WARMUP.includes(sessionStatus)
     ) {
         const nonReadyCount = await prisma.syncSessionDevice.count({
             where: {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SYNC_LOG_EVENT, type SyncLogEvent } from "@/types/sync";
 
@@ -72,12 +73,12 @@ function normalizeSyncEvent(value: unknown): SyncLogEvent | null {
     return normalized as SyncLogEvent;
 }
 
-function normalizeData(value: unknown): Record<string, unknown> | null {
+function normalizeData(value: unknown): Prisma.InputJsonValue | undefined {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-        return null;
+        return undefined;
     }
 
-    return value as Record<string, unknown>;
+    return value as Prisma.InputJsonValue;
 }
 
 export async function POST(request: Request) {
