@@ -171,7 +171,7 @@ class SyncManager:
             return False
 
         try:
-            url = f"{self.server_url}/api/device/preview"
+            url = f"{self.server_url}/api/device/heartbeat"
             data: Dict[str, str] = {
                 "device_token": self.device_token,
                 "playing_playlist_id": playing_playlist_id or "",
