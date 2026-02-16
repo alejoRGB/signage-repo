@@ -4,6 +4,46 @@
   - Root cause: UI state depended on stale/partial sync signals.
   - Resolution: Added direct `/api/devices` polling in Devices manager and adjusted sync-label logic to require reported playback mismatch.
   - Validation: Local unit, e2e, and QA test suites passed.
+- 2026-02-16: In progress - Global directive tabs in dashboard (`Schedules` / `Sync/VideoWall`) with DB persistence per user.
+  - Scope:
+    - Add top global tabs in `/dashboard/*` (Chrome-style visual treatment).
+    - Keep all existing dashboard UI under `Schedules`.
+    - Show empty panel under `Sync/VideoWall` (no functional content yet).
+    - Checkbox controls must behave as exclusive radio logic.
+    - Active selection changes only when checkbox is clicked (not tab title click).
+    - Persist preference in DB per user with autosave.
+  - Implemented:
+    - Prisma model update: new `DirectiveTab` enum and `User.activeDirectiveTab` default `SCHEDULES`.
+    - New API endpoint: `GET/PATCH /api/dashboard/directive-tab` (authenticated `USER` only).
+    - New global dashboard shell component with exclusive checkbox behavior and empty Sync/VideoWall panel.
+    - `dashboard/layout` now loads initial active tab from DB and wraps all dashboard content with the tab shell.
+  - Validation:
+    - `npm run test:api` ✅
+    - `npm run test:ui` ✅
+    - Added targeted tests for API and tab behavior.
+  - Note:
+    - Global `npm run lint` still fails due many pre-existing repository lint issues outside this scope.
+- 2026-02-16: Adjusted - Tab navigation decoupled from active directive checkbox.
+  - Behavior fix:
+    - User can navigate to either tab panel independently from checkbox selection.
+    - Checkbox selection updates active directive only (autosave), without forcing panel change.
+    - Clicking tab title changes visible panel only, without changing checkbox selection.
+  - Validation:
+    - Updated component tests and reran `npm run test:ui` successfully.
+- 2026-02-16: Adjusted - Global scope of directive tabs moved above full dashboard shell.
+  - Behavior fix:
+    - `Schedules` tab now contains the complete existing dashboard shell (mobile header, sidebar, and all current dashboard pages).
+    - `Sync/VideoWall` panel remains outside that shell and stays empty for now.
+  - Validation:
+    - Reran UI tests and focused lint on modified files successfully.
+- 2026-02-16: UI Polish - Global directive tabs restyled for visual coherence with dashboard.
+  - Changes:
+    - Dark gradient top rail aligned with sidebar visual language.
+    - Chrome-like tab treatment with clearer active-view state and improved spacing.
+    - Active directive badge moved to header context for quick readability.
+    - Sync/VideoWall empty panel upgraded to a cleaner placeholder surface.
+  - Validation:
+    - `npm run test:ui` passed after restyling.
 
 ## Schedules Redesign Rollout Checklist
 

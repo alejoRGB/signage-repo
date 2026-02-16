@@ -13,6 +13,7 @@ model User {
   email     String      @unique
   password  String
   name      String?
+  activeDirectiveTab DirectiveTab @default(SCHEDULES)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   isActive  Boolean     @default(true)
@@ -140,4 +141,9 @@ model Admin {
 enum Role {
   USER
   ADMIN
+}
+
+enum DirectiveTab {
+  SCHEDULES
+  SYNC_VIDEOWALL
 }

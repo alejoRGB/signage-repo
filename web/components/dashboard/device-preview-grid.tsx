@@ -77,7 +77,6 @@ export default function DevicePreviewGrid({
     return (
         <div className="mt-8">
             <h2 className="text-lg font-semibold text-gray-900">Device Live Preview</h2>
-            <p className="mt-1 text-sm text-gray-500">Current playback for each device</p>
 
             <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {devices.map((device) => {
