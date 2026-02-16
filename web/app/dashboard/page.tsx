@@ -11,7 +11,7 @@ export default async function DashboardPage() {
 
     if (!session) return null;
 
-    const [deviceCount, mediaCount, playlistCount, previewDevices] = await Promise.all([
+    const [deviceCount, mediaCount, playlistCount, previewDevices, mediaItems] = await Promise.all([
         prisma.device.count({ where: { userId: session.user.id } }),
         prisma.mediaItem.count({ where: { userId: session.user.id } }),
         prisma.playlist.count({ where: { userId: session.user.id } }),
@@ -23,8 +23,6 @@ export default async function DashboardPage() {
                 createdAt: true,
                 lastSeenAt: true,
                 currentContentName: true,
-                previewImageUrl: true,
-                previewCapturedAt: true,
                 activePlaylist: {
                     select: {
                         id: true,
@@ -48,7 +46,31 @@ export default async function DashboardPage() {
                 createdAt: "asc",
             },
         }),
+        prisma.mediaItem.findMany({
+            where: { userId: session.user.id },
+            select: {
+                name: true,
+                filename: true,
+                type: true,
+                url: true,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+        }),
     ]);
+
+    const mediaByFilename = new Map<string, { type: string; url: string; name: string }>();
+    const mediaByName = new Map<string, { type: string; url: string; name: string }>();
+    for (const media of mediaItems) {
+        const preview = { type: media.type, url: media.url, name: media.name };
+        if (media.filename && !mediaByFilename.has(media.filename)) {
+            mediaByFilename.set(media.filename, preview);
+        }
+        if (!mediaByName.has(media.name)) {
+            mediaByName.set(media.name, preview);
+        }
+    }
 
     const stats = [
         { name: 'Total Devices', value: deviceCount, icon: Monitor, color: 'bg-blue-500' },
@@ -89,8 +111,10 @@ export default async function DashboardPage() {
                 ...device,
                 createdAt: device.createdAt.toISOString(),
                 lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
-                previewCapturedAt: device.previewCapturedAt ? device.previewCapturedAt.toISOString() : null,
                 connectivityStatus: device.lastSeenAt && (Date.now() - device.lastSeenAt.getTime()) < ONLINE_STALE_MS ? "online" : "offline",
+                contentPreview: device.currentContentName
+                    ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
+                    : null,
             }))} />
         </div>
     );

@@ -102,14 +102,13 @@ class Player:
         return None
 
     def preview_report_loop(self):
-        """Send now-playing metadata + preview every 5 seconds."""
+        """Send now-playing metadata every 5 seconds (without screenshots)."""
         while self.running:
             try:
-                preview = self.capture_preview()
                 self.sync_manager.report_playback_state(
                     playing_playlist_id=self.current_playlist_id_for_preview,
                     current_content_name=self.current_content_name_for_preview,
-                    preview_path=preview,
+                    preview_path=None,
                 )
             except Exception as e:
                 logging.warning(f"[PREVIEW] Reporting failed: {e}")

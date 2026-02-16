@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, FileVideo, Globe } from "lucide-react";
 
 type DashboardDevice = {
     id: string;
@@ -10,14 +10,16 @@ type DashboardDevice = {
     lastSeenAt: string | null;
     connectivityStatus?: string;
     currentContentName?: string | null;
-    previewImageUrl?: string | null;
-    previewCapturedAt?: string | null;
+    contentPreview?: {
+        type: string;
+        url: string;
+        name: string;
+    } | null;
     activePlaylist?: { id: string; name: string } | null;
     playingPlaylist?: { id: string; name: string } | null;
     schedule?: { id: string; name: string } | null;
 };
 
-const PREVIEW_STALE_MS = 30_000;
 const ONLINE_STALE_MS = 5 * 60_000;
 const POLL_INTERVAL_MS = 5_000;
 
@@ -28,12 +30,6 @@ function twoLineClampStyle() {
         WebkitLineClamp: 2,
         overflow: "hidden",
     };
-}
-
-function isPreviewFresh(previewCapturedAt: string | null | undefined) {
-    if (!previewCapturedAt) return false;
-    const capturedAt = new Date(previewCapturedAt).getTime();
-    return Date.now() - capturedAt <= PREVIEW_STALE_MS;
 }
 
 function isDeviceOnline(device: DashboardDevice) {
@@ -87,8 +83,7 @@ export default function DevicePreviewGrid({
                 {devices.map((device) => {
                     const isExpanded = !!expandedById[device.id];
                     const online = isDeviceOnline(device);
-                    const freshPreview = isPreviewFresh(device.previewCapturedAt);
-                    const showPreview = online && freshPreview && !!device.previewImageUrl;
+                    const preview = device.contentPreview;
 
                     return (
                         <div
@@ -116,12 +111,26 @@ export default function DevicePreviewGrid({
                             {isExpanded && (
                                 <div className="space-y-2 px-4 pb-4">
                                     <div className="h-28 w-full overflow-hidden rounded-md bg-gray-100">
-                                        {showPreview ? (
-                                            <img
-                                                src={device.previewImageUrl || ""}
-                                                alt={`Preview of ${device.name || "device"}`}
-                                                className="h-full w-full object-cover"
-                                            />
+                                        {preview ? (
+                                            preview.type === "video" ? (
+                                                <div className="relative flex h-full w-full items-center justify-center bg-gray-900">
+                                                    <FileVideo className="h-10 w-10 text-gray-500" />
+                                                    <video src={preview.url} className="absolute inset-0 h-full w-full object-cover opacity-50" />
+                                                </div>
+                                            ) : preview.type === "image" ? (
+                                                <img
+                                                    src={preview.url}
+                                                    alt={preview.name}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full w-full flex-col items-center justify-center bg-indigo-50">
+                                                    <Globe className="mb-2 h-10 w-10 text-indigo-400" />
+                                                    <span className="max-w-[150px] truncate px-4 text-center text-xs font-medium text-indigo-900">
+                                                        {preview.name}
+                                                    </span>
+                                                </div>
+                                            )
                                         ) : (
                                             <div className="flex h-full w-full items-center justify-center text-sm font-medium text-gray-500">
                                                 {online ? "preview unavailable" : "offline"}

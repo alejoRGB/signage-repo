@@ -43,6 +43,33 @@ export async function GET(request: Request) {
         },
     });
 
+    const mediaItems = await prisma.mediaItem.findMany({
+        where: {
+            userId: session.user.id,
+        },
+        select: {
+            name: true,
+            filename: true,
+            type: true,
+            url: true,
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+    });
+
+    const mediaByFilename = new Map<string, { type: string; url: string; name: string }>();
+    const mediaByName = new Map<string, { type: string; url: string; name: string }>();
+    for (const media of mediaItems) {
+        const preview = { type: media.type, url: media.url, name: media.name };
+        if (media.filename && !mediaByFilename.has(media.filename)) {
+            mediaByFilename.set(media.filename, preview);
+        }
+        if (!mediaByName.has(media.name)) {
+            mediaByName.set(media.name, preview);
+        }
+    }
+
     // Calculate dynamic status based on lastSeenAt
     const devicesWithStatus = devices.map(device => {
         let status = "offline";
@@ -60,7 +87,10 @@ export async function GET(request: Request) {
 
         return {
             ...device,
-            connectivityStatus: status
+            connectivityStatus: status,
+            contentPreview: device.currentContentName
+                ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
+                : null,
         };
     });
 
