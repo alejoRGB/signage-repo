@@ -2,7 +2,7 @@
 
 ## Overview
 **Product Name:** Expanded Signage (Digital Signage System)
-**Version:** 1.3 (Feb 2026)
+**Version:** 1.4 (Feb 2026)
 **Purpose:** Cloud-based digital signage management system with web dashboard and Raspberry Pi player client.
 
 ## Core Decisions
@@ -11,7 +11,8 @@
   - **Edge:** Player Client (Raspberry Pi, Python, MPV).
 - **Control Flow:**
   - Dashboard is Source of Truth for configuration.
-  - Player syncs via API (Push/Pull model via Heartbeat) and reports active state ("True Sync").
+  - Player syncs via HTTP APIs and reports active state ("True Sync").
+  - Sync/VideoWall control plane is command-queue + heartbeat based (`/api/device/commands`, `/api/device/ack`, `/api/device/heartbeat`, `/api/device/logs`).
 - **Authentication:**
   - **Users:** NextAuth (Email/Password) against `User` table.
   - **Admins:** NextAuth against `Admin` table. Separate credentials.
@@ -55,6 +56,7 @@
 - **Operating System:** Raspberry Pi OS / Linux.
 - **Network:** Devices must handle offline playback (cache required).
 - **Multi-Device:** Sync/VideoWall support is feature-flagged (`SYNC_VIDEOWALL_ENABLED`).
+- **Sync Target:** Same LAN, up to 20 devices, drift target p95 <= 40ms.
 - **Content:** Images, Videos, Web Pages. Mixed playlists are NOT supported (only `media` or `web` playlists).
 - **Schedule:** Canonical editing model is slot-based (30-minute cells). Persisted API payload remains `dayOfWeek`, `startTime`, `endTime`, `playlistId`.
 - **Observability:** Dashboard displays assigned Schedule per device (or "No Schedule"). Status reflects connectivity and sync state.
@@ -81,6 +83,12 @@
 - **Sync Feature Gate:** `SYNC_VIDEOWALL_ENABLED=false` hides Sync tab and forces dashboard directive fallback to `Schedules` without touching schedule behavior.
 - **Rollout Plan:** Incremental enablement in staging/prod: pilot `3 devices` -> `10 devices` -> `20 devices`.
 - **Rollback Rule:** Disable Sync by setting `SYNC_VIDEOWALL_ENABLED=false` and redeploy. This must immediately remove Sync entry points while preserving Schedules operations.
+- **Sync Backend APIs (active):**
+  - Presets: `/api/sync/presets`, `/api/sync/presets/[id]`
+  - Sessions: `/api/sync/session/start`, `/api/sync/session/active`, `/api/sync/session/stop`
+  - Device channel: `/api/device/commands`, `/api/device/ack`, `/api/device/heartbeat`, `/api/device/logs`
+- **Sync Data Model (active):** `SyncPreset`, `SyncPresetDevice`, `SyncSession`, `SyncSessionDevice`, `SyncDeviceCommand`, and structured `DeviceLog` sync events.
+- **Sync Test Gate (required):** `python execution/run_tests.py sync`
 - **Staging Checklist (required):**
   - Baseline with flag OFF: dashboard shows `Schedules` only; no Sync controls visible.
   - Flag ON in staging: run `python execution/run_tests.py sync`.
@@ -92,7 +100,7 @@
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
-2. **Sync:** Device heartbeats (60s) -> Receives JSON payload -> Downloads media -> Reports `playingPlaylistId` -> Plays.
+2. **Schedule Sync:** Device polls `/api/device/sync` -> Downloads media -> Reports `playingPlaylistId` -> Plays.
 3. **Playback:**
    - Media: MPV loop.
    - Web: Chromium Kiosk.
@@ -100,4 +108,6 @@
 4. **Sync/VideoWall (feature-flagged):**
    - Enabled only when `SYNC_VIDEOWALL_ENABLED=true`.
    - Session control from Sync tab (`start/stop`, readiness, health panel).
+   - Runtime statuses: `assigned -> preloading -> ready -> warming_up -> playing -> disconnected/errored`.
+   - Device events/logs include `READY`, `STARTED`, `SOFT_CORRECTION`, `HARD_RESYNC`, `REJOIN`, `MPV_CRASH`, `THERMAL_THROTTLE`.
    - Disabled state must keep the full Schedules flow unaffected.

@@ -21,6 +21,21 @@ The player uses a hybrid approach to handle different content types and duration
 - **Pros:** Zero gap between items, lower CPU usage.
 - **Cons:** Cannot handle per-item custom durations easily without complex EDL files.
 
+### 3. Sync/VideoWall Mode (Implemented)
+- **Used for:** active Sync sessions controlled by backend commands.
+- **Mechanism:**
+  - Player receives `sync.prepare` via command polling.
+  - MPV starts in paused warm-up mode with Lua script `lua/videowall_sync.lua`.
+  - Runtime loop applies correction policy:
+    - deadband `< 25ms`
+    - soft correction `25..500ms`
+    - hard resync `>= 500ms`
+- **Config files:**
+  - `mpv-videowall.conf`
+  - `lua/videowall_sync.lua`
+- **State transitions:** `assigned -> preloading -> ready -> warming_up -> playing` with rejoin support.
+- **Observability:** emits structured sync events (`READY`, `STARTED`, `HARD_RESYNC`, `REJOIN`, `MPV_CRASH`, `THERMAL_THROTTLE`).
+
 ## Configuration & Constraints
 - **Socket Location:** MUST be in a persistent user directory (e.g., `~/signage-player/mpv.sock`), NOT `/tmp`.
   - Reason: `/tmp` cleaning policies or systemd isolation can cause "Connection refused" errors even if the process is running.

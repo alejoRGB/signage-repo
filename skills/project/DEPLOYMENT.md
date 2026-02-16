@@ -7,6 +7,7 @@
   - `DATABASE_URL_UNPOOLED`: Neon Postgres **non-pooler** connection string (required by Prisma; must NOT include `-pooler`).
   - `NEXTAUTH_SECRET`: Auth secret.
   - `NEXT_PUBLIC_APP_URL`: Canonical URL for the app (prevents Host Header Injection in sync).
+  - `SYNC_VIDEOWALL_ENABLED`: Feature gate for Sync UI + Sync session control (`true`/`false`, default `false`).
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
   - `E2E_USERNAME` / `E2E_PASSWORD`: Required for credentialed E2E testing (DO NOT hardcode in tests).
   - `E2E_BASE_URL`: Optional override for Playwright; defaults to canonical production URL.
@@ -19,6 +20,28 @@
 - **QA Artifacts:** Also ignore `qa_automation/playwright-report` and `qa_automation/test-results`.
 - **Admin Recovery:** Use `web/scripts/reset_password.js` to reset admin credentials directly in DB.
 - **Device Debugging:** Use `web/scripts/check_devices.js` to verify device tokens and status in DB.
+
+## Sync Release Checklist (Vercel)
+1. Confirm env vars in target environment:
+   - `SYNC_VIDEOWALL_ENABLED=true` (only when rollout stage enables Sync)
+   - `NEXT_PUBLIC_APP_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_SECRET` valid.
+2. Deploy web from `master`.
+3. Run DB migrations in deployed environment:
+```bash
+cd web
+npx prisma migrate deploy
+npx prisma generate
+```
+4. Validate Sync test gate locally before production promotion:
+```bash
+python execution/run_tests.py sync
+```
+5. Execute staging runbook before scaling rollout:
+   - `docs/sync_qa_runbook.md`
+6. Rollback (fast):
+   - Set `SYNC_VIDEOWALL_ENABLED=false`
+   - Redeploy web
+   - Keep Schedules path operational.
 
 ## Edge Deployment (Raspberry Pi)
 ### One-Line Install (Canonical)
@@ -38,6 +61,20 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
    - `powershell .\deploy.ps1 -PlayerIp <IP> -PlayerUser <USER>`
 3. Ensure `~/signage-player/config.json` has empty/unset token for new pairing (`device_token: null` or `device_token: ""`).
 4. After a successful deploy and restart, the pairing code should appear on screen.
+
+### Multi-Device Deploy (Sync pilot/fleet)
+- Deploy player updates device by device:
+```powershell
+python execution/player_ops.py deploy -PlayerIp <IP> -PlayerUser <USER>
+```
+- Validate service and clock after each deploy:
+```powershell
+python execution/player_ops.py remote_status -PlayerIp <IP> -PlayerUser <USER>
+```
+```bash
+chronyc tracking
+```
+- If player logs show `Invalid device token`, re-pair the device (clear/remove token in `~/signage-player/config.json` and restart service).
 
 ### Updates
 - **Code:** `git pull` in `~/signage-player`.

@@ -133,3 +133,32 @@ El usuario va a la lista de **Dispositivos** y selecciona uno para editar o ver 
 **¿Qué ve en pantalla?**
 - Dashboard: Panel de propiedades del dispositivo. El estado se actualiza en tiempo real (verde/rojo).
 - Pantalla física: En menos de un minuto, el contenido se actualiza automáticamente a la nueva configuración.
+
+---
+
+## Feature 7: Sync VideoWall (Feature Flagged)
+- **Nombre:** Sync Session Control (VideoWall)
+- **Que hace (1 frase):** Permite iniciar y detener sesiones de reproduccion sincronizada entre multiples Raspberry en la misma LAN.
+- **Beneficio para el usuario:** Operacion centralizada para paredes de video con monitoreo de readiness, drift y salud por dispositivo.
+- **Ejemplo de uso real:** El operador inicia una sesion Sync para 10 pantallas y monitorea p95 drift, resync count y estado de master/failover.
+- **Nivel de importancia:** Clave (Key)
+
+### C. Flujo de uso (si aplica)
+**Como empieza el usuario?**
+El usuario entra a `/dashboard`, abre la tab `Sync/VideoWall` y usa un preset Sync valido.
+
+**Que pasos sigue?**
+1. Crea o selecciona un preset (common/per-device) con videos de igual duracion.
+2. Presiona `Start` para iniciar sesion Sync.
+3. Espera transicion de estados por device: `assigned -> preloading -> ready -> warming_up -> playing`.
+4. Monitorea salud y drift en tiempo real.
+5. Presiona `Stop` para cerrar sesion y persistir resumen de calidad.
+
+**Que ve en pantalla?**
+- Panel Sync con controles Start/Stop, readiness por device, master device actual, y metricas de drift/salud.
+- Logs por dispositivo filtrables por `sessionId` y `event` (`READY`, `HARD_RESYNC`, `REJOIN`, etc.).
+
+**Reglas de rollout y seguridad operacional**
+- Feature gate: `SYNC_VIDEOWALL_ENABLED=true` para habilitar la funcionalidad.
+- Rollout incremental: `3 -> 10 -> 20` dispositivos.
+- Rollback rapido: `SYNC_VIDEOWALL_ENABLED=false` + redeploy, sin afectar flujo Schedules.

@@ -34,7 +34,11 @@
    - **Web Loop:** Used for `web` playlists with Chromium playback and schedule-based switching.
    - **Native Media Loop:** Optimized mode for homogeneous video media playlists (MPV native loop).
 2. **Offline First:** Player *must* continue working if network fails.
-3. **No Web sockets:** Communication is polling-based (Heartbeat every 60s).
+3. **No Web sockets (baseline):** Communication is HTTP polling-based.
+   - Device schedule sync: `/api/device/sync`
+   - Device command channel: `/api/device/commands` + `/api/device/ack`
+   - Device runtime updates: `/api/device/heartbeat`
+   - Structured device events: `/api/device/logs`
 4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`) and refreshes device state from `/api/devices` every 10s in Devices UI.
    - "Syncing..." is shown only while there is explicit mismatch between active playlist and a reported `playingPlaylistId`, or during optimistic update.
 5. **API Security:** 
@@ -70,3 +74,20 @@
    - Progress to next stage only if drift/health KPIs remain within runbook thresholds.
    - Rollback path is fast and reversible: set `SYNC_VIDEOWALL_ENABLED=false` and redeploy.
    - Rollback must preserve existing Schedules behavior with no schema or playlist migration required.
+12. **Sync Domain Architecture (implemented):**
+   - Prisma domain objects:
+     - `SyncPreset`, `SyncPresetDevice`
+     - `SyncSession`, `SyncSessionDevice`
+     - `SyncDeviceCommand`
+   - Session lifecycle:
+     - `CREATED -> STARTING -> WARMING_UP -> RUNNING -> STOPPED/ABORTED`
+   - Per-device lifecycle:
+     - `ASSIGNED -> PRELOADING -> READY -> WARMING_UP -> PLAYING -> DISCONNECTED/ERRORED`
+   - Master election and failover:
+     - Initial master selected on session start.
+     - Automatic re-election when master heartbeat expires.
+13. **Sync Observability Architecture (implemented):**
+   - Structured sync logs are persisted in `DeviceLog` (`event`, `sessionId`, `data`).
+   - Runtime health in `SyncSessionDevice` includes drift history, resync count/rate, clock offset, thermal/throttled flags.
+   - Session quality summary persisted on stop:
+     - `avgDriftMs`, `p50DriftMs`, `p90DriftMs`, `p95DriftMs`, `p99DriftMs`, `maxDriftMs`, `totalResyncs`, `devicesWithIssues`.
