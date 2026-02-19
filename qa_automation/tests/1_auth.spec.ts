@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-const TEST_USER = process.env.E2E_USERNAME;
-const TEST_PASS = process.env.E2E_PASSWORD;
+const normalizeEnv = (value?: string) => value?.trim();
+
+const TEST_USER = normalizeEnv(process.env.E2E_USERNAME);
+const TEST_PASS = normalizeEnv(process.env.E2E_PASSWORD);
 
 test.describe('Phase 1: Core & Authentication (No Credentials Required)', () => {
 

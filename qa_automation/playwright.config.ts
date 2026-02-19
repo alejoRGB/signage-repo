@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.E2E_BASE_URL?.trim() || 'https://signage-repo-dc5s.vercel.app';
+
 export default defineConfig({
     testDir: './tests',
     fullyParallel: true,
@@ -8,7 +10,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     reporter: 'html',
     use: {
-        baseURL: 'https://signage-repo-dc5s.vercel.app',
+        baseURL,
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',

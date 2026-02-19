@@ -4,6 +4,7 @@ Este directorio contiene la suite de QA automatizada (Playwright) y referencias 
 
 ## Estructura
 - `tests/1_auth.spec.ts`: pruebas actuales de autenticacion.
+- `tests/2_admin.spec.ts`: pruebas de autenticacion/autorizacion para `/admin`.
 - `package.json`: dependencias y scripts de Playwright.
 - `playwright.config.ts`: configuracion global de Playwright.
 - `../docs/sync_qa_runbook.md`: runbook manual de carga y caos para Sync (2/5/10/20 devices).
@@ -44,5 +45,13 @@ python execution/run_tests.py sync
 3. Adjuntar evidencia y consolidar resultado PASS/FAIL por escala.
 
 ## Credenciales
-Las pruebas Playwright actuales usan credenciales definidas en `tests/1_auth.spec.ts`.
-Si cambian, actualizar ese archivo.
+Las pruebas Playwright usan variables de entorno (sin hardcodear secretos):
+
+- Usuario dashboard:
+  - `E2E_USERNAME`
+  - `E2E_PASSWORD`
+- Usuario admin:
+  - `E2E_ADMIN_USERNAME` (o `E2E_ADMIN_EMAIL`)
+  - `E2E_ADMIN_PASSWORD`
+
+Si no se definen, las pruebas credentialed se marcan como `skipped`.
