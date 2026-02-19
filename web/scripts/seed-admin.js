@@ -1,25 +1,37 @@
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const dotenv = require('dotenv');
+const path = require('path');
+
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 const prisma = new PrismaClient();
 
 async function main() {
-    const email = 'admin@example.invalid';
-    const password = 'admin'; // Default password
+    const email = (process.env.ADMIN_EMAIL || '').trim();
+    const password = process.env.ADMIN_PASSWORD || '';
+    const adminName = (process.env.ADMIN_NAME || 'Super Admin').trim() || 'Super Admin';
+
+    if (!email || !password) {
+        throw new Error(
+            'Missing ADMIN_EMAIL or ADMIN_PASSWORD. Set both env vars before running seed-admin.',
+        );
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const admin = await prisma.admin.upsert({
         where: { email },
-        update: {}, // Do nothing if exists
+        update: {},
         create: {
             email,
             password: hashedPassword,
-            name: 'Super Admin',
+            name: adminName,
         },
     });
 
-    console.log({ admin });
+    console.log(`Admin seeded/verified: ${admin.email}`);
 }
 
 main()
@@ -30,3 +42,4 @@ main()
     .finally(async () => {
         await prisma.$disconnect();
     });
+

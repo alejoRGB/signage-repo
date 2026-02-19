@@ -2,7 +2,8 @@
 
 ## Cloud Deployment (Vercel)
 - **Repo:** GitHub connected.
-- **Canonical Production URL:** `https://signage-repo-dc5s.vercel.app`
+- **Canonical Production URL:** `https://senaldigital.xyz`
+- **Canonical Project Link:** scope `alejos-projects-7a73f1be`, project `signage-repo-dc5s`
 - **Environment:**
   - `DATABASE_URL_UNPOOLED`: Neon Postgres **non-pooler** connection string (required by Prisma; must NOT include `-pooler`).
   - `NEXTAUTH_SECRET`: Auth secret.
@@ -11,6 +12,7 @@
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
   - `E2E_USERNAME` / `E2E_PASSWORD`: Required for credentialed E2E testing (DO NOT hardcode in tests).
   - `E2E_BASE_URL`: Optional override for Playwright; defaults to canonical production URL.
+  - `E2E_SYNC_MODE`: Optional QA selector for Sync gate tests (`on` / `off`). This does NOT toggle product feature flags.
 
 ## Security & Maintenance
 - **Credentials:** 
@@ -18,7 +20,7 @@
   - Rotated credentials (Feb 2026) due to historic exposure.
 - **Gitignore:** Ensure `web/dev.db`, `web/public/uploads`, `playwright-report`, `test-results`, and `.env*` are ignored.
 - **QA Artifacts:** Also ignore `qa_automation/playwright-report` and `qa_automation/test-results`.
-- **Admin Recovery:** Use `web/scripts/reset_password.js` to reset admin credentials directly in DB.
+- **Admin Recovery:** Use `web/scripts/reset_password.js` with `ADMIN_EMAIL` and `ADMIN_PASSWORD` env vars to reset admin credentials directly in DB.
 - **Device Debugging:** Use `web/scripts/check_devices.js` to verify device tokens and status in DB.
 
 ## Sync Release Checklist (Vercel)
@@ -35,13 +37,40 @@ npx prisma generate
 4. Validate Sync test gate locally before production promotion:
 ```bash
 python execution/run_tests.py sync
+python execution/run_tests.py qa:smoke --project=chromium
+python execution/run_tests.py qa:regression --project=chromium
+# If Sync flag is enabled in the target environment:
+python execution/run_tests.py qa:sync:on --project=chromium
+# If Sync flag is disabled in the target environment:
+python execution/run_tests.py qa:sync:off --project=chromium
 ```
 5. Execute staging runbook before scaling rollout:
    - `docs/sync_qa_runbook.md`
-6. Rollback (fast):
+   - Validate start alignment from persisted `DeviceLog` events (`STARTED.data.started_at_ms`) with inter-device gap `<= 100ms`.
+6. If Sync tuning defaults are changed in web code (for example `web/lib/sync-command-service.ts`), redeploy web before validating behavior on devices.
+   - Confirmation rule: player logs for new sessions must show the expected tuning tuple in `[VIDEOWALL] Sync tuning ...`.
+   - If logs still show old values (`soft=[25,500] deadband=25`), web deploy has not applied yet.
+7. Rollback (fast):
    - Set `SYNC_VIDEOWALL_ENABLED=false`
    - Redeploy web
    - Keep Schedules path operational.
+
+## Canonical QA Runtime Notes (Updated Feb 19, 2026)
+- Production QA runs use:
+  - `E2E_BASE_URL=https://senaldigital.xyz`
+  - Credentialed auth (`E2E_USERNAME`, `E2E_PASSWORD`)
+- Sync gate behavior is controlled only by deployment env var `SYNC_VIDEOWALL_ENABLED`.
+- `E2E_SYNC_MODE` only decides which test subset runs:
+  - `qa:sync:on` -> runs `@sync-on`
+  - `qa:sync:off` -> runs `@sync-off`
+- Recommended policy to avoid excessive production redeploys:
+  - Validate `qa:sync:on` in production when production flag is ON.
+  - Validate `qa:sync:off` in staging/preview with flag OFF.
+  - Toggle production flag only when explicitly validating rollback behavior.
+- Confirmed on Feb 19, 2026:
+  - `qa:smoke` passed against production.
+  - `qa:sync:off` passed when `SYNC_VIDEOWALL_ENABLED=false` and deployment was redeployed.
+  - `qa:sync:on` passed after restoring `SYNC_VIDEOWALL_ENABLED=true` and redeploying.
 
 ## Edge Deployment (Raspberry Pi)
 ### One-Line Install (Canonical)
@@ -67,6 +96,7 @@ curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/s
 ```powershell
 python execution/player_ops.py deploy -PlayerIp <IP> -PlayerUser <USER>
 ```
+- In environments without SSH keys, password-based `plink/pscp` with host-key pinning is an accepted fallback for urgent player-only rollout.
 - Validate service and clock after each deploy:
 ```powershell
 python execution/player_ops.py remote_status -PlayerIp <IP> -PlayerUser <USER>
@@ -75,6 +105,9 @@ python execution/player_ops.py remote_status -PlayerIp <IP> -PlayerUser <USER>
 chronyc tracking
 ```
 - If player logs show `Invalid device token`, re-pair the device (clear/remove token in `~/signage-player/config.json` and restart service).
+- For Sync diagnostics after deploy, also capture:
+  - `journalctl -u signage-player` filtered by `VIDEOWALL_SYNC`, `HARD_RESYNC`, `SOFT_CORRECTION`
+  - Latest `Dropped` frame counters from mpv log lines.
 
 ### Updates
 - **Code:** `git pull` in `~/signage-player`.
