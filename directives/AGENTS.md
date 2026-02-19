@@ -11,6 +11,26 @@ This file consolidates the responsibilities, capabilities, and tools for all age
 
 ---
 
+## Mandatory Delivery Workflow (All Agents)
+For every code/config/documentation change made by an agent:
+
+1. **Commit** the change in git with a clear message.
+2. **Push** to `origin/master` so Vercel can trigger a deployment.
+3. **Verify** the latest production deployment status in Vercel.
+4. If deployment is `Error`, the agent must:
+   - inspect build/runtime logs,
+   - apply a fix,
+   - commit + push again,
+   - re-check Vercel until deployment is `Ready`.
+5. Report back with:
+   - commit hash,
+   - deployment URL,
+   - deployment status confirmation (`Ready`).
+
+This workflow is required by default unless the user explicitly asks to skip commit/push/deploy verification for a specific task.
+
+---
+
 ## 1. Coordinator Agent
 **Role**: Project Coordinator. Orchestrate development by routing tasks to sub-agents and maintaining architectural integrity.
 
