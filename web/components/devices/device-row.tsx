@@ -51,8 +51,9 @@ export default function DeviceRow({
     }, [isSynced, hasActivePlaylist]);
 
     useEffect(() => {
-        if (isPlaylistSelectionLocked && document.activeElement === playlistSelectRef.current) {
-            playlistSelectRef.current.blur();
+        const selectElement = playlistSelectRef.current;
+        if (isPlaylistSelectionLocked && selectElement && document.activeElement === selectElement) {
+            selectElement.blur();
         }
     }, [isPlaylistSelectionLocked]);
 
