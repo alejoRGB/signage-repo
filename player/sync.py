@@ -355,15 +355,21 @@ class SyncManager:
                 if ":" not in line:
                     continue
                 key, value = [part.strip() for part in line.split(":", 1)]
-                lowered = key.lower()
-                if lowered == "leap status":
+                normalized_key = re.sub(r"\s+", " ", key).strip().lower()
+                if normalized_key == "leap status":
                     leap_status = value
-                elif lowered in {"last offset", "rms offset", "system time"}:
+                elif normalized_key in {"last offset", "rms offset", "system time"}:
                     parsed = self._parse_seconds_to_ms(value)
                     if parsed is not None:
                         offset_ms = parsed
-                        if lowered == "last offset":
+                        if normalized_key == "last offset":
                             break
+
+            # Fallback parser for environments where key spacing/characters vary.
+            if leap_status is None:
+                leap_match = re.search(r"leap\s+status\s*:\s*(.+)", tracking_output, flags=re.IGNORECASE)
+                if leap_match:
+                    leap_status = leap_match.group(1).strip()
 
             throttled = False
             try:
@@ -381,7 +387,7 @@ class SyncManager:
             except Exception:
                 throttled = False
 
-            healthy_leap = (leap_status or "").lower() == "normal"
+            healthy_leap = (leap_status or "").strip().lower() == "normal"
             healthy_offset = offset_ms is not None and abs(offset_ms) <= max_offset_ms
             healthy = healthy_leap and healthy_offset and not throttled
 
