@@ -11,8 +11,19 @@ This file consolidates the responsibilities, capabilities, and tools for all age
 
 ---
 
-## Mandatory Delivery Workflow (All Agents)
-For every code/config/documentation change made by an agent:
+## Mandatory Scope Classification (All Agents)
+Before executing delivery/deployment steps, classify the change scope:
+
+1. **Web-only change**: impacts `web/**` (or backend/API used by web) and does not impact Raspberry runtime files.
+2. **Player-only change**: impacts Raspberry runtime/deploy files (`player/**`, `deploy.ps1`, `execution/player_ops.py`) and does not impact web behavior.
+3. **Mixed change**: impacts both web and player domains.
+
+This classification is mandatory and drives which deployment workflow must run.
+
+---
+
+## Mandatory Web Delivery Workflow (Web-only or Mixed)
+Run this workflow only when scope includes web impact (`Web-only` or `Mixed`):
 
 1. **Commit** the change in git with a clear message.
 2. **Push** to `origin/master` so Vercel can trigger a deployment.
@@ -27,11 +38,11 @@ For every code/config/documentation change made by an agent:
    - deployment URL,
    - deployment status confirmation (`Ready`).
 
-This workflow is required by default unless the user explicitly asks to skip commit/push/deploy verification for a specific task.
+For `Player-only` changes, this workflow is **not required** unless explicitly requested by the user.
 
 ---
 
-## Mandatory Raspberry Deployment Workflow (Player Changes)
+## Mandatory Raspberry Deployment Workflow (Player-only or Mixed)
 When a task modifies Raspberry/player-related files, deployment to Raspberry devices is mandatory before closing the task.
 
 Trigger this workflow when changes include any of:
@@ -46,6 +57,8 @@ Required steps:
 3. Report deployment result per device (IP/hostname + status).
 
 If IP, username, or password/credential is missing, the agent must ask the user for those values before attempting deployment.
+
+For `Web-only` changes, Raspberry deployment is **not required** unless explicitly requested by the user.
 
 ---
 
