@@ -936,8 +936,10 @@ class Player:
         check_schedule_interval = 10 
         last_check_time = 0
 
+        loop_sleep_s = 0.2
+
         while self.running:
-            time.sleep(1)
+            time.sleep(loop_sleep_s)
             now_ts = time.time()
             self.videowall_controller.tick()
 

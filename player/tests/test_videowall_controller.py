@@ -224,3 +224,51 @@ def test_crash_recovery_rejoins_with_seek_and_resets_attempts():
     assert restarts["count"] == 1
     assert seeks["count"] == 1
     assert controller._restart_attempts == 0
+
+
+def test_ready_transition_aligns_phase_before_unpause(mocker):
+    now_ms = 1_000_000
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-5",
+            start_at_ms=now_ms - 900,
+            duration_ms=10000,
+            local_path="/tmp/video.mp4",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+
+    seeks = []
+    pause_calls = []
+
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda phase_ms: seeks.append(phase_ms) or True,
+        set_pause=lambda paused: pause_calls.append(paused) or True,
+        is_playback_alive=lambda: True,
+    )
+
+    mocker.patch("videowall_controller.time.time", return_value=now_ms / 1000.0)
+
+    controller._advance_runtime_state()
+
+    assert len(seeks) == 1
+    assert seeks[0] == 900
+    assert pause_calls == [False]
+    assert machine.state == "WARMING_UP"

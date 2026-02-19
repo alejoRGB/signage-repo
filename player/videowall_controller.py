@@ -371,6 +371,17 @@ class VideowallController:
             return
 
         if self.state_machine.state == SYNC_STATE_READY and now_ms >= context.start_at_ms:
+            target_phase = compute_target_phase_ms(now_ms, context.start_at_ms, context.duration_ms)
+            seek_to_ms = None
+            if target_phase is not None:
+                seek_to_ms = round_to_frame(target_phase)
+                if not self.seek_to_phase_ms(seek_to_ms):
+                    logging.warning(
+                        "[VIDEOWALL] Initial phase alignment failed for session %s (seek_to_ms=%s)",
+                        context.session_id,
+                        seek_to_ms,
+                    )
+
             self.set_pause(False)
             if self.state_machine.transition(SYNC_STATE_WARMING_UP):
                 self._enter_warmup(now_ms, rejoin=False)
@@ -380,6 +391,8 @@ class VideowallController:
                     data={
                         "start_at_ms": context.start_at_ms,
                         "started_at_ms": now_ms,
+                        "start_delay_ms": now_ms - context.start_at_ms,
+                        "seek_to_ms": seek_to_ms,
                     },
                 )
 
