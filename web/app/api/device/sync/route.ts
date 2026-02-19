@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractSyncRuntimeFromJson, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
+import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
             where: { token: device_token },
             include: {
                 user: {
-                    select: { isActive: true }
+                    select: { isActive: true, activeDirectiveTab: true }
                 },
                 // Include Schedule and its relations
                 schedule: {
@@ -147,27 +148,44 @@ export async function POST(request: Request) {
             };
         };
 
+        const isSyncVideowallDirectiveActive =
+            device.user?.activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL;
+
+        const schedulePayload = isSyncVideowallDirectiveActive
+            ? null
+            : device.schedule
+                ? {
+                    id: device.schedule.id,
+                    name: device.schedule.name,
+                    items: device.schedule.items.map((item) => ({
+                        dayOfWeek: item.dayOfWeek,
+                        startTime: item.startTime,
+                        endTime: item.endTime,
+                        playlist: formatPlaylist(item.playlist)
+                    }))
+                }
+                : null;
+
+        const defaultPlaylistPayload = isSyncVideowallDirectiveActive
+            ? null
+            : formatPlaylist(device.defaultPlaylist);
+
+        const legacyPlaylistPayload = isSyncVideowallDirectiveActive
+            ? null
+            : formatPlaylist(device.activePlaylist || device.defaultPlaylist);
+
         // Construct Response
         const responsePayload = {
-            _debug_version: "1.0.3",
+            _debug_version: "1.0.4",
             device_id: device.id,
             device_name: device.name,
             // Legacy field (deprecated but useful for fallback)
-            playlist: formatPlaylist(device.activePlaylist || device.defaultPlaylist),
+            playlist: legacyPlaylistPayload,
 
             // New Scheduling Fields
-            schedule: device.schedule ? {
-                id: device.schedule.id,
-                name: device.schedule.name,
-                items: device.schedule.items.map((item) => ({
-                    dayOfWeek: item.dayOfWeek,
-                    startTime: item.startTime,
-                    endTime: item.endTime,
-                    playlist: formatPlaylist(item.playlist)
-                }))
-            } : null,
+            schedule: schedulePayload,
 
-            default_playlist: formatPlaylist(device.defaultPlaylist)
+            default_playlist: defaultPlaylistPayload
         };
 
         return NextResponse.json(responsePayload);

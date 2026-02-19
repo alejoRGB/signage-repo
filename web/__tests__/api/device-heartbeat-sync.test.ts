@@ -104,4 +104,81 @@ describe("Device runtime sync persistence", () => {
             })
         );
     });
+
+    it("device sync route suppresses schedule/default payload when Sync tab is active", async () => {
+        (extractSyncRuntimeFromJson as jest.Mock).mockReturnValue(null);
+
+        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
+            id: "device-1",
+            token: "token-1",
+            name: "Device 1",
+            user: { isActive: true, activeDirectiveTab: "SYNC_VIDEOWALL" },
+            schedule: {
+                id: "schedule-1",
+                name: "Schedule",
+                items: [
+                    {
+                        dayOfWeek: 1,
+                        startTime: "09:00",
+                        endTime: "10:00",
+                        playlist: {
+                            id: "playlist-schedule",
+                            name: "Schedule Playlist",
+                            orientation: "landscape",
+                            items: [
+                                {
+                                    id: "pi-1",
+                                    order: 1,
+                                    duration: 10,
+                                    mediaItem: {
+                                        id: "m-1",
+                                        type: "image",
+                                        url: "https://cdn.example.com/m-1.jpg",
+                                        name: "Image",
+                                        filename: "m-1.jpg",
+                                        duration: null,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+            defaultPlaylist: {
+                id: "playlist-default",
+                name: "Default Playlist",
+                orientation: "landscape",
+                items: [
+                    {
+                        id: "pi-2",
+                        order: 1,
+                        duration: 10,
+                        mediaItem: {
+                            id: "m-2",
+                            type: "image",
+                            url: "https://cdn.example.com/m-2.jpg",
+                            name: "Image 2",
+                            filename: "m-2.jpg",
+                            duration: null,
+                        },
+                    },
+                ],
+            },
+            activePlaylist: null,
+        });
+
+        const response = await DEVICE_SYNC_POST(
+            new Request("http://localhost/api/device/sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ device_token: "token-1" }),
+            })
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.playlist).toBeNull();
+        expect(body.schedule).toBeNull();
+        expect(body.default_playlist).toBeNull();
+    });
 });
