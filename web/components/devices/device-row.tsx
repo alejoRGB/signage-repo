@@ -12,6 +12,7 @@ type DeviceRowProps = {
     onViewLogs: (device: Device) => void;
     onDelete: (id: string) => void;
     updatingDeviceId?: string | null;
+    isPlaylistSelectionLocked?: boolean;
 };
 
 export default function DeviceRow({
@@ -21,9 +22,11 @@ export default function DeviceRow({
     onEdit,
     onViewLogs,
     onDelete,
-    updatingDeviceId
+    updatingDeviceId,
+    isPlaylistSelectionLocked = false,
 }: DeviceRowProps) {
     const [showReady, setShowReady] = useState(false);
+    const playlistSelectRef = useRef<HTMLSelectElement | null>(null);
 
     // Logic for True Sync
     const isOptimisticUpdating = updatingDeviceId === device.id;
@@ -46,6 +49,12 @@ export default function DeviceRow({
         }
         prevSynced.current = isSynced;
     }, [isSynced, hasActivePlaylist]);
+
+    useEffect(() => {
+        if (isPlaylistSelectionLocked && document.activeElement === playlistSelectRef.current) {
+            playlistSelectRef.current.blur();
+        }
+    }, [isPlaylistSelectionLocked]);
 
     // Don't show "Ready" if we are currently updating (optimistic)
     const shouldShowReady = showReady && !isOptimisticUpdating;
@@ -70,9 +79,14 @@ export default function DeviceRow({
             <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex flex-col gap-1">
                     <select
+                        ref={playlistSelectRef}
+                        key={`playlist-selector-${device.id}-${isPlaylistSelectionLocked ? "locked" : "unlocked"}`}
                         value={device.activePlaylist?.id || ""}
                         onChange={(e) => onPlaylistChange(device.id, e.target.value)}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        disabled={isPlaylistSelectionLocked}
+                        className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 ${
+                            isPlaylistSelectionLocked ? "cursor-not-allowed bg-gray-100 text-gray-500" : ""
+                        }`}
                     >
                         <option value="">Select Playlist</option>
                         {playlists.map((playlist) => (
@@ -81,6 +95,9 @@ export default function DeviceRow({
                             </option>
                         ))}
                     </select>
+                    {isPlaylistSelectionLocked && (
+                        <div className="text-xs font-medium text-amber-700">Sync tab selected</div>
+                    )}
                     {shouldShowReady && (
                         <div className="flex items-center gap-1 text-xs text-green-600">
                             <span className="font-medium">Synced</span>

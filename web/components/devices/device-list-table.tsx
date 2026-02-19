@@ -11,6 +11,7 @@ type DeviceListTableProps = {
     onViewLogs: (device: Device) => void;
     onDelete: (id: string) => void;
     updatingDeviceId?: string | null;
+    isPlaylistSelectionLocked?: boolean;
 };
 
 export default function DeviceListTable({
@@ -20,7 +21,8 @@ export default function DeviceListTable({
     onEdit,
     onViewLogs,
     onDelete,
-    updatingDeviceId
+    updatingDeviceId,
+    isPlaylistSelectionLocked = false,
 }: DeviceListTableProps) {
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -65,6 +67,7 @@ export default function DeviceListTable({
                                 onViewLogs={onViewLogs}
                                 onDelete={onDelete}
                                 updatingDeviceId={updatingDeviceId}
+                                isPlaylistSelectionLocked={isPlaylistSelectionLocked}
                             />
                         ))
                     )}

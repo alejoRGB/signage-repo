@@ -11,6 +11,8 @@ import DeviceLogsModal from "@/components/devices/device-logs-modal";
 import ConfirmModal from "@/components/confirm-modal";
 import EditDeviceModal from "@/components/devices/edit-device-modal";
 import { useToast } from "@/components/ui/toast-context";
+import { useDirectiveTabs } from "@/components/dashboard/directive-tabs-context";
+import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
 
 export default function DeviceManager({
     devices: initialDevices,
@@ -20,6 +22,8 @@ export default function DeviceManager({
     playlists: Playlist[];
 }) {
     const { showToast } = useToast();
+    const { activeDirectiveTab } = useDirectiveTabs();
+    const isPlaylistSelectionLocked = activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL;
     const [devices, setDevices] = useState<Device[]>(initialDevices);
 
     // Modals State
@@ -68,6 +72,10 @@ export default function DeviceManager({
     };
 
     const handlePlaylistChange = async (deviceId: string, playlistId: string) => {
+        if (isPlaylistSelectionLocked) {
+            return;
+        }
+
         setUpdatingDeviceId(deviceId);
         try {
             const res = await fetch(`/api/devices/${deviceId}`, {
@@ -185,6 +193,7 @@ export default function DeviceManager({
                 onViewLogs={setSelectedDeviceForLogs}
                 onDelete={handleDeleteClick}
                 updatingDeviceId={updatingDeviceId}
+                isPlaylistSelectionLocked={isPlaylistSelectionLocked}
             />
 
             {/* Toast Container removed */}

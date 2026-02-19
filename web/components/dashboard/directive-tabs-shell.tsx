@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, DIRECTIVE_TAB_LABEL, type DirectiveTab } from "@/lib/directive-tabs";
 import { SyncVideowallPanel } from "@/components/dashboard/sync-videowall-panel";
+import { DirectiveTabsContext } from "@/components/dashboard/directive-tabs-context";
 
 const TAB_ORDER: DirectiveTab[] = [DIRECTIVE_TAB.SCHEDULES, DIRECTIVE_TAB.SYNC_VIDEOWALL];
 const SCHEDULES_ONLY_TAB_ORDER: DirectiveTab[] = [DIRECTIVE_TAB.SCHEDULES];
@@ -71,49 +72,56 @@ export function DirectiveTabsShell({
     };
 
     return (
-        <div className="flex h-full min-h-0 flex-col">
-            <div className="border-b border-slate-700/80 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-4 pt-3 shadow-[0_10px_35px_-25px_rgba(2,6,23,0.9)]">
-                <div className="flex items-end justify-center gap-2">
-                    {availableTabs.map((tab) => {
-                        const isActiveDirectiveTab = activeDirectiveTab === tab;
-                        const isViewingTab = viewTab === tab;
-                        return (
-                            <button
-                                key={tab}
-                                type="button"
-                                data-testid={`directive-tab-${tab}`}
-                                onClick={() => setViewTab(tab)}
-                                className={`relative -mb-px flex min-w-fit items-center gap-2 rounded-t-xl border border-b-0 px-4 py-2 transition-colors ${
-                                    isViewingTab
-                                        ? "border-slate-300 bg-white text-slate-900 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.55)]"
-                                        : "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                                }`}
-                                aria-current={isViewingTab ? "page" : undefined}
-                            >
-                                <input
-                                    data-testid={`directive-checkbox-${tab}`}
-                                    type="checkbox"
-                                    checked={isActiveDirectiveTab}
-                                    disabled={isSaving}
-                                    onClick={(event) => event.stopPropagation()}
-                                    onChange={(event) => handleCheckboxChange(tab, event.target.checked)}
-                                    className="h-4 w-4 cursor-pointer rounded-[4px] border border-slate-400 accent-indigo-600"
-                                    aria-label={`Activate ${DIRECTIVE_TAB_LABEL[tab]} tab`}
-                                />
-                                <span className="select-none text-sm font-medium">{DIRECTIVE_TAB_LABEL[tab]}</span>
-                            </button>
-                        );
-                    })}
+        <DirectiveTabsContext.Provider
+            value={{
+                activeDirectiveTab,
+                viewTab,
+                isSyncVideowallEnabled,
+            }}
+        >
+            <div className="flex h-full min-h-0 flex-col">
+                <div className="border-b border-slate-700/80 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-4 pt-3 shadow-[0_10px_35px_-25px_rgba(2,6,23,0.9)]">
+                    <div className="flex items-end justify-center gap-2">
+                        {availableTabs.map((tab) => {
+                            const isActiveDirectiveTab = activeDirectiveTab === tab;
+                            const isViewingTab = viewTab === tab;
+                            return (
+                                <button
+                                    key={tab}
+                                    type="button"
+                                    data-testid={`directive-tab-${tab}`}
+                                    onClick={() => setViewTab(tab)}
+                                    className={`relative -mb-px flex min-w-fit items-center gap-2 rounded-t-xl border border-b-0 px-4 py-2 transition-colors ${
+                                        isViewingTab
+                                            ? "border-slate-300 bg-white text-slate-900 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.55)]"
+                                            : "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                                    }`}
+                                    aria-current={isViewingTab ? "page" : undefined}
+                                >
+                                    <input
+                                        data-testid={`directive-checkbox-${tab}`}
+                                        type="checkbox"
+                                        checked={isActiveDirectiveTab}
+                                        disabled={isSaving}
+                                        onClick={(event) => event.stopPropagation()}
+                                        onChange={(event) => handleCheckboxChange(tab, event.target.checked)}
+                                        className="h-4 w-4 cursor-pointer rounded-[4px] border border-slate-400 accent-indigo-600"
+                                        aria-label={`Activate ${DIRECTIVE_TAB_LABEL[tab]} tab`}
+                                    />
+                                    <span className="select-none text-sm font-medium">{DIRECTIVE_TAB_LABEL[tab]}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
+                {!isSyncVideowallEnabled || viewTab === DIRECTIVE_TAB.SCHEDULES ? (
+                    <div data-testid="directive-schedules-panel" className="min-h-0 flex-1 overflow-hidden">
+                        {children}
+                    </div>
+                ) : (
+                    <SyncVideowallPanel activeDirectiveTab={activeDirectiveTab} />
+                )}
             </div>
-
-            {!isSyncVideowallEnabled || viewTab === DIRECTIVE_TAB.SCHEDULES ? (
-                <div data-testid="directive-schedules-panel" className="min-h-0 flex-1 overflow-hidden">
-                    {children}
-                </div>
-            ) : (
-                <SyncVideowallPanel activeDirectiveTab={activeDirectiveTab} />
-            )}
-        </div>
+        </DirectiveTabsContext.Provider>
     );
 }
