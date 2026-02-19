@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { ACTIVE_SYNC_SESSION_STATUSES, syncSessionInclude, toJsonSafe } from "@/lib/sync-session-service";
 import { computeSyncSessionMetrics } from "@/lib/sync-metrics";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function requireUserSession() {
     const session = await getServerSession(authOptions);
 

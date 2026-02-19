@@ -197,7 +197,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
     const refreshActiveSession = async () => {
         try {
-            const active = await fetchJson<{ session: ActiveSession | null }>("/api/sync/session/active");
+            const active = await fetchJson<{ session: ActiveSession | null }>("/api/sync/session/active", {
+                cache: "no-store",
+            });
             setActiveSession(active.session ?? null);
         } catch {
             setActiveSession(null);
