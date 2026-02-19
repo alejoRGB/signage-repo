@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     try {
         // Rate Limiting
         const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-        const isAllowed = await checkRateLimit(ip);
+        const isAllowed = await checkRateLimit(ip, "device_register");
 
         if (!isAllowed) {
             return NextResponse.json(

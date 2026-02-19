@@ -19,7 +19,7 @@ export async function POST(request: Request) {
         }
 
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(deviceToken);
+        const isAllowed = await checkRateLimit(deviceToken, "device_preview");
         if (!isAllowed) {
             return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }

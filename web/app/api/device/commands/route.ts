@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         }
 
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(result.data.device_token);
+        const isAllowed = await checkRateLimit(result.data.device_token, "device_commands");
         if (!isAllowed) {
             return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }

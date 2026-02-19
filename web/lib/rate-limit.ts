@@ -1,20 +1,50 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
-// Rate limiter for device endpoints
-// Allow 60 requests per minute per IP or Token
-// In a serverless environment (Vercel), this memory cache is per-instance.
-// For strict global limiting, we would need Redis (Upstash).
-// But this provides a basic layer of protection against rapid spam on a single instance.
-const rateLimiter = new RateLimiterMemory({
-    points: 60, // 60 requests
-    duration: 60, // Per 60 seconds
-});
+type RateLimitScope =
+    | "default"
+    | "device_register"
+    | "device_sync"
+    | "device_status"
+    | "device_commands"
+    | "device_ack"
+    | "device_heartbeat"
+    | "device_preview"
+    | "device_logs";
 
-export async function checkRateLimit(key: string) {
+const RATE_LIMIT_CONFIG: Record<RateLimitScope, { points: number; duration: number }> = {
+    default: { points: 60, duration: 60 },
+    device_register: { points: 20, duration: 60 },
+    device_sync: { points: 120, duration: 60 },
+    device_status: { points: 60, duration: 60 },
+    device_commands: { points: 180, duration: 60 },
+    device_ack: { points: 120, duration: 60 },
+    device_heartbeat: { points: 180, duration: 60 },
+    device_preview: { points: 120, duration: 60 },
+    device_logs: { points: 240, duration: 60 },
+};
+
+const scopedLimiters = new Map<RateLimitScope, RateLimiterMemory>();
+
+function getLimiter(scope: RateLimitScope) {
+    const cached = scopedLimiters.get(scope);
+    if (cached) {
+        return cached;
+    }
+
+    const config = RATE_LIMIT_CONFIG[scope];
+    const limiter = new RateLimiterMemory({
+        points: config.points,
+        duration: config.duration,
+    });
+    scopedLimiters.set(scope, limiter);
+    return limiter;
+}
+
+export async function checkRateLimit(key: string, scope: RateLimitScope = "default") {
     try {
-        await rateLimiter.consume(key);
+        await getLimiter(scope).consume(key);
         return true;
-    } catch (rejRes) {
+    } catch {
         return false;
     }
 }
