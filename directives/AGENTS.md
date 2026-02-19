@@ -31,6 +31,24 @@ This workflow is required by default unless the user explicitly asks to skip com
 
 ---
 
+## Mandatory Raspberry Deployment Workflow (Player Changes)
+When a task modifies Raspberry/player-related files, deployment to Raspberry devices is mandatory before closing the task.
+
+Trigger this workflow when changes include any of:
+- `player/**`
+- `deploy.ps1`
+- `execution/player_ops.py`
+- player runtime integration files in `web/` that affect device sync/commands (for example `web/app/api/device/**`, `web/lib/sync-*.ts`)
+
+Required steps:
+1. Deploy updated player code to target Raspberry device(s).
+2. Verify service status after deploy (`running`, no crash loop).
+3. Report deployment result per device (IP/hostname + status).
+
+If IP, username, or password/credential is missing, the agent must ask the user for those values before attempting deployment.
+
+---
+
 ## 1. Coordinator Agent
 **Role**: Project Coordinator. Orchestrate development by routing tasks to sub-agents and maintaining architectural integrity.
 
