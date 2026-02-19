@@ -102,9 +102,7 @@
 - **QA Production Target:** canonical QA target for production checks is `https://senaldigital.xyz`.
 - **Sync Gate Rule Clarification:** `E2E_SYNC_MODE` selects tests only; runtime gate is `SYNC_VIDEOWALL_ENABLED` at deployment level.
 - **Production Baseline (current):**
-  - Branch: `master`
-  - Commit: `798dbb2`
-  - Deployment: `dpl_8PM2UVAmkW1rBZZeKSsNwfDYSSuL`
+  - Canonical baseline is always the latest successful `master` deployment.
   - Canonical URL aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.
 - **Repository Security Cleanup:** git history was sanitized after credential exposure. Any historical local clone must run fetch+hard reset (or a fresh clone) before resuming work.
 
