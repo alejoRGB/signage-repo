@@ -60,6 +60,33 @@ class VideowallController:
             "health_score": 0.0,
         }
 
+    def _resolve_prepare_local_path(self, raw_local_path: str) -> Optional[str]:
+        """
+        Resolve media path from sync.prepare payload in a player-portable way.
+        Accept absolute paths when valid, otherwise fallback to media_dir + basename.
+        """
+        local_path = str(raw_local_path)
+        if os.path.isabs(local_path) and os.path.exists(local_path):
+            return local_path
+
+        media_dir = getattr(self.sync_manager, "media_dir", None)
+        basename = os.path.basename(local_path)
+        if media_dir and basename:
+            candidate = os.path.join(str(media_dir), basename)
+            if os.path.exists(candidate):
+                if candidate != local_path:
+                    logging.info(
+                        "[VIDEOWALL] Resolved prepare path '%s' -> '%s'",
+                        local_path,
+                        candidate,
+                    )
+                return candidate
+
+        if os.path.exists(local_path):
+            return local_path
+
+        return None
+
     def is_active(self) -> bool:
         return self.state_machine.is_active()
 
@@ -118,6 +145,9 @@ class VideowallController:
         local_path = media.get("local_path") or media.get("localPath")
         if not local_path:
             return False, "Missing media.local_path in sync.prepare"
+        resolved_local_path = self._resolve_prepare_local_path(str(local_path))
+        if not resolved_local_path:
+            return False, f"Local media not found: {local_path}"
 
         start_at_ms = payload.get("start_at_ms") or payload.get("startAtMs")
         duration_ms = payload.get("duration_ms") or payload.get("durationMs")
@@ -136,7 +166,7 @@ class VideowallController:
         if existing_context and existing_context.session_id == session_id:
             existing_context.start_at_ms = start_at_ms
             existing_context.duration_ms = duration_ms
-            existing_context.local_path = str(local_path)
+            existing_context.local_path = resolved_local_path
             existing_context.master_device_id = master_device_id
             # No need to restart if already running and process is healthy.
             if self.state_machine.state in {SYNC_STATE_READY, SYNC_STATE_WARMING_UP, SYNC_STATE_PLAYING}:
@@ -153,7 +183,7 @@ class VideowallController:
                 session_id=session_id,
                 start_at_ms=start_at_ms,
                 duration_ms=duration_ms,
-                local_path=str(local_path),
+                local_path=resolved_local_path,
                 master_device_id=master_device_id,
             )
         )
@@ -168,10 +198,6 @@ class VideowallController:
                 False,
                 f"Clock unsynchronized (offset_ms={clock_health.get('offset_ms')}, healthy={clock_health.get('healthy')})",
             )
-
-        if not os.path.exists(local_path):
-            self.state_machine.transition(SYNC_STATE_ERRORED, force=True)
-            return False, f"Local media not found: {local_path}"
 
         context = self.state_machine.context
         if not context:
@@ -191,6 +217,7 @@ class VideowallController:
             session_id=session_id,
             data={
                 "local_path": local_path,
+                "resolved_local_path": resolved_local_path,
                 "start_at_ms": start_at_ms,
                 "duration_ms": duration_ms,
                 "master_device_id": master_device_id,

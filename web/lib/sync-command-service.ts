@@ -35,7 +35,8 @@ function mediaLocalPath(filename: string | null) {
         return "";
     }
 
-    return `/var/lib/signage/media/${filename}`;
+    // Keep payload path portable; player resolves against its configured media_dir.
+    return filename;
 }
 
 export function buildPreparePayload(input: PrepareCommandInput) {
