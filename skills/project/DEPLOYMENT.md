@@ -72,6 +72,13 @@ python execution/run_tests.py qa:sync:off --project=chromium
   - `qa:sync:off` passed when `SYNC_VIDEOWALL_ENABLED=false` and deployment was redeployed.
   - `qa:sync:on` passed after restoring `SYNC_VIDEOWALL_ENABLED=true` and redeploying.
 
+## Canonical Production Baseline (Feb 19, 2026)
+- Branch: `master`
+- Commit: `798dbb2`
+- Deployment ID: `dpl_8PM2UVAmkW1rBZZeKSsNwfDYSSuL`
+- Active aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.
+- Repository history was sanitized after secret exposure; all local clones must sync with `fetch + hard reset` (or fresh clone) before continuing.
+
 ## Edge Deployment (Raspberry Pi)
 ### One-Line Install (Canonical)
 ```bash
