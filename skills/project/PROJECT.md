@@ -101,6 +101,7 @@
 ## Canonical Notes (2026-02-19)
 - **QA Production Target:** canonical QA target for production checks is `https://senaldigital.xyz`.
 - **Sync Gate Rule Clarification:** `E2E_SYNC_MODE` selects tests only; runtime gate is `SYNC_VIDEOWALL_ENABLED` at deployment level.
+- **Admin QA Coverage (Playwright):** canonical QA suite now includes `/admin` auth/authorization checks (redirect to admin login, invalid admin login, valid admin login, admin logout, and non-admin access boundary to `/admin`).
 - **Production Baseline (current):**
   - Canonical baseline is always the latest successful `master` deployment.
   - Canonical URL aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.

@@ -11,6 +11,7 @@
   - `SYNC_VIDEOWALL_ENABLED`: Feature gate for Sync UI + Sync session control (`true`/`false`, default `false`).
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
   - `E2E_USERNAME` / `E2E_PASSWORD`: Required for credentialed E2E testing (DO NOT hardcode in tests).
+  - `E2E_ADMIN_USERNAME` (or `E2E_ADMIN_EMAIL`) / `E2E_ADMIN_PASSWORD`: Required for credentialed admin E2E testing on `/admin`.
   - `E2E_BASE_URL`: Optional override for Playwright; defaults to canonical production URL.
   - `E2E_SYNC_MODE`: Optional QA selector for Sync gate tests (`on` / `off`). This does NOT toggle product feature flags.
 
@@ -58,7 +59,9 @@ python execution/run_tests.py qa:sync:off --project=chromium
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
 - Production QA runs use:
   - `E2E_BASE_URL=https://senaldigital.xyz`
-  - Credentialed auth (`E2E_USERNAME`, `E2E_PASSWORD`)
+  - Credentialed dashboard auth (`E2E_USERNAME`, `E2E_PASSWORD`)
+  - Credentialed admin auth (`E2E_ADMIN_USERNAME` or `E2E_ADMIN_EMAIL`, plus `E2E_ADMIN_PASSWORD`)
+- Playwright credentialed specs must normalize env values (`trim`) before login usage to avoid false failures from trailing whitespace in external env providers.
 - Sync gate behavior is controlled only by deployment env var `SYNC_VIDEOWALL_ENABLED`.
 - `E2E_SYNC_MODE` only decides which test subset runs:
   - `qa:sync:on` -> runs `@sync-on`
