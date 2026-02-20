@@ -192,6 +192,28 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         [syncDeviceIds, deviceById]
     );
 
+    const perDeviceDurationLockMs = useMemo(() => {
+        for (const deviceId of syncDeviceIds) {
+            const mediaId = assignedMediaByDevice[deviceId];
+            if (!mediaId) {
+                continue;
+            }
+            const media = videoMediaById[mediaId];
+            if (media && typeof media.durationMs === "number") {
+                return media.durationMs;
+            }
+        }
+        return null;
+    }, [syncDeviceIds, assignedMediaByDevice, videoMediaById]);
+
+    const durationLockMs = useMemo(() => {
+        if (mode === SYNC_PRESET_MODE.COMMON) {
+            const media = videoMediaById[commonMediaId];
+            return media && typeof media.durationMs === "number" ? media.durationMs : null;
+        }
+        return perDeviceDurationLockMs;
+    }, [mode, commonMediaId, perDeviceDurationLockMs, videoMediaById]);
+
     const groupedVideos = useMemo(() => {
         const groups = new Map<number, SyncMediaItem[]>();
         for (const media of videoMediaItems) {
@@ -356,8 +378,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             return { valid: false, error: "Preset name is required" };
         }
 
-        if (syncDeviceIds.length === 0) {
-            return { valid: false, error: "At least one synchronized device is required" };
+        if (syncDeviceIds.length < 2) {
+            return { valid: false, error: "At least two synchronized devices are required" };
         }
 
         if (mode === SYNC_PRESET_MODE.COMMON) {
@@ -559,6 +581,11 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     <p className="text-sm font-semibold tracking-wide text-amber-900">
                         Los videos a reproducirse en sync deben durar exactamente lo mismo
                     </p>
+                    {typeof durationLockMs === "number" ? (
+                        <p className="mt-1 text-xs text-amber-900">
+                            Duration lock active: {msToSecondsLabel(durationLockMs)}
+                        </p>
+                    ) : null}
                     {!isDirectiveActive ? (
                         <p className="mt-1 text-xs text-amber-800">
                             Start bloqueado: activá el checkbox de la directiva Sync para permitir inicio.
@@ -667,8 +694,24 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                             >
                                 <option value="">Select common video</option>
                                 {videoMediaItems.map((media) => (
-                                    <option key={media.id} value={media.id}>
-                                        {media.name} ({typeof media.durationMs === "number" ? msToSecondsLabel(media.durationMs) : "no durationMs"})
+                                    <option
+                                        key={media.id}
+                                        value={media.id}
+                                        disabled={
+                                            typeof media.durationMs !== "number" ||
+                                            (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
+                                        }
+                                    >
+                                        {media.name} (
+                                        {typeof media.durationMs === "number"
+                                            ? msToSecondsLabel(media.durationMs)
+                                            : "no durationMs"}
+                                        {typeof durationLockMs === "number" &&
+                                        typeof media.durationMs === "number" &&
+                                        media.durationMs !== durationLockMs
+                                            ? ", different duration"
+                                            : ""}
+                                        )
                                     </option>
                                 ))}
                             </select>
@@ -788,6 +831,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 {syncDevices.length}
                             </span>
                         </div>
+                        <p className="mb-3 text-xs text-cyan-900">
+                            Select at least 2 devices to save and start a sync configuration.
+                        </p>
 
                         <div className="space-y-3">
                             {syncDevices.length === 0 ? (
@@ -843,8 +889,24 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                                 >
                                                     <option value="">Select media file</option>
                                                     {videoMediaItems.map((media) => (
-                                                        <option key={media.id} value={media.id}>
-                                                            {media.name} ({typeof media.durationMs === "number" ? msToSecondsLabel(media.durationMs) : "no durationMs"})
+                                                        <option
+                                                            key={media.id}
+                                                            value={media.id}
+                                                            disabled={
+                                                                typeof media.durationMs !== "number" ||
+                                                                (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
+                                                            }
+                                                        >
+                                                            {media.name} (
+                                                            {typeof media.durationMs === "number"
+                                                                ? msToSecondsLabel(media.durationMs)
+                                                                : "no durationMs"}
+                                                            {typeof durationLockMs === "number" &&
+                                                            typeof media.durationMs === "number" &&
+                                                            media.durationMs !== durationLockMs
+                                                                ? ", different duration"
+                                                                : ""}
+                                                            )
                                                         </option>
                                                     ))}
                                                 </select>

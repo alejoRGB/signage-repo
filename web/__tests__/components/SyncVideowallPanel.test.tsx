@@ -21,7 +21,10 @@ describe("SyncVideowallPanel - presets", () => {
                 if (url.includes("/api/devices")) {
                     return {
                         ok: true,
-                        json: async () => [{ id: "device-1", name: "Lobby", connectivityStatus: "online" }],
+                        json: async () => [
+                            { id: "device-1", name: "Lobby", connectivityStatus: "online" },
+                            { id: "device-2", name: "Window", connectivityStatus: "offline" },
+                        ],
                     } as Response;
                 }
 
@@ -65,6 +68,7 @@ describe("SyncVideowallPanel - presets", () => {
         await screen.findByText("Available Devices");
 
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
+        fireEvent.click(screen.getByLabelText("Add Window to synchronized devices"));
         fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
             target: { value: "Main Wall" },
         });
@@ -82,7 +86,10 @@ describe("SyncVideowallPanel - presets", () => {
             const body = JSON.parse(String(postCall?.[1]?.body ?? "{}"));
             expect(body.mode).toBe("COMMON");
             expect(body.durationMs).toBe(10000);
-            expect(body.devices).toEqual([{ deviceId: "device-1", mediaItemId: null }]);
+            expect(body.devices).toEqual([
+                { deviceId: "device-1", mediaItemId: null },
+                { deviceId: "device-2", mediaItemId: null },
+            ]);
         });
     });
 });

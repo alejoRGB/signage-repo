@@ -114,8 +114,8 @@ export async function validateSyncPresetInput(
 ): Promise<ValidateSyncPresetResult> {
     const { userId, mode, durationMs, presetMediaId, devices } = input;
 
-    if (devices.length === 0) {
-        throw new SyncPresetValidationError("At least one device is required");
+    if (devices.length < 2) {
+        throw new SyncPresetValidationError("At least two devices are required");
     }
 
     ensureUniqueDeviceAssignments(devices);

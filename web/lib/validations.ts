@@ -152,7 +152,7 @@ export const CreateSyncPresetSchema = z.object({
     mode: z.enum(SyncPresetModeValues).default(SYNC_PRESET_MODE.COMMON),
     durationMs: z.number().int().positive("Duration must be a positive integer"),
     presetMediaId: z.string().min(1).transform(sanitize).optional().nullable(),
-    devices: z.array(SyncPresetDeviceAssignmentSchema).min(1, "At least one device is required"),
+    devices: z.array(SyncPresetDeviceAssignmentSchema).min(2, "At least two devices are required"),
     contentProfile: SyncPresetContentProfileSchema.optional(),
 }).superRefine((data, ctx) => {
     if (data.mode === SYNC_PRESET_MODE.COMMON && !data.presetMediaId) {
@@ -189,7 +189,7 @@ export const UpdateSyncPresetSchema = z.object({
     mode: z.enum(SyncPresetModeValues).optional(),
     durationMs: z.number().int().positive().optional(),
     presetMediaId: z.string().min(1).transform(sanitize).optional().nullable(),
-    devices: z.array(SyncPresetDeviceAssignmentSchema).min(1).optional(),
+    devices: z.array(SyncPresetDeviceAssignmentSchema).min(2).optional(),
     contentProfile: SyncPresetContentProfileSchema.optional(),
 });
 

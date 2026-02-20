@@ -61,7 +61,7 @@ describe("Sync presets API", () => {
     });
 
     it("creates preset in COMMON mode", async () => {
-        (prisma.device.findMany as jest.Mock).mockResolvedValue([{ id: "device-1" }]);
+        (prisma.device.findMany as jest.Mock).mockResolvedValue([{ id: "device-1" }, { id: "device-2" }]);
         (prisma.mediaItem.findMany as jest.Mock).mockResolvedValue([{ id: "media-1", durationMs: 10000 }]);
         (prisma.syncPreset.create as jest.Mock).mockResolvedValue({ id: "preset-1" });
 
@@ -73,7 +73,7 @@ describe("Sync presets API", () => {
                 mode: "COMMON",
                 durationMs: 10000,
                 presetMediaId: "media-1",
-                devices: [{ deviceId: "device-1" }],
+                devices: [{ deviceId: "device-1" }, { deviceId: "device-2" }],
             }),
         });
 
@@ -93,7 +93,7 @@ describe("Sync presets API", () => {
                 mode: "COMMON",
                 durationMs: 10000,
                 presetMediaId: "media-1",
-                devices: [{ deviceId: "device-1" }],
+                devices: [{ deviceId: "device-1" }, { deviceId: "device-2" }],
             }),
         });
 
@@ -113,11 +113,14 @@ describe("Sync presets API", () => {
                 maxResolution: null,
                 motionIntensity: null,
                 hasText: false,
-                devices: [{ deviceId: "device-1", mediaItemId: null }],
+                devices: [
+                    { deviceId: "device-1", mediaItemId: null },
+                    { deviceId: "device-2", mediaItemId: null },
+                ],
             })
             .mockResolvedValueOnce({ id: "preset-1", name: "New name" });
 
-        (prisma.device.findMany as jest.Mock).mockResolvedValue([{ id: "device-1" }]);
+        (prisma.device.findMany as jest.Mock).mockResolvedValue([{ id: "device-1" }, { id: "device-2" }]);
         (prisma.mediaItem.findMany as jest.Mock).mockResolvedValue([{ id: "media-1", durationMs: 10000 }]);
         (prisma.$transaction as jest.Mock).mockImplementation(
             async (
@@ -149,7 +152,7 @@ describe("Sync presets API", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 name: "New name",
-                devices: [{ deviceId: "device-1" }],
+                devices: [{ deviceId: "device-1" }, { deviceId: "device-2" }],
             }),
         });
 

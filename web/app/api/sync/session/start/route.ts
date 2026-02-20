@@ -79,6 +79,7 @@ export async function POST(request: Request) {
                         device: {
                             select: {
                                 id: true,
+                                name: true,
                                 lastSeenAt: true,
                             },
                         },
@@ -100,9 +101,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Sync preset not found" }, { status: 404 });
         }
 
-        if (preset.devices.length === 0) {
+        if (preset.devices.length < 2) {
             return NextResponse.json(
-                { error: "Sync preset must have at least one assigned device" },
+                { error: "Sync preset must have at least two assigned devices" },
                 { status: 400 }
             );
         }
@@ -134,12 +135,42 @@ export async function POST(request: Request) {
         }
 
         const nowMs = Date.now();
+        const ONLINE_HEARTBEAT_WINDOW_MS = 5 * 60 * 1000;
+        const offlineDevices = preset.devices
+            .map((assignment) => {
+                const lastSeenAt = assignment.device.lastSeenAt;
+                const ageMs = lastSeenAt ? nowMs - lastSeenAt.getTime() : Number.POSITIVE_INFINITY;
+                const isOnline = !!lastSeenAt && ageMs <= ONLINE_HEARTBEAT_WINDOW_MS;
+
+                if (isOnline) {
+                    return null;
+                }
+
+                return {
+                    deviceId: assignment.deviceId,
+                    deviceName: assignment.device.name ?? assignment.deviceId,
+                    lastSeenAt: lastSeenAt ? lastSeenAt.toISOString() : null,
+                    reason: lastSeenAt ? "stale_heartbeat" : "missing_heartbeat",
+                };
+            })
+            .filter((item): item is NonNullable<typeof item> => item !== null);
+
+        if (offlineDevices.length > 0) {
+            return NextResponse.json(
+                {
+                    error: "All selected devices must be online before starting sync",
+                    offlineDevices,
+                },
+                { status: 400 }
+            );
+        }
+
         const hasColdDevice = preset.devices.some((assignment) => {
             if (!assignment.device.lastSeenAt) {
                 return true;
             }
 
-            return nowMs - assignment.device.lastSeenAt.getTime() > 5 * 60 * 1000;
+            return nowMs - assignment.device.lastSeenAt.getTime() > 60 * 1000;
         });
 
         const preparationBufferMs = computePreparationBufferMs({

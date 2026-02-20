@@ -67,7 +67,12 @@ describe("Sync session API", () => {
             devices: [
                 {
                     deviceId: "device-1",
-                    device: { id: "device-1", lastSeenAt: new Date() },
+                    device: { id: "device-1", name: "Lobby", lastSeenAt: new Date() },
+                    mediaItem: null,
+                },
+                {
+                    deviceId: "device-2",
+                    device: { id: "device-2", name: "Window", lastSeenAt: new Date() },
                     mediaItem: null,
                 },
             ],
@@ -85,10 +90,10 @@ describe("Sync session API", () => {
                     }),
                 },
                 syncSessionDevice: {
-                    createMany: jest.fn().mockResolvedValue({ count: 1 }),
+                    createMany: jest.fn().mockResolvedValue({ count: 2 }),
                 },
                 syncDeviceCommand: {
-                    createMany: jest.fn().mockResolvedValue({ count: 1 }),
+                    createMany: jest.fn().mockResolvedValue({ count: 2 }),
                 },
             })
         );
@@ -126,7 +131,12 @@ describe("Sync session API", () => {
             devices: [
                 {
                     deviceId: "device-1",
-                    device: { id: "device-1", lastSeenAt: new Date() },
+                    device: { id: "device-1", name: "Lobby", lastSeenAt: new Date() },
+                    mediaItem: null,
+                },
+                {
+                    deviceId: "device-2",
+                    device: { id: "device-2", name: "Window", lastSeenAt: new Date() },
                     mediaItem: null,
                 },
             ],
@@ -144,6 +154,55 @@ describe("Sync session API", () => {
 
         const response = await START_SYNC(request);
         expect(response.status).toBe(409);
+    });
+
+    it("START rejects when any selected device is offline", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({
+            user: { id: "user-1", role: "USER" },
+        });
+        (prisma.syncSession.findFirst as jest.Mock).mockResolvedValue(null);
+        (prisma.syncPreset.findFirst as jest.Mock).mockResolvedValue({
+            id: "preset-1",
+            mode: "COMMON",
+            durationMs: 10000,
+            presetMedia: {
+                id: "media-1",
+                filename: "video.mp4",
+                width: 1920,
+                height: 1080,
+                fps: 30,
+            },
+            devices: [
+                {
+                    deviceId: "device-1",
+                    device: { id: "device-1", name: "Lobby", lastSeenAt: new Date() },
+                    mediaItem: null,
+                },
+                {
+                    deviceId: "device-2",
+                    device: { id: "device-2", name: "Window", lastSeenAt: null },
+                    mediaItem: null,
+                },
+            ],
+        });
+        (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue(null);
+
+        const request = new Request("http://localhost/api/sync/session/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ presetId: "preset-1" }),
+        });
+
+        const response = await START_SYNC(request);
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toMatch(/must be online/i);
+        expect(body.offlineDevices).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ deviceId: "device-2", reason: "missing_heartbeat" }),
+            ])
+        );
     });
 
     it("STOP updates active session status", async () => {
