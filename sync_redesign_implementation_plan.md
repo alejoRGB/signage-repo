@@ -11,19 +11,19 @@
 ## Delivery Phases
 
 ### Phase 1 - Validation and Session Start Guardrails
-- [ ] Raise minimum devices from 1 to 2 in Sync preset validation (UI + backend).
-- [ ] Keep offline devices selectable while building preset/session.
-- [ ] Add preflight online check in sync session start endpoint.
-- [ ] Return actionable start errors listing offline devices.
-- [ ] Add/update tests for min-device and preflight-online behavior.
+- [x] Raise minimum devices from 1 to 2 in Sync preset validation (UI + backend).
+- [x] Keep offline devices selectable while building preset/session.
+- [x] Add preflight online check in sync session start endpoint.
+- [x] Return actionable start errors listing offline devices.
+- [x] Add/update tests for min-device and preflight-online behavior.
 
 ### Phase 2 - Sync Wizard UX (3 steps)
-- [ ] Step 1: Devices selection (>=2 required, online/offline allowed).
-- [ ] Step 2: Video assignment only.
-- [ ] Step 2: First selected video defines `targetDurationMs`.
-- [ ] Step 2: Restrict selectors to videos with matching `targetDurationMs`.
-- [ ] Step 3: Review assignments and statuses before start.
-- [ ] Step 3: Show blocking list when devices are offline.
+- [x] Step 1: Devices selection (>=2 required, online/offline allowed).
+- [x] Step 2: Video assignment only.
+- [x] Step 2: First selected video defines `targetDurationMs`.
+- [x] Step 2: Restrict selectors to videos with matching `targetDurationMs`.
+- [x] Step 3: Review assignments and statuses before start.
+- [x] Step 3: Show blocking list when devices are offline.
 
 ### Phase 3 - Saved Sessions (using existing presets)
 - [ ] Reuse `SyncPreset` as editable saved sync configuration.

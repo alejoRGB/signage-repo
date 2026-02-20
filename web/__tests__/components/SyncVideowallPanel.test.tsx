@@ -69,6 +69,7 @@ describe("SyncVideowallPanel - presets", () => {
 
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Window to synchronized devices"));
+        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
         fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
             target: { value: "Main Wall" },
         });
