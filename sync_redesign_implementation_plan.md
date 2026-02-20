@@ -38,10 +38,23 @@
 - [x] Validate Session Health still updates (`heartbeat`, `drift avg/max`, `resync`).
 
 ### Phase 5 - Rollout
-- [ ] Web deploy to `master`.
-- [ ] Verify Vercel production deployment reaches `Ready`.
-- [ ] Run smoke checks on Sync tab in production.
-- [ ] Confirm no regressions in Schedules tab behavior.
+- [x] Web deploy to `master`.
+- [x] Verify Vercel production deployment reaches `Ready`.
+- [x] Run smoke checks on Sync tab in production.
+- [x] Confirm no regressions in Schedules tab behavior.
+
+## Rollout Evidence (2026-02-20)
+- Deployment validated in Vercel as `Ready`:
+  - `https://signage-repo-dc5s-1wu5frwm2-alejos-projects-7a73f1be.vercel.app`
+- Production smoke (Playwright) executed against:
+  - `https://signage-repo-dc5s.vercel.app`
+- Auth smoke passed (`/dashboard` login flow + logout flow).
+- Sync smoke:
+  - Sync panel loads and renders correctly.
+  - Current test account/environment has `0` available devices, so Step 1->3 wizard progression could not be exercised in production data for this run.
+- Schedules smoke:
+  - `/dashboard/schedules` loads successfully after login.
+  - No crash/regression observed in Schedules navigation.
 
 ## Acceptance Criteria
 - [ ] User cannot proceed from Step 1 with fewer than 2 selected devices.
