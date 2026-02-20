@@ -476,6 +476,12 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         setWizardStep((current) => (current <= 1 ? 1 : ((current - 1) as WizardStep)));
     };
 
+    const openSavedPreset = (presetId: string) => {
+        setSelectedPresetId(presetId);
+        setWizardStep(1);
+        setErrorMessage(null);
+    };
+
     const validatePresetDraft = (): ValidationResult => {
         const trimmedName = presetName.trim();
         if (!trimmedName) {
@@ -484,7 +490,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         return assignmentValidation;
     };
 
-    const savePreset = async () => {
+    const savePreset = async (options?: { forceCreate?: boolean }) => {
+        const forceCreate = options?.forceCreate ?? false;
         setErrorMessage(null);
         const validation = validatePresetDraft();
         if (!validation.valid) {
@@ -506,7 +513,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
         setIsSavingPreset(true);
         try {
-            if (selectedPresetId) {
+            if (selectedPresetId && !forceCreate) {
                 const updated = await fetchJson<SyncPreset>(`/api/sync/presets/${selectedPresetId}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -522,7 +529,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 });
                 setPresets((current) => [created, ...current]);
                 setSelectedPresetId(created.id);
-                showToast("Sync preset created", "success");
+                showToast(forceCreate ? "New sync preset created from current draft" : "Sync preset created", "success");
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to save preset";
@@ -758,7 +765,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         <button
                             type="button"
                             data-testid="sync-save-preset-btn"
-                            onClick={savePreset}
+                            onClick={() => savePreset()}
                             disabled={isSavingPreset || isLoading}
                             className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -775,6 +782,56 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                             <Trash2 className="h-4 w-4" />
                             Delete
                         </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            data-testid="sync-save-as-new-preset-btn"
+                            onClick={() => savePreset({ forceCreate: true })}
+                            disabled={isSavingPreset || isLoading}
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Save As New
+                        </button>
+                        <p className="text-xs text-slate-500">
+                            Saved sessions are managed via Sync Presets and can be reopened for editing.
+                        </p>
+                    </div>
+
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                            <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Saved Sync Sessions</h4>
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                                {presets.length}
+                            </span>
+                        </div>
+                        {presets.length === 0 ? (
+                            <p className="text-xs text-slate-500">No saved sessions yet. Save the current draft to create one.</p>
+                        ) : (
+                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                {presets.map((preset) => (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        data-testid={`sync-saved-preset-${preset.id}`}
+                                        onClick={() => openSavedPreset(preset.id)}
+                                        className={`rounded-lg border px-3 py-2 text-left transition ${
+                                            selectedPresetId === preset.id
+                                                ? "border-cyan-500 bg-cyan-50"
+                                                : "border-slate-200 bg-white hover:border-cyan-300"
+                                        }`}
+                                    >
+                                        <p className="truncate text-sm font-semibold text-slate-900">{preset.name}</p>
+                                        <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-slate-500">
+                                            {preset.mode} • {preset.devices.length} devices • {msToSecondsLabel(preset.durationMs)}
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-slate-500">
+                                            {selectedPresetId === preset.id ? "Currently loaded" : "Click to load"}
+                                        </p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-3 grid gap-3 lg:grid-cols-[1.2fr_1fr]">
@@ -1175,6 +1232,21 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                data-testid="sync-start-from-saved-btn"
+                                onClick={startSession}
+                                disabled={startDisabled}
+                                className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <Play className="h-3.5 w-3.5" />
+                                Start from saved session
+                            </button>
+                            <p className="text-xs text-slate-500">
+                                Traceability: session start stores `presetId` in `SyncSession` and keeps command history per device.
+                            </p>
                         </div>
                     </section>
                 ) : null}

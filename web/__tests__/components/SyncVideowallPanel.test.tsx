@@ -92,5 +92,7 @@ describe("SyncVideowallPanel - presets", () => {
                 { deviceId: "device-2", mediaItemId: null },
             ]);
         });
+
+        expect(screen.getByTestId("sync-saved-preset-preset-new")).toBeInTheDocument();
     });
 });

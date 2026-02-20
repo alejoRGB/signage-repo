@@ -26,10 +26,10 @@
 - [x] Step 3: Show blocking list when devices are offline.
 
 ### Phase 3 - Saved Sessions (using existing presets)
-- [ ] Reuse `SyncPreset` as editable saved sync configuration.
-- [ ] Improve preset list UX for open/edit/save/delete.
-- [ ] Add explicit "Start from saved preset" flow from Step 3.
-- [ ] Ensure snapshot behavior remains traceable via `SyncSession`.
+- [x] Reuse `SyncPreset` as editable saved sync configuration.
+- [x] Improve preset list UX for open/edit/save/delete.
+- [x] Add explicit "Start from saved preset" flow from Step 3.
+- [x] Ensure snapshot behavior remains traceable via `SyncSession`.
 
 ### Phase 4 - QA Automation and Regression Safety
 - [ ] Update unit/API tests for new validation rules.
