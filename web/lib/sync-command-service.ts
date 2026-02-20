@@ -63,8 +63,8 @@ export function buildPreparePayload(input: PrepareCommandInput) {
             codec: "h264",
         },
         sync_config: {
-            hard_resync_threshold_ms: 500,
-            soft_correction_range_ms: [25, 500],
+            hard_resync_threshold_ms: 50,
+            soft_correction_range_ms: [25, 50],
             deadband_ms: 25,
             warmup_loops: 3,
         },

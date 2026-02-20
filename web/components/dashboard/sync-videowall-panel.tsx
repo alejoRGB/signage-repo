@@ -52,12 +52,22 @@ type ActiveSessionDevice = {
     };
 };
 
+type ActiveSessionCorrection = {
+    isCorrectingNow: boolean;
+    lastEvent: string | null;
+    lastEventAt: string | null;
+    lastDriftMs: number | null;
+    lastSpeed: number | null;
+    lastSeekToMs: number | null;
+};
+
 type ActiveSession = {
     id: string;
     status: string;
     presetId: string;
     masterDeviceId?: string | null;
     devices: ActiveSessionDevice[];
+    correctionTelemetryByDeviceId?: Record<string, ActiveSessionCorrection>;
 };
 
 type DragOrigin = "available" | "sync";
@@ -123,6 +133,30 @@ function heartbeatAgeLabel(lastSeenAt?: string | null) {
 
     const elapsedMinutes = Math.floor(elapsedSeconds / 60);
     return `${elapsedMinutes}m ago`;
+}
+
+function correctionAgeLabel(lastEventAt?: string | null) {
+    if (!lastEventAt) {
+        return "n/a";
+    }
+
+    const parsedMs = Date.parse(lastEventAt);
+    if (Number.isNaN(parsedMs)) {
+        return "n/a";
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - parsedMs) / 1000));
+    return `${elapsedSeconds}s ago`;
+}
+
+function correctionBadgeClass(event: string | null, isActive: boolean) {
+    if (!event) {
+        return "bg-slate-100 text-slate-700";
+    }
+    if (event === "HARD_RESYNC") {
+        return isActive ? "bg-amber-100 text-amber-900" : "bg-amber-50 text-amber-700";
+    }
+    return isActive ? "bg-cyan-100 text-cyan-900" : "bg-cyan-50 text-cyan-700";
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -276,10 +310,20 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
     const refreshActiveSession = async () => {
         try {
-            const active = await fetchJson<{ session: ActiveSession | null }>("/api/sync/session/active", {
-                cache: "no-store",
+            const active = await fetchJson<{
+                session: ActiveSession | null;
+                correctionTelemetryByDeviceId?: Record<string, ActiveSessionCorrection>;
+            }>("/api/sync/session/active", { cache: "no-store" });
+
+            if (!active.session) {
+                setActiveSession(null);
+                return;
+            }
+
+            setActiveSession({
+                ...active.session,
+                correctionTelemetryByDeviceId: active.correctionTelemetryByDeviceId ?? {},
             });
-            setActiveSession(active.session ?? null);
         } catch {
             setActiveSession(null);
         }
@@ -1376,31 +1420,56 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 {activeSession?.devices.length ?? 0} devices
                             </span>
                         </div>
-                    </div>
+                        </div>
                         <div className="space-y-2">
-                            {activeSession.devices.map((device) => (
-                                <div
-                                    key={device.id}
-                                    data-testid={`sync-device-health-${device.deviceId}`}
-                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2"
-                                >
-                                    <div className="mb-1 flex items-center justify-between gap-2">
-                                        <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
-                                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass(device.status)}`}>
-                                            {SYNC_STATUS_LABELS[device.status] ?? device.status.toLowerCase()}
-                                        </span>
+                            {activeSession.devices.map((device) => {
+                                const correction = activeSession.correctionTelemetryByDeviceId?.[device.deviceId] ?? null;
+                                const correctionLabel = correction?.lastEvent
+                                    ? correction.lastEvent === "HARD_RESYNC"
+                                        ? "Hard resync"
+                                        : "Soft correction"
+                                    : "No correction";
+
+                                return (
+                                    <div
+                                        key={device.id}
+                                        data-testid={`sync-device-health-${device.deviceId}`}
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                                    >
+                                        <div className="mb-1 flex items-center justify-between gap-2">
+                                            <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
+                                            <div className="flex items-center gap-1.5">
+                                                <span
+                                                    data-testid={`sync-device-correction-${device.deviceId}`}
+                                                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${correctionBadgeClass(
+                                                        correction?.lastEvent ?? null,
+                                                        !!correction?.isCorrectingNow
+                                                    )}`}
+                                                >
+                                                    {correction?.isCorrectingNow ? `${correctionLabel} active` : correctionLabel}
+                                                </span>
+                                                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass(device.status)}`}>
+                                                    {SYNC_STATUS_LABELS[device.status] ?? device.status.toLowerCase()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
+                                            <p>last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
+                                            <p>drift avg: {typeof device.avgDriftMs === "number" ? `${device.avgDriftMs.toFixed(1)}ms` : "n/a"}</p>
+                                            <p>drift max: {typeof device.maxDriftMs === "number" ? `${device.maxDriftMs.toFixed(1)}ms` : "n/a"}</p>
+                                            <p>clock offset: {typeof device.clockOffsetMs === "number" ? `${device.clockOffsetMs.toFixed(1)}ms` : "n/a"}</p>
+                                            <p>health: {typeof device.healthScore === "number" ? device.healthScore.toFixed(2) : "n/a"}</p>
+                                            <p>resync count: {device.resyncCount ?? 0}</p>
+                                            <p>resync rate: {typeof device.resyncRate === "number" ? device.resyncRate.toFixed(2) : "n/a"}</p>
+                                            <p>last correction: {correctionAgeLabel(correction?.lastEventAt ?? null)}</p>
+                                            <p>
+                                                correction drift:{" "}
+                                                {typeof correction?.lastDriftMs === "number" ? `${correction.lastDriftMs.toFixed(1)}ms` : "n/a"}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
-                                        <p>last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
-                                        <p>drift avg: {typeof device.avgDriftMs === "number" ? `${device.avgDriftMs.toFixed(1)}ms` : "n/a"}</p>
-                                        <p>drift max: {typeof device.maxDriftMs === "number" ? `${device.maxDriftMs.toFixed(1)}ms` : "n/a"}</p>
-                                        <p>clock offset: {typeof device.clockOffsetMs === "number" ? `${device.clockOffsetMs.toFixed(1)}ms` : "n/a"}</p>
-                                        <p>health: {typeof device.healthScore === "number" ? device.healthScore.toFixed(2) : "n/a"}</p>
-                                        <p>resync count: {device.resyncCount ?? 0}</p>
-                                        <p>resync rate: {typeof device.resyncRate === "number" ? device.resyncRate.toFixed(2) : "n/a"}</p>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                 </section>
                 ) : null}

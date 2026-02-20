@@ -319,9 +319,9 @@ class Player:
                 f"videowall-session_id={context.session_id},"
                 f"videowall-start_at_ms={context.start_at_ms},"
                 f"videowall-duration_ms={context.duration_ms},"
-                "videowall-hard_resync_threshold_ms=500,"
+                "videowall-hard_resync_threshold_ms=50,"
                 "videowall-soft_min_ms=25,"
-                "videowall-soft_max_ms=500,"
+                "videowall-soft_max_ms=50,"
                 "videowall-deadband_ms=25,"
                 "videowall-warmup_loops=3"
             )

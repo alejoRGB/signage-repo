@@ -65,6 +65,16 @@ describe("Sync health panel", () => {
                                     },
                                 ],
                             },
+                            correctionTelemetryByDeviceId: {
+                                "device-1": {
+                                    isCorrectingNow: true,
+                                    lastEvent: "SOFT_CORRECTION",
+                                    lastEventAt: new Date().toISOString(),
+                                    lastDriftMs: 38.2,
+                                    lastSpeed: 0.99,
+                                    lastSeekToMs: null,
+                                },
+                            },
                         }),
                     } as Response;
                 }
@@ -84,6 +94,8 @@ describe("Sync health panel", () => {
         expect(screen.getByText("drift max: 35.8ms")).toBeInTheDocument();
         expect(screen.getByText("clock offset: 4.2ms")).toBeInTheDocument();
         expect(screen.getByText("health: 0.95")).toBeInTheDocument();
+        expect(screen.getByText("Soft correction active")).toBeInTheDocument();
+        expect(screen.getByText("correction drift: 38.2ms")).toBeInTheDocument();
         expect(screen.getByText(/last heartbeat:/i)).toBeInTheDocument();
     });
 
@@ -143,6 +155,16 @@ describe("Sync health panel", () => {
                                         },
                                     },
                                 ],
+                            },
+                            correctionTelemetryByDeviceId: {
+                                "device-1": {
+                                    isCorrectingNow: true,
+                                    lastEvent: "SOFT_CORRECTION",
+                                    lastEventAt: new Date().toISOString(),
+                                    lastDriftMs: 38.2,
+                                    lastSpeed: 0.99,
+                                    lastSeekToMs: null,
+                                },
                             },
                         }),
                     } as Response;

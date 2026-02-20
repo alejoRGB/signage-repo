@@ -58,7 +58,7 @@ def decide_correction(
     frame_ms: float = 16.6667,
 ) -> CorrectionDecision:
     abs_drift = abs(drift_ms)
-    hard_threshold = 300 if in_warmup else hard_resync_threshold_ms
+    hard_threshold = min(300, hard_resync_threshold_ms) if in_warmup else hard_resync_threshold_ms
     max_speed_delta = max_speed_delta_warmup if in_warmup else max_speed_delta_normal
 
     if abs_drift >= hard_threshold:

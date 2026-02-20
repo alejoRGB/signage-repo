@@ -55,6 +55,7 @@ class VideowallController:
         self.command_poll_critical_interval_s = self._resolve_interval_env("SYNC_COMMAND_POLL_CRITICAL_S", 1.0)
         self.status_interval_critical_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_CRITICAL_S", 2.0)
         self.status_interval_playing_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_PLAYING_S", 5.0)
+        self.hard_resync_threshold_ms = self._resolve_int_env("SYNC_HARD_RESYNC_THRESHOLD_MS", 50, 25)
         self.clock_check_interval_s = 10.0
         self.clock_max_offset_ms = 50.0
 
@@ -90,6 +91,17 @@ class VideowallController:
             return default_value
         try:
             parsed = float(raw)
+        except ValueError:
+            return default_value
+        return max(minimum, parsed)
+
+    @staticmethod
+    def _resolve_int_env(name: str, default_value: int, minimum: int) -> int:
+        raw = os.getenv(name)
+        if raw is None:
+            return default_value
+        try:
+            parsed = int(raw)
         except ValueError:
             return default_value
         return max(minimum, parsed)
@@ -389,6 +401,7 @@ class VideowallController:
             drift_ms=drift_ms,
             target_phase_ms=target_phase_ms,
             in_warmup=in_warmup,
+            hard_resync_threshold_ms=self.hard_resync_threshold_ms,
         )
 
         if decision.action == "hard" and decision.seek_to_ms is not None:
