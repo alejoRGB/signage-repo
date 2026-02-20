@@ -54,13 +54,13 @@ describe("Sync session controls", () => {
         );
     });
 
-    it("disables Start when active directive tab is not Sync", async () => {
+    it("hides start controls when active directive tab is not Sync", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SCHEDULES} />);
 
         await screen.findByText("Available Devices");
 
-        const startButton = screen.getByTestId("sync-start-session-btn") as HTMLButtonElement;
-        expect(startButton.disabled).toBe(true);
+        expect(screen.queryByTestId("sync-start-session-btn")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("sync-start-from-saved-btn")).not.toBeInTheDocument();
         expect(screen.getByText(/Start bloqueado/i)).toBeInTheDocument();
 
         await waitFor(() => {
