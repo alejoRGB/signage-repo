@@ -47,11 +47,23 @@ export default function DevicePreviewGrid({
     initialDevices: DashboardDevice[];
 }) {
     const [devices, setDevices] = useState<DashboardDevice[]>(initialDevices);
-    const [expandedById, setExpandedById] = useState<Record<string, boolean>>({});
+    const [expandedById, setExpandedById] = useState<Record<string, boolean>>(
+        () => Object.fromEntries(initialDevices.map((device) => [device.id, true])),
+    );
 
     useEffect(() => {
         setDevices(initialDevices);
     }, [initialDevices]);
+
+    useEffect(() => {
+        setExpandedById((prev) => {
+            const next: Record<string, boolean> = {};
+            for (const device of devices) {
+                next[device.id] = prev[device.id] ?? true;
+            }
+            return next;
+        });
+    }, [devices]);
 
     const refreshDevices = useCallback(async () => {
         try {
