@@ -360,10 +360,20 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             return;
         }
 
-        if (!selectedPresetId || !presets.some((preset) => preset.id === selectedPresetId)) {
-            setSelectedPresetId(presets[0].id);
+        const selectedExists = !!selectedPresetId && presets.some((preset) => preset.id === selectedPresetId);
+
+        if (entryView === "saved") {
+            if (!selectedExists) {
+                setSelectedPresetId(presets[0].id);
+            }
+            return;
         }
-    }, [presets, selectedPresetId]);
+
+        // In new-session wizard flow, never auto-load an old preset.
+        if (selectedPresetId && !selectedExists) {
+            setSelectedPresetId("");
+        }
+    }, [entryView, presets, selectedPresetId]);
 
     useEffect(() => {
         hydrateEditorFromPreset(selectedPreset);

@@ -219,4 +219,59 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         expect(await screen.findByText("Sesiones guardadas")).toBeInTheDocument();
         expect(screen.queryByText("Available Devices")).not.toBeInTheDocument();
     });
+
+    it("starts new session from clean state even when saved presets exist", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => mockDevices,
+                    } as Response;
+                }
+
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => mockMedia,
+                    } as Response;
+                }
+
+                if (url.includes("/api/sync/presets") && !init?.method) {
+                    return {
+                        ok: true,
+                        json: async () => [
+                            {
+                                id: "preset-existing",
+                                name: "Preset Existing",
+                                mode: "COMMON",
+                                durationMs: 10000,
+                                presetMediaId: "media-1",
+                                devices: [
+                                    { deviceId: "device-1", mediaItemId: null },
+                                    { deviceId: "device-2", mediaItemId: null },
+                                ],
+                            },
+                        ],
+                    } as Response;
+                }
+
+                if (url.includes("/api/sync/session/active")) {
+                    return { ok: true, json: async () => ({ session: null }) } as Response;
+                }
+
+                return { ok: true, json: async () => ({}) } as Response;
+            }) as unknown as typeof fetch
+        );
+
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        fireEvent.click(await screen.findByTestId("sync-entry-new-session-btn"));
+        expect(await screen.findByText("Available Devices")).toBeInTheDocument();
+        expect(screen.getByText(/Drag devices here to build your synchronized wall/i)).toBeInTheDocument();
+        expect(screen.queryByTestId("sync-preset-name-input")).not.toBeInTheDocument();
+    });
 });
