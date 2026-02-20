@@ -71,6 +71,7 @@ class Player:
             seek_to_phase_ms=self.seek_mpv_to_phase_ms,
             set_pause=self.set_mpv_paused,
             is_playback_alive=self.is_mpv_alive,
+            get_playback_time_ms=self.get_mpv_time_pos_ms,
         )
         try:
             self.videowall_controller.clock_max_offset_ms = float(
@@ -208,6 +209,45 @@ class Player:
             # It's normal to fail if mpv isn't running or socket doesn't exist yet
             logging.warning(f"[PLAYER] IPC Command failed: {e}")
             return False
+
+    def get_mpv_time_pos_ms(self) -> Optional[float]:
+        """Query MPV current playback position in milliseconds."""
+        import socket
+
+        if not self.is_mpv_alive():
+            return None
+
+        payload = json.dumps({"command": ["get_property", "time-pos"]}).encode() + b"\n"
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+                client.settimeout(1.0)
+                client.connect(self.socket_path)
+                client.sendall(payload)
+                response = client.recv(4096)
+        except Exception as error:
+            logging.debug(f"[PLAYER] IPC get time-pos failed: {error}")
+            return None
+
+        if not response:
+            return None
+
+        first_line = response.split(b"\n", 1)[0].decode("utf-8", errors="ignore").strip()
+        if not first_line:
+            return None
+
+        try:
+            parsed = json.loads(first_line)
+        except Exception:
+            return None
+
+        if parsed.get("error") != "success":
+            return None
+
+        value = parsed.get("data")
+        if not isinstance(value, (int, float)):
+            return None
+
+        return max(0.0, float(value) * 1000.0)
 
     def is_mpv_alive(self) -> bool:
         return self.mpv_process is not None and self.mpv_process.poll() is None

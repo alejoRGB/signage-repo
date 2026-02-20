@@ -15,7 +15,7 @@ from state_machine import (
     SyncSessionContext,
     SyncStateMachine,
 )
-from videowall_drift import compute_target_phase_ms, round_to_frame
+from videowall_drift import compute_target_phase_ms, compute_wrapped_drift_ms, round_to_frame
 
 
 class VideowallController:
@@ -28,6 +28,7 @@ class VideowallController:
         seek_to_phase_ms: Callable[[int], bool],
         set_pause: Callable[[bool], bool],
         is_playback_alive: Callable[[], bool],
+        get_playback_time_ms: Optional[Callable[[], Optional[float]]] = None,
     ):
         self.sync_manager = sync_manager
         self.state_machine = state_machine
@@ -36,6 +37,7 @@ class VideowallController:
         self.seek_to_phase_ms = seek_to_phase_ms
         self.set_pause = set_pause
         self.is_playback_alive = is_playback_alive
+        self.get_playback_time_ms = get_playback_time_ms or (lambda: None)
 
         self.poll_interval_s = 1.0
         self.status_interval_s = 2.0
@@ -52,6 +54,10 @@ class VideowallController:
         self._max_restart_attempts = 5
         self._restart_backoff_seconds = [2, 4, 8, 16, 30]
         self._next_restart_at_ms: Optional[int] = None
+        self._drift_sample_count = 0
+        self._drift_abs_sum_ms = 0.0
+        self._drift_max_abs_ms = 0.0
+        self._last_drift_ms: Optional[float] = None
         self._last_clock_health: Dict[str, object] = {
             "healthy": False,
             "critical": True,
@@ -59,6 +65,13 @@ class VideowallController:
             "throttled": False,
             "health_score": 0.0,
         }
+
+    def _reset_runtime_metrics(self) -> None:
+        self._resync_count = 0
+        self._drift_sample_count = 0
+        self._drift_abs_sum_ms = 0.0
+        self._drift_max_abs_ms = 0.0
+        self._last_drift_ms = None
 
     def _resolve_prepare_local_path(self, raw_local_path: str) -> Optional[str]:
         """
@@ -178,6 +191,8 @@ class VideowallController:
         ):
             self._stop_active_session()
 
+        self._reset_runtime_metrics()
+
         self.state_machine.activate(
             SyncSessionContext(
                 session_id=session_id,
@@ -243,6 +258,7 @@ class VideowallController:
         if self.state_machine.is_active():
             self.state_machine.transition("DISCONNECTED", force=True)
         self.state_machine.reset()
+        self._reset_runtime_metrics()
         self._warmup_until_ms = None
         self._restart_attempts = 0
         self._next_restart_at_ms = None
@@ -420,19 +436,44 @@ class VideowallController:
         if not context:
             return None
 
+        now_ms = int(time.time() * 1000)
+        target_phase = compute_target_phase_ms(now_ms, context.start_at_ms, context.duration_ms)
+        if target_phase is not None and context.duration_ms > 0:
+            playback_time_ms = self.get_playback_time_ms()
+            if playback_time_ms is not None:
+                actual_phase_ms = float(playback_time_ms) % context.duration_ms
+                drift_ms = compute_wrapped_drift_ms(
+                    actual_phase_ms=actual_phase_ms,
+                    target_phase_ms=float(target_phase),
+                    duration_ms=context.duration_ms,
+                )
+                abs_drift = abs(drift_ms)
+                self._last_drift_ms = drift_ms
+                self._drift_sample_count += 1
+                self._drift_abs_sum_ms += abs_drift
+                if abs_drift > self._drift_max_abs_ms:
+                    self._drift_max_abs_ms = abs_drift
+
+        avg_drift_ms = (
+            self._drift_abs_sum_ms / self._drift_sample_count
+            if self._drift_sample_count > 0
+            else 0.0
+        )
+        elapsed_minutes = max(0.0, (now_ms - context.start_at_ms) / 60000.0)
+        resync_rate = self._resync_count / elapsed_minutes if elapsed_minutes > 0 else 0.0
         clock_health = self._get_clock_health(force_refresh=False)
         status = self.state_machine.state
         return {
             "session_id": context.session_id,
             "status": status,
-            "drift_ms": 0,
+            "drift_ms": self._last_drift_ms if self._last_drift_ms is not None else 0.0,
             "resync_count": self._resync_count,
             "clock_offset_ms": clock_health.get("offset_ms"),
             "throttled": bool(clock_health.get("throttled", False)),
             "health_score": clock_health.get("health_score"),
-            "avg_drift_ms": 0,
-            "max_drift_ms": 0,
-            "resync_rate": 0,
+            "avg_drift_ms": avg_drift_ms,
+            "max_drift_ms": self._drift_max_abs_ms,
+            "resync_rate": resync_rate,
         }
 
     def _report_status(self) -> None:
