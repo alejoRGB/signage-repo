@@ -32,10 +32,10 @@
 - [x] Ensure snapshot behavior remains traceable via `SyncSession`.
 
 ### Phase 4 - QA Automation and Regression Safety
-- [ ] Update unit/API tests for new validation rules.
-- [ ] Add Playwright cases for wizard flow and offline start blocking.
-- [ ] Add Playwright cases for equal-duration filtering and repeated-video assignment.
-- [ ] Validate Session Health still updates (`heartbeat`, `drift avg/max`, `resync`).
+- [x] Update unit/API tests for new validation rules.
+- [x] Add Playwright cases for wizard flow and offline start blocking.
+- [x] Add Playwright cases for equal-duration filtering and repeated-video assignment.
+- [x] Validate Session Health still updates (`heartbeat`, `drift avg/max`, `resync`).
 
 ### Phase 5 - Rollout
 - [ ] Web deploy to `master`.

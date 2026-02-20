@@ -84,4 +84,77 @@ describe("Sync health panel", () => {
         expect(screen.getByText("health: 0.95")).toBeInTheDocument();
         expect(screen.getByText(/last heartbeat:/i)).toBeInTheDocument();
     });
+
+    it("refreshes session health metrics over polling interval", async () => {
+        let activePollCount = 0;
+
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => [{ id: "device-1", name: "Lobby", connectivityStatus: "online" }],
+                    } as Response;
+                }
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => [{ id: "media-1", name: "Promo", type: "video", durationMs: 10000 }],
+                    } as Response;
+                }
+                if (url.includes("/api/sync/presets") && !init?.method) {
+                    return {
+                        ok: true,
+                        json: async () => [],
+                    } as Response;
+                }
+                if (url.includes("/api/sync/session/active")) {
+                    activePollCount += 1;
+                    const driftValue = activePollCount >= 2 ? 28.4 : 12.3;
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            session: {
+                                id: "session-1",
+                                status: "RUNNING",
+                                presetId: "preset-1",
+                                masterDeviceId: "device-1",
+                                devices: [
+                                    {
+                                        id: "ssd-1",
+                                        deviceId: "device-1",
+                                        status: "PLAYING",
+                                        lastSeenAt: new Date().toISOString(),
+                                        avgDriftMs: driftValue,
+                                        maxDriftMs: 35.8,
+                                        clockOffsetMs: 4.2,
+                                        healthScore: 0.95,
+                                        resyncCount: 2,
+                                        resyncRate: 0.1,
+                                        device: {
+                                            id: "device-1",
+                                            name: "Lobby",
+                                            status: "online",
+                                        },
+                                    },
+                                ],
+                            },
+                        }),
+                    } as Response;
+                }
+
+                return { ok: true, json: async () => ({}) } as Response;
+            }) as unknown as typeof fetch
+        );
+
+        const { unmount } = render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        expect(await screen.findByText("drift avg: 12.3ms")).toBeInTheDocument();
+        await new Promise((resolve) => setTimeout(resolve, 1800));
+        expect(await screen.findByText("drift avg: 28.4ms")).toBeInTheDocument();
+        unmount();
+    });
 });

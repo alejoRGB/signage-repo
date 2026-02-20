@@ -1087,6 +1087,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                                     Assigned Media
                                                 </label>
                                                 <select
+                                                    data-testid={`sync-device-media-select-${device.id}`}
                                                     value={assignedMediaByDevice[device.id] ?? ""}
                                                     onChange={(event) =>
                                                         setAssignedMediaByDevice((current) => ({

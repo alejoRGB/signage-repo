@@ -101,6 +101,34 @@ describe("Sync presets API", () => {
         expect(response.status).toBe(403);
     });
 
+    it("rejects PER_DEVICE preset when assigned videos have different durationMs", async () => {
+        (prisma.device.findMany as jest.Mock).mockResolvedValue([{ id: "device-1" }, { id: "device-2" }]);
+        (prisma.mediaItem.findMany as jest.Mock).mockResolvedValue([
+            { id: "media-1", durationMs: 10000 },
+            { id: "media-2", durationMs: 12000 },
+        ]);
+
+        const request = new Request("http://localhost/api/sync/presets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: "Mixed Duration",
+                mode: "PER_DEVICE",
+                durationMs: 10000,
+                devices: [
+                    { deviceId: "device-1", mediaItemId: "media-1" },
+                    { deviceId: "device-2", mediaItemId: "media-2" },
+                ],
+            }),
+        });
+
+        const response = await CREATE_PRESET(request);
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toMatch(/durationMs must exactly match/i);
+    });
+
     it("updates a preset and rewrites assignments", async () => {
         (prisma.syncPreset.findFirst as jest.Mock)
             .mockResolvedValueOnce({
