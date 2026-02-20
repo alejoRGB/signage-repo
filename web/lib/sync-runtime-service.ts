@@ -13,6 +13,8 @@ type SyncRuntimeInput = {
     avgDriftMs?: number | null;
     maxDriftMs?: number | null;
     resyncRate?: number | null;
+    lanMode?: string | null;
+    lanBeaconAgeMs?: number | null;
 };
 
 const syncStatusMap: Record<string, SyncSessionDeviceStatus> = {
@@ -97,6 +99,8 @@ export function extractSyncRuntimeFromJson(payload: unknown): SyncRuntimeInput |
         avgDriftMs: toOptionalNumber(runtimeRecord.avg_drift_ms ?? runtimeRecord.avgDriftMs),
         maxDriftMs: toOptionalNumber(runtimeRecord.max_drift_ms ?? runtimeRecord.maxDriftMs),
         resyncRate: toOptionalNumber(runtimeRecord.resync_rate ?? runtimeRecord.resyncRate),
+        lanMode: (runtimeRecord.lan_mode as string | undefined) ?? (runtimeRecord.lanMode as string | undefined) ?? null,
+        lanBeaconAgeMs: toOptionalNumber(runtimeRecord.lan_beacon_age_ms ?? runtimeRecord.lanBeaconAgeMs),
     };
 }
 
@@ -120,6 +124,8 @@ export function extractSyncRuntimeFromFormData(formData: FormData): SyncRuntimeI
         avgDriftMs: toOptionalNumber(formData.get("sync_avg_drift_ms")),
         maxDriftMs: toOptionalNumber(formData.get("sync_max_drift_ms")),
         resyncRate: toOptionalNumber(formData.get("sync_resync_rate")),
+        lanMode: typeof formData.get("sync_lan_mode") === "string" ? (formData.get("sync_lan_mode") as string) : null,
+        lanBeaconAgeMs: toOptionalNumber(formData.get("sync_lan_beacon_age_ms")),
     };
 }
 

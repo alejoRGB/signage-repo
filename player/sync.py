@@ -18,6 +18,7 @@ class SyncManager:
         self.config = self._load_config(self.config_path)
         self.server_url = self.config.get("server_url")
         self.device_token = self.config.get("device_token")
+        self.device_id = self.config.get("device_id")
         
         self.media_dir = os.path.join(os.path.dirname(self.config_path), "media")
         self.playlist_cache = os.path.join(os.path.dirname(self.config_path), "playlist.json")
@@ -144,6 +145,8 @@ class SyncManager:
             if response.status_code == 200:
                 try:
                     data = response.json()
+                    if isinstance(data.get("device_id"), str) and data.get("device_id"):
+                        self.device_id = str(data.get("device_id"))
                     logging.info(f"[SYNC] Response: {str(data)[:200]}") # Log first 200 chars to check version
                     logging.debug(f"[SYNC] Device: {data.get('device_name')}")
                     return data
@@ -201,6 +204,10 @@ class SyncManager:
                     data["sync_max_drift_ms"] = str(sync_runtime.get("max_drift_ms"))
                 if sync_runtime.get("resync_rate") is not None:
                     data["sync_resync_rate"] = str(sync_runtime.get("resync_rate"))
+                if sync_runtime.get("lan_mode") is not None:
+                    data["sync_lan_mode"] = str(sync_runtime.get("lan_mode"))
+                if sync_runtime.get("lan_beacon_age_ms") is not None:
+                    data["sync_lan_beacon_age_ms"] = str(sync_runtime.get("lan_beacon_age_ms"))
 
             files = None
             if preview_path and os.path.exists(preview_path):
@@ -628,6 +635,19 @@ class SyncManager:
         except json.JSONDecodeError as e:
             logging.error(f"[SYNC] Error reading cached playlist: {e}")
             return None
+
+    def get_current_device_id(self) -> Optional[str]:
+        if isinstance(self.device_id, str) and self.device_id:
+            return self.device_id
+
+        cached = self.load_cached_playlist()
+        if isinstance(cached, dict):
+            cached_device_id = cached.get("device_id")
+            if isinstance(cached_device_id, str) and cached_device_id:
+                self.device_id = cached_device_id
+                return self.device_id
+
+        return None
 
 
 if __name__ == "__main__":

@@ -39,7 +39,36 @@ function mediaLocalPath(filename: string | null) {
     return filename;
 }
 
+function envBoolean(name: string, defaultValue: boolean) {
+    const raw = process.env[name];
+    if (!raw) {
+        return defaultValue;
+    }
+    const normalized = raw.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(normalized)) return true;
+    if (["0", "false", "no", "off"].includes(normalized)) return false;
+    return defaultValue;
+}
+
+function envNumber(name: string, defaultValue: number, minimum: number) {
+    const raw = process.env[name];
+    if (!raw) {
+        return defaultValue;
+    }
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+        return defaultValue;
+    }
+    return Math.max(minimum, parsed);
+}
+
 export function buildPreparePayload(input: PrepareCommandInput) {
+    const lanEnabled = envBoolean("SYNC_LAN_ENABLED", false);
+    const lanBeaconHz = envNumber("SYNC_LAN_BEACON_HZ", 20, 1);
+    const lanBeaconPort = envNumber("SYNC_LAN_BEACON_PORT", 39051, 1024);
+    const lanTimeoutMs = envNumber("SYNC_LAN_TIMEOUT_MS", 1500, 250);
+    const lanFallbackToCloud = envBoolean("SYNC_LAN_FALLBACK_TO_CLOUD", true);
+
     return JSON.parse(
         JSON.stringify({
         type: "sync.prepare",
@@ -48,6 +77,7 @@ export function buildPreparePayload(input: PrepareCommandInput) {
         start_at_ms: input.startAtMs,
         duration_ms: input.durationMs,
         master_device_id: input.masterDeviceId ?? undefined,
+        target_device_id: input.deviceId,
         failover: input.failoverFromDeviceId
             ? {
                   from_device_id: input.failoverFromDeviceId,
@@ -67,6 +97,13 @@ export function buildPreparePayload(input: PrepareCommandInput) {
             soft_correction_range_ms: [25, 500],
             deadband_ms: 25,
             warmup_loops: 3,
+            lan: {
+                enabled: lanEnabled,
+                beacon_hz: lanBeaconHz,
+                beacon_port: lanBeaconPort,
+                timeout_ms: lanTimeoutMs,
+                fallback_to_cloud: lanFallbackToCloud,
+            },
         },
         })
     ) as Prisma.InputJsonValue;

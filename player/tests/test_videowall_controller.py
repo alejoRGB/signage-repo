@@ -11,6 +11,7 @@ class DummySyncManager:
         self.acks = []
         self.status_reports = []
         self.poll_count = 0
+        self.device_id = "device-local"
 
     def poll_device_commands(self, limit=10):
         self.poll_count += 1
@@ -35,6 +36,42 @@ class DummySyncManager:
 
     def get_clock_sync_health(self, max_offset_ms=50.0):
         return self.clock_health
+
+    def get_current_device_id(self):
+        return self.device_id
+
+
+class FakeLanSync:
+    def __init__(self):
+        self.mode = "idle"
+        self.started_master = []
+        self.started_follower = []
+        self.stopped = 0
+        self.next_target_phase = None
+        self.next_age_ms = None
+
+    def update_settings(self, **_kwargs):
+        return None
+
+    def stop(self):
+        self.stopped += 1
+        self.mode = "idle"
+
+    def start_master(self, **kwargs):
+        self.started_master.append(kwargs)
+        self.mode = "master"
+        return True
+
+    def start_follower(self, **kwargs):
+        self.started_follower.append(kwargs)
+        self.mode = "follower"
+        return True
+
+    def get_follower_target_phase_ms(self, _now_ms):
+        return self.next_target_phase
+
+    def get_follower_beacon_age_ms(self, _now_ms):
+        return self.next_age_ms
 
 
 def test_prepare_command_acks_when_clock_is_healthy(tmp_path):
@@ -470,3 +507,166 @@ def test_tick_uses_slower_status_interval_in_playing_state(mocker):
     controller.tick()
 
     assert len(manager.status_reports) == 2
+
+
+def test_prepare_configures_lan_master_role_when_device_is_master(tmp_path):
+    media_file = tmp_path / "sync.mp4"
+    media_file.write_bytes(b"test")
+
+    manager = DummySyncManager(
+        command_batches=[
+            [
+                {
+                    "id": "cmd-lan-master",
+                    "type": "SYNC_PREPARE",
+                    "sessionId": "session-lan",
+                    "payload": {
+                        "session_id": "session-lan",
+                        "start_at_ms": int(time.time() * 1000) + 500,
+                        "duration_ms": 10000,
+                        "master_device_id": "device-local",
+                        "target_device_id": "device-local",
+                        "sync_config": {"lan": {"enabled": True}},
+                        "media": {"local_path": str(media_file)},
+                    },
+                }
+            ]
+        ],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    fake_lan = FakeLanSync()
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=SyncStateMachine(),
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+        lan_sync=fake_lan,
+    )
+
+    controller.tick()
+
+    assert controller._lan_mode == "master"
+    assert len(fake_lan.started_master) == 1
+    assert fake_lan.started_master[0]["master_device_id"] == "device-local"
+
+
+def test_runtime_correction_prefers_lan_target_phase_for_follower():
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    fake_lan = FakeLanSync()
+    fake_lan.next_target_phase = 280.0
+    fake_lan.next_age_ms = 40
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-follow",
+            start_at_ms=0,
+            duration_ms=10_000,
+            local_path="/tmp/video.mp4",
+            master_device_id="device-master",
+            device_id="device-local",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+    machine.transition("WARMING_UP")
+    machine.transition("PLAYING")
+
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+        set_playback_speed=lambda _speed: True,
+        get_playback_time_ms=lambda: 300.0,
+        lan_sync=fake_lan,
+    )
+    controller.lan_enabled = True
+    controller.lan_sync.update_settings(enabled=True)
+    controller._lan_mode = "follower"
+
+    assert machine.context is not None
+    controller._apply_runtime_correction(now_ms=10_000, context=machine.context)
+
+    # Cloud target at now=10000/start=0 would be 0ms (drift ~=300ms),
+    # but LAN target is 280ms, so sampled drift should stay near 20ms.
+    assert controller._last_drift_ms is not None
+    assert abs(controller._last_drift_ms - 20.0) < 0.001
+    assert controller._lan_mode == "follower"
+
+
+def test_runtime_correction_falls_back_to_cloud_when_lan_beacon_missing():
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    fake_lan = FakeLanSync()
+    fake_lan.next_target_phase = None
+    fake_lan.next_age_ms = 2500
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-fallback",
+            start_at_ms=0,
+            duration_ms=10_000,
+            local_path="/tmp/video.mp4",
+            master_device_id="device-master",
+            device_id="device-local",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+    machine.transition("WARMING_UP")
+    machine.transition("PLAYING")
+
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+        set_playback_speed=lambda _speed: True,
+        get_playback_time_ms=lambda: 300.0,
+        lan_sync=fake_lan,
+    )
+    controller.lan_enabled = True
+    controller.lan_sync.update_settings(enabled=True)
+    controller._lan_mode = "follower"
+
+    assert machine.context is not None
+    controller._apply_runtime_correction(now_ms=10_000, context=machine.context)
+
+    assert controller._lan_mode == "cloud_fallback"

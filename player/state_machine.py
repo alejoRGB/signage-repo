@@ -31,6 +31,7 @@ class SyncSessionContext:
     duration_ms: int
     local_path: str
     master_device_id: Optional[str] = None
+    device_id: Optional[str] = None
 
 
 class SyncStateMachine:
@@ -124,5 +125,6 @@ class SyncStateMachine:
                 "state": self._state,
                 "session_id": self._context.session_id if self._context else None,
                 "master_device_id": self._context.master_device_id if self._context else None,
+                "device_id": self._context.device_id if self._context else None,
                 "local_path": self._context.local_path if self._context else None,
             }

@@ -6,6 +6,7 @@ import os
 import time
 from typing import Callable, Dict, Optional
 
+from lan_sync import LanSyncService
 from logger_service import log_sync_event
 from state_machine import (
     SYNC_STATE_ERRORED,
@@ -38,6 +39,7 @@ class VideowallController:
         is_playback_alive: Callable[[], bool],
         set_playback_speed: Optional[Callable[[float], bool]] = None,
         get_playback_time_ms: Optional[Callable[[], Optional[float]]] = None,
+        lan_sync: Optional[LanSyncService] = None,
     ):
         self.sync_manager = sync_manager
         self.state_machine = state_machine
@@ -58,6 +60,23 @@ class VideowallController:
         self.hard_resync_threshold_ms = self._resolve_int_env("SYNC_HARD_RESYNC_THRESHOLD_MS", 500, 25)
         self.clock_check_interval_s = 10.0
         self.clock_max_offset_ms = 50.0
+        self.lan_enabled = self._resolve_bool_env("SYNC_LAN_ENABLED", False)
+        self.lan_beacon_hz = self._resolve_interval_env("SYNC_LAN_BEACON_HZ", 20.0, 1.0)
+        self.lan_beacon_port = self._resolve_int_env("SYNC_LAN_BEACON_PORT", 39051, 1024)
+        self.lan_timeout_ms = self._resolve_int_env("SYNC_LAN_TIMEOUT_MS", 1500, 250)
+        self.lan_fallback_to_cloud = self._resolve_bool_env("SYNC_LAN_FALLBACK_TO_CLOUD", True)
+        self.lan_bind_host = os.getenv("SYNC_LAN_BIND_HOST", "0.0.0.0")
+        self.lan_broadcast_addr = os.getenv("SYNC_LAN_BROADCAST_ADDR", "255.255.255.255")
+        self.status_interval_playing_lan_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_PLAYING_LAN_S", 10.0, 1.0)
+        self.command_poll_playing_lan_s = self._resolve_interval_env("SYNC_COMMAND_POLL_PLAYING_LAN_S", 5.0, 1.0)
+        self.lan_sync = lan_sync or LanSyncService(
+            enabled=self.lan_enabled,
+            beacon_hz=self.lan_beacon_hz,
+            beacon_port=self.lan_beacon_port,
+            timeout_ms=self.lan_timeout_ms,
+            broadcast_addr=self.lan_broadcast_addr,
+            bind_host=self.lan_bind_host,
+        )
 
         self._last_poll_ts = 0.0
         self._last_status_ts = 0.0
@@ -76,6 +95,9 @@ class VideowallController:
         self._drift_window_samples: deque[tuple[int, float]] = deque()
         self._last_applied_speed = 1.0
         self._last_soft_correction_log_ts = 0.0
+        self._local_device_id: Optional[str] = None
+        self._lan_mode = "disabled"
+        self._lan_last_beacon_age_ms: Optional[int] = None
         self._last_clock_health: Dict[str, object] = {
             "healthy": False,
             "critical": True,
@@ -106,6 +128,29 @@ class VideowallController:
             return default_value
         return max(minimum, parsed)
 
+    @staticmethod
+    def _resolve_bool_env(name: str, default_value: bool) -> bool:
+        raw = os.getenv(name)
+        if raw is None:
+            return default_value
+        return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _coerce_bool(value: object, default: bool) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"1", "true", "yes", "on"}:
+                return True
+            if lowered in {"0", "false", "no", "off"}:
+                return False
+        return default
+
     def _current_command_poll_interval_s(self) -> float:
         if not self.state_machine.is_active():
             return self.command_poll_idle_interval_s
@@ -114,6 +159,8 @@ class VideowallController:
         if state in {SYNC_STATE_PRELOADING, SYNC_STATE_READY, SYNC_STATE_WARMING_UP}:
             return self.command_poll_critical_interval_s
         if state == SYNC_STATE_PLAYING:
+            if self._lan_mode == "follower":
+                return max(self.command_poll_active_interval_s, self.command_poll_playing_lan_s)
             return self.command_poll_active_interval_s
         return self.command_poll_idle_interval_s
 
@@ -122,6 +169,8 @@ class VideowallController:
         if state in {SYNC_STATE_READY, SYNC_STATE_WARMING_UP}:
             return self.status_interval_critical_s
         if state == SYNC_STATE_PLAYING:
+            if self._lan_mode == "follower":
+                return max(self.status_interval_playing_s, self.status_interval_playing_lan_s)
             return self.status_interval_playing_s
         return self.status_interval_critical_s
 
@@ -164,6 +213,146 @@ class VideowallController:
 
         if os.path.exists(local_path):
             return local_path
+
+        return None
+
+    def _resolve_local_device_id(self) -> Optional[str]:
+        if self._local_device_id:
+            return self._local_device_id
+        getter = getattr(self.sync_manager, "get_current_device_id", None)
+        if callable(getter):
+            resolved = getter()
+            if isinstance(resolved, str) and resolved:
+                self._local_device_id = resolved
+                return self._local_device_id
+        return None
+
+    def _apply_prepare_sync_config(self, payload: Dict) -> None:
+        sync_config = payload.get("sync_config") or payload.get("syncConfig")
+        if not isinstance(sync_config, dict):
+            return
+
+        hard_resync = sync_config.get("hard_resync_threshold_ms")
+        if hard_resync is not None:
+            try:
+                self.hard_resync_threshold_ms = max(25, int(hard_resync))
+            except (TypeError, ValueError):
+                pass
+
+        lan = sync_config.get("lan")
+        if not isinstance(lan, dict):
+            return
+
+        enabled = lan.get("enabled")
+        if enabled is not None:
+            self.lan_enabled = self._coerce_bool(enabled, self.lan_enabled)
+
+        beacon_hz = lan.get("beacon_hz") or lan.get("beaconHz")
+        if beacon_hz is not None:
+            try:
+                self.lan_beacon_hz = max(1.0, float(beacon_hz))
+            except (TypeError, ValueError):
+                pass
+
+        beacon_port = lan.get("beacon_port") or lan.get("beaconPort")
+        if beacon_port is not None:
+            try:
+                self.lan_beacon_port = max(1024, int(beacon_port))
+            except (TypeError, ValueError):
+                pass
+
+        timeout_ms = lan.get("timeout_ms") or lan.get("timeoutMs")
+        if timeout_ms is not None:
+            try:
+                self.lan_timeout_ms = max(250, int(timeout_ms))
+            except (TypeError, ValueError):
+                pass
+
+        fallback = lan.get("fallback_to_cloud") if "fallback_to_cloud" in lan else lan.get("fallbackToCloud")
+        if fallback is not None:
+            self.lan_fallback_to_cloud = self._coerce_bool(fallback, self.lan_fallback_to_cloud)
+
+        bind_host = lan.get("bind_host") or lan.get("bindHost")
+        if isinstance(bind_host, str) and bind_host:
+            self.lan_bind_host = bind_host
+
+        broadcast_addr = lan.get("broadcast_addr") or lan.get("broadcastAddr")
+        if isinstance(broadcast_addr, str) and broadcast_addr:
+            self.lan_broadcast_addr = broadcast_addr
+
+        self.lan_sync.update_settings(
+            enabled=self.lan_enabled,
+            beacon_hz=self.lan_beacon_hz,
+            beacon_port=self.lan_beacon_port,
+            timeout_ms=self.lan_timeout_ms,
+            bind_host=self.lan_bind_host,
+            broadcast_addr=self.lan_broadcast_addr,
+        )
+
+    def _configure_lan_role(self, context: SyncSessionContext) -> None:
+        if not self.lan_enabled:
+            self.lan_sync.stop()
+            self._lan_mode = "disabled"
+            self._lan_last_beacon_age_ms = None
+            return
+
+        local_device_id = context.device_id or self._resolve_local_device_id()
+        if not local_device_id:
+            self.lan_sync.stop()
+            self._lan_mode = "cloud_fallback"
+            self._lan_last_beacon_age_ms = None
+            return
+
+        if context.master_device_id and local_device_id == context.master_device_id:
+            if self.lan_sync.start_master(
+                session_id=context.session_id,
+                master_device_id=local_device_id,
+                duration_ms=context.duration_ms,
+                get_phase_ms=self.get_playback_time_ms,
+                get_speed=lambda: self._last_applied_speed,
+            ):
+                self._lan_mode = "master"
+                self._lan_last_beacon_age_ms = None
+            else:
+                self._lan_mode = "cloud_fallback"
+            return
+
+        if context.master_device_id:
+            if self.lan_sync.start_follower(
+                session_id=context.session_id,
+                master_device_id=context.master_device_id,
+                duration_ms=context.duration_ms,
+            ):
+                self._lan_mode = "follower"
+                self._lan_last_beacon_age_ms = None
+            else:
+                self._lan_mode = "cloud_fallback"
+            return
+
+        self.lan_sync.stop()
+        self._lan_mode = "cloud_fallback"
+        self._lan_last_beacon_age_ms = None
+
+    def _resolve_target_phase_ms(self, now_ms: int, context: SyncSessionContext) -> Optional[int]:
+        cloud_target = compute_target_phase_ms(now_ms, context.start_at_ms, context.duration_ms)
+        if cloud_target is None:
+            return None
+
+        if self._lan_mode not in {"follower", "cloud_fallback"}:
+            self._lan_last_beacon_age_ms = None
+            return int(cloud_target)
+
+        lan_target = self.lan_sync.get_follower_target_phase_ms(now_ms)
+        beacon_age_ms = self.lan_sync.get_follower_beacon_age_ms(now_ms)
+        self._lan_last_beacon_age_ms = beacon_age_ms
+
+        if lan_target is not None:
+            self._lan_mode = "follower"
+            return int(round(lan_target))
+
+        if self.lan_fallback_to_cloud:
+            self._lan_mode = "cloud_fallback"
+            return int(cloud_target)
 
         return None
 
@@ -220,6 +409,7 @@ class VideowallController:
         session_id = self._extract_session_id(payload, fallback_session_id)
         if not session_id:
             return False, "Missing session_id in sync.prepare"
+        self._apply_prepare_sync_config(payload)
 
         media = payload.get("media") or {}
         local_path = media.get("local_path") or media.get("localPath")
@@ -244,6 +434,15 @@ class VideowallController:
         start_at_ms = payload.get("start_at_ms") or payload.get("startAtMs")
         duration_ms = payload.get("duration_ms") or payload.get("durationMs")
         master_device_id = payload.get("master_device_id") or payload.get("masterDeviceId")
+        local_device_id = (
+            payload.get("target_device_id")
+            or payload.get("targetDeviceId")
+            or payload.get("device_id")
+            or payload.get("deviceId")
+            or self._resolve_local_device_id()
+        )
+        if isinstance(local_device_id, str) and local_device_id:
+            self._local_device_id = local_device_id
 
         if start_at_ms is None or duration_ms is None:
             return False, "Missing start_at_ms or duration_ms in sync.prepare"
@@ -260,9 +459,11 @@ class VideowallController:
             existing_context.duration_ms = duration_ms
             existing_context.local_path = resolved_local_path
             existing_context.master_device_id = master_device_id
+            existing_context.device_id = local_device_id
             # No need to restart if already running and process is healthy.
             if self.state_machine.state in {SYNC_STATE_READY, SYNC_STATE_WARMING_UP, SYNC_STATE_PLAYING}:
                 if self.is_playback_alive():
+                    self._configure_lan_role(existing_context)
                     return True, None
 
         if self.state_machine.is_active() and (
@@ -279,6 +480,7 @@ class VideowallController:
                 duration_ms=duration_ms,
                 local_path=resolved_local_path,
                 master_device_id=master_device_id,
+                device_id=local_device_id,
             )
         )
 
@@ -319,6 +521,7 @@ class VideowallController:
         )
         self._restart_attempts = 0
         self._next_restart_at_ms = None
+        self._configure_lan_role(context)
 
         return True, None
 
@@ -334,6 +537,7 @@ class VideowallController:
 
     def _stop_active_session(self) -> None:
         self.stop_playback()
+        self.lan_sync.stop()
         if self.state_machine.is_active():
             self.state_machine.transition("DISCONNECTED", force=True)
         self.state_machine.reset()
@@ -341,6 +545,8 @@ class VideowallController:
         self._warmup_until_ms = None
         self._restart_attempts = 0
         self._next_restart_at_ms = None
+        self._lan_mode = "disabled"
+        self._lan_last_beacon_age_ms = None
 
     def _enter_warmup(self, now_ms: int, *, rejoin: bool = False) -> None:
         context = self.state_machine.context
@@ -364,7 +570,7 @@ class VideowallController:
             )
 
     def _sample_current_drift(self, now_ms: int, context: SyncSessionContext) -> Optional[tuple[float, int]]:
-        target_phase = compute_target_phase_ms(now_ms, context.start_at_ms, context.duration_ms)
+        target_phase = self._resolve_target_phase_ms(now_ms, context)
         if target_phase is None or context.duration_ms <= 0:
             return None
 
@@ -625,6 +831,8 @@ class VideowallController:
             "avg_drift_ms": avg_drift_ms,
             "max_drift_ms": self._drift_max_abs_ms,
             "resync_rate": resync_rate,
+            "lan_mode": self._lan_mode,
+            "lan_beacon_age_ms": self._lan_last_beacon_age_ms,
         }
 
     def _report_status(self) -> None:

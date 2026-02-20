@@ -68,3 +68,16 @@ def test_clock_sync_health_parses_leap_status_and_marks_healthy(tmp_path, mocker
     assert health["offset_ms"] == pytest.approx(0.33443, rel=1e-6)
     assert health["healthy"] is True
     assert health["critical"] is False
+
+
+def test_get_current_device_id_from_cached_playlist(tmp_path):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"server_url": "http://test.com", "device_token": "token"}))
+
+    manager = SyncManager(config_path=str(config_file))
+    manager.device_id = None
+
+    cache_payload = {"device_id": "device-cache-1"}
+    (tmp_path / "playlist.json").write_text(json.dumps(cache_payload))
+
+    assert manager.get_current_device_id() == "device-cache-1"
