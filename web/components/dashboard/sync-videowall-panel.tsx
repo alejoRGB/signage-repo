@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GripVertical, Monitor, Play, Plus, Save, Square, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, GripVertical, Monitor, Play, Plus, Save, Square, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
 import { SYNC_PRESET_MODE, type SyncPresetMode } from "@/types/sync";
@@ -62,6 +62,7 @@ type ActiveSession = {
 
 type DragOrigin = "available" | "sync";
 type WizardStep = 1 | 2 | 3;
+type EntryView = "menu" | "builder";
 
 type ValidationResult =
     | { valid: false; error: string }
@@ -151,6 +152,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
     const [syncDeviceIds, setSyncDeviceIds] = useState<string[]>([]);
     const [assignedMediaByDevice, setAssignedMediaByDevice] = useState<Record<string, string>>({});
     const [wizardStep, setWizardStep] = useState<WizardStep>(1);
+    const [entryView, setEntryView] = useState<EntryView>("menu");
     const [draggedDeviceId, setDraggedDeviceId] = useState<string | null>(null);
     const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -381,6 +383,13 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         [syncDevices]
     );
 
+    const syncOnlineCount = syncDevices.length - offlineSyncDevices.length;
+
+    const perDeviceAssignedCount = useMemo(
+        () => syncDeviceIds.reduce((count, deviceId) => (assignedMediaByDevice[deviceId] ? count + 1 : count), 0),
+        [assignedMediaByDevice, syncDeviceIds]
+    );
+
     const reviewRows = useMemo(
         () =>
             syncDevices.map((device) => {
@@ -530,6 +539,20 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         setErrorMessage(null);
     };
 
+    const openNewSessionFlow = () => {
+        createNewPresetDraft();
+        setEntryView("builder");
+    };
+
+    const openSavedSessionsFlow = () => {
+        if (!selectedPresetId && presets.length > 0) {
+            setSelectedPresetId(presets[0].id);
+        }
+        setWizardStep(3);
+        setErrorMessage(null);
+        setEntryView("builder");
+    };
+
     const deletePreset = async () => {
         if (!selectedPresetId) {
             return;
@@ -619,6 +642,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 body: JSON.stringify({ sessionId: activeSession.id, reason: "USER_STOP" }),
             });
             setActiveSession(null);
+            setEntryView("menu");
             showToast("Sync session stopped", "info");
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to stop sync session";
@@ -647,44 +671,111 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         >
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
                 {!activeSession ? (
+                    entryView === "menu" ? (
+                        <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-300 bg-white/90 p-6 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.45)]">
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-700">Sync</p>
+                            <h2 className="mt-1 text-2xl font-semibold text-slate-900">¿Cómo querés continuar?</h2>
+                            <p className="mt-2 text-sm text-slate-600">
+                                Elegí crear una nueva sesión de sincronización o abrir una configuración guardada.
+                            </p>
+                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    data-testid="sync-entry-new-session-btn"
+                                    onClick={openNewSessionFlow}
+                                    className="rounded-xl border border-cyan-500 bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                                >
+                                    Empezar una nueva sesión
+                                </button>
+                                <button
+                                    type="button"
+                                    data-testid="sync-entry-saved-sessions-btn"
+                                    onClick={openSavedSessionsFlow}
+                                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                                >
+                                    Ver sesiones guardadas
+                                </button>
+                            </div>
+                            {!isDirectiveActive ? (
+                                <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                    Start bloqueado: activa el checkbox de la directiva Sync para permitir inicio.
+                                </p>
+                            ) : null}
+                        </section>
+                    ) : (
                     <>
-                <div className="rounded-2xl border border-amber-300 bg-[linear-gradient(90deg,rgba(252,211,77,0.14),rgba(251,191,36,0.07))] px-4 py-3">
-                    <p className="text-sm font-semibold tracking-wide text-amber-900">
-                        Los videos a reproducirse en sync deben durar exactamente lo mismo
-                    </p>
-                    {typeof durationLockMs === "number" ? (
-                        <p className="mt-1 text-xs text-amber-900">
-                            Duration lock active: {msToSecondsLabel(durationLockMs)}
-                        </p>
-                    ) : null}
-                    {!isDirectiveActive ? (
-                        <p className="mt-1 text-xs text-amber-800">
-                            Start bloqueado: activá el checkbox de la directiva Sync para permitir inicio.
-                        </p>
-                    ) : null}
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEntryView("menu");
+                            setErrorMessage(null);
+                        }}
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                    >
+                        Volver al menú
+                    </button>
                 </div>
+                <section className="rounded-2xl border border-slate-300 bg-[linear-gradient(145deg,rgba(248,250,252,0.94),rgba(226,232,240,0.5))] p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
+                    <div className="grid gap-3 lg:grid-cols-[1.2fr_auto_auto]">
+                        <div className="rounded-xl border border-amber-300 bg-[linear-gradient(90deg,rgba(252,211,77,0.16),rgba(251,191,36,0.1))] px-4 py-3">
+                            <p className="text-sm font-semibold tracking-wide text-amber-900">
+                                Los videos a reproducirse en sync deben durar exactamente lo mismo
+                            </p>
+                            {typeof durationLockMs === "number" ? (
+                                <p className="mt-1 text-xs text-amber-900">
+                                    Duration lock active: {msToSecondsLabel(durationLockMs)}
+                                </p>
+                            ) : (
+                                <p className="mt-1 text-xs text-amber-900">Duration lock pending until first valid assignment.</p>
+                            )}
+                            {!isDirectiveActive ? (
+                                <p className="mt-1 text-xs text-amber-800">
+                                    Start bloqueado: activa el checkbox de la directiva Sync para permitir inicio.
+                                </p>
+                            ) : null}
+                        </div>
+                        <div className="rounded-xl border border-cyan-200 bg-cyan-50/90 px-4 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-800">Selected devices</p>
+                            <p className="mt-1 text-2xl font-semibold text-slate-900">{syncDevices.length}</p>
+                            <p className="mt-1 text-xs text-slate-600">
+                                {syncOnlineCount} online - {offlineSyncDevices.length} offline
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white/90 px-4 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Video assignment</p>
+                            <p className="mt-1 text-2xl font-semibold text-slate-900">
+                                {mode === SYNC_PRESET_MODE.COMMON ? (commonMediaId ? "1/1" : "0/1") : `${perDeviceAssignedCount}/${syncDeviceIds.length || 0}`}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-600">{mode === SYNC_PRESET_MODE.COMMON ? "Common mode" : "Per device mode"}</p>
+                        </div>
+                    </div>
+                </section>
 
                 <section className="rounded-2xl border border-slate-300 bg-white/90 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="grid flex-1 gap-2 sm:grid-cols-3">
                             {([1, 2, 3] as WizardStep[]).map((step) => {
                                 const isActive = wizardStep === step;
                                 const isDone = wizardStep > step;
                                 const label =
                                     step === 1 ? "1. Devices" : step === 2 ? "2. Assign Videos" : "3. Review & Start";
                                 return (
-                                    <span
+                                    <div
                                         key={step}
-                                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                        className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                                             isActive
-                                                ? "bg-cyan-600 text-white"
+                                                ? "border-cyan-500 bg-cyan-600 text-white"
                                                 : isDone
-                                                  ? "bg-emerald-100 text-emerald-900"
-                                                  : "bg-slate-100 text-slate-600"
+                                                  ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                                                  : "border-slate-200 bg-slate-50 text-slate-600"
                                         }`}
                                     >
-                                        {label}
-                                    </span>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span>{label}</span>
+                                            {isDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                        </div>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -726,9 +817,31 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
                 {wizardStep === 2 ? (
                     <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Assignment mode</p>
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Assignment mode</p>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+                                    {videoMediaItems.length} videos
+                                </span>
+                                <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-semibold ${
+                                        canProceedFromStep2 ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"
+                                    }`}
+                                >
+                                    {canProceedFromStep2 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                                    {canProceedFromStep2 ? "ready" : "pending"}
+                                </span>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-2">
-                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                            <label
+                                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                                    mode === SYNC_PRESET_MODE.COMMON
+                                        ? "border-cyan-400 bg-cyan-50 text-cyan-900"
+                                        : "border-slate-300 text-slate-700"
+                                }`}
+                            >
                                 <input
                                     type="radio"
                                     name="sync-mode"
@@ -738,7 +851,13 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 />
                                 Common media
                             </label>
-                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                            <label
+                                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                                    mode === SYNC_PRESET_MODE.PER_DEVICE
+                                        ? "border-cyan-400 bg-cyan-50 text-cyan-900"
+                                        : "border-slate-300 text-slate-700"
+                                }`}
+                            >
                                 <input
                                     type="radio"
                                     name="sync-mode"
@@ -751,7 +870,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         </div>
 
                         {mode === SYNC_PRESET_MODE.COMMON ? (
-                            <div className="mt-3">
+                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                                     Common media for all devices
                                 </label>
@@ -789,7 +908,12 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                 {syncDevices.map((device) => (
                                     <div key={device.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-                                        <p className="mb-2 text-sm font-semibold text-slate-900">{device.name}</p>
+                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                            <p className="text-sm font-semibold text-slate-900">{device.name}</p>
+                                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${connectivityClass(isDeviceOnline(device))}`}>
+                                                {isDeviceOnline(device) ? "online" : "offline"}
+                                            </span>
+                                        </div>
                                         <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                                             Assigned Media
                                         </label>
@@ -919,7 +1043,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                     >
                                         <p className="truncate text-sm font-semibold text-slate-900">{preset.name}</p>
                                         <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-slate-500">
-                                            {preset.mode} • {preset.devices.length} devices • {msToSecondsLabel(preset.durationMs)}
+                                            {preset.mode} - {preset.devices.length} devices - {msToSecondsLabel(preset.durationMs)}
                                         </p>
                                         <p className="mt-1 text-[11px] text-slate-500">
                                             {selectedPresetId === preset.id ? "Currently loaded" : "Click to load"}
@@ -992,7 +1116,13 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                             <Monitor className="h-4 w-4 text-slate-500" />
                                             <div>
                                                 <p className="text-sm font-medium text-slate-900">{device.name}</p>
-                                                <p className="text-xs text-slate-500">{getDeviceStatus(device)}</p>
+                                                <span
+                                                    className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${connectivityClass(
+                                                        isDeviceOnline(device)
+                                                    )}`}
+                                                >
+                                                    {getDeviceStatus(device)}
+                                                </span>
                                             </div>
                                         </div>
                                         <button
@@ -1053,6 +1183,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                                 <Monitor className="h-4 w-4 text-cyan-700" />
                                                 <p className="text-sm font-semibold text-slate-900">{device.name}</p>
                                             </div>
+                                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${connectivityClass(isDeviceOnline(device))}`}>
+                                                {getDeviceStatus(device)}
+                                            </span>
                                             <button
                                                 type="button"
                                                 onClick={() => removeDeviceFromSync(device.id)}
@@ -1114,11 +1247,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         <tr key={row.deviceId} className="border-b border-slate-100 text-slate-700">
                                             <td className="py-2 pr-3 font-medium text-slate-900">{row.deviceName}</td>
                                             <td className="py-2 pr-3">
-                                                <span
-                                                    className={`rounded-full px-2 py-0.5 font-semibold ${
-                                                        row.isOnline ? "bg-emerald-100 text-emerald-900" : "bg-rose-100 text-rose-900"
-                                                    }`}
-                                                >
+                                                <span className={`rounded-full px-2 py-0.5 font-semibold ${connectivityClass(row.isOnline)}`}>
                                                     {row.isOnline ? "Online" : "Offline"}
                                                 </span>
                                             </td>
@@ -1149,6 +1278,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     </section>
                 ) : null}
                     </>
+                    )
                 ) : (
                     <section className="sticky top-0 z-20 rounded-2xl border border-cyan-300 bg-[linear-gradient(135deg,rgba(6,182,212,0.12),rgba(14,165,233,0.16))] px-4 py-3 shadow-[0_16px_36px_-24px_rgba(6,182,212,0.55)]">
                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1226,3 +1356,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         </div>
     );
 }
+
+function connectivityClass(isOnline: boolean) {
+    return isOnline ? "bg-emerald-100 text-emerald-900" : "bg-rose-100 text-rose-900";
+}
+

@@ -57,7 +57,8 @@ describe("Sync session controls", () => {
     it("hides start controls when active directive tab is not Sync", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SCHEDULES} />);
 
-        await screen.findByText("Available Devices");
+        await screen.findByTestId("sync-entry-new-session-btn");
+        expect(screen.getByTestId("sync-entry-saved-sessions-btn")).toBeInTheDocument();
 
         expect(screen.queryByTestId("sync-start-session-btn")).not.toBeInTheDocument();
         expect(screen.queryByTestId("sync-start-from-saved-btn")).not.toBeInTheDocument();

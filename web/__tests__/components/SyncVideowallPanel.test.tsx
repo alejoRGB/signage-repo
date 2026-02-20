@@ -65,6 +65,12 @@ function installFetchMock() {
     );
 }
 
+async function openNewSessionBuilder() {
+    const newSessionButton = await screen.findByTestId("sync-entry-new-session-btn");
+    fireEvent.click(newSessionButton);
+    await screen.findByText("Available Devices");
+}
+
 describe("SyncVideowallPanel - wizard and presets", () => {
     beforeEach(() => {
         showToast.mockReset();
@@ -75,7 +81,7 @@ describe("SyncVideowallPanel - wizard and presets", () => {
     it("creates preset in COMMON mode with durationMs validation", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
-        await screen.findByText("Available Devices");
+        await openNewSessionBuilder();
 
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Window to synchronized devices"));
@@ -110,7 +116,7 @@ describe("SyncVideowallPanel - wizard and presets", () => {
     it("keeps wizard on Step 1 when fewer than 2 devices are selected", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
-        await screen.findByText("Available Devices");
+        await openNewSessionBuilder();
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
 
@@ -121,7 +127,7 @@ describe("SyncVideowallPanel - wizard and presets", () => {
     it("disables mismatched-duration videos after selecting the first common video", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
-        await screen.findByText("Available Devices");
+        await openNewSessionBuilder();
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Hall to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
@@ -134,7 +140,7 @@ describe("SyncVideowallPanel - wizard and presets", () => {
     it("allows assigning the same video to multiple devices in PER_DEVICE mode", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
-        await screen.findByText("Available Devices");
+        await openNewSessionBuilder();
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Hall to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
@@ -170,7 +176,7 @@ describe("SyncVideowallPanel - wizard and presets", () => {
     it("shows offline blocking message in Step 3 review", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
-        await screen.findByText("Available Devices");
+        await openNewSessionBuilder();
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Window to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
@@ -192,5 +198,13 @@ describe("SyncVideowallPanel - wizard and presets", () => {
             const reviewStartBtn = screen.getByTestId("sync-start-from-saved-btn") as HTMLButtonElement;
             expect(reviewStartBtn.disabled).toBe(true);
         });
+    });
+
+    it("shows entry menu with new and saved session options when no session is active", async () => {
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        expect(await screen.findByTestId("sync-entry-new-session-btn")).toBeInTheDocument();
+        expect(screen.getByTestId("sync-entry-saved-sessions-btn")).toBeInTheDocument();
+        expect(screen.queryByText("Available Devices")).not.toBeInTheDocument();
     });
 });
