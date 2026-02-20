@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GripVertical, Monitor, Play, Plus, Save, Square, Trash2, Video } from "lucide-react";
+import { GripVertical, Monitor, Play, Plus, Save, Square, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
 import { SYNC_PRESET_MODE, type SyncPresetMode } from "@/types/sync";
@@ -216,22 +216,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         return perDeviceDurationLockMs;
     }, [mode, commonMediaId, perDeviceDurationLockMs, videoMediaById]);
 
-    const groupedVideos = useMemo(() => {
-        const groups = new Map<number, SyncMediaItem[]>();
-        for (const media of videoMediaItems) {
-            if (typeof media.durationMs !== "number") {
-                continue;
-            }
-            if (!groups.has(media.durationMs)) {
-                groups.set(media.durationMs, []);
-            }
-            groups.get(media.durationMs)?.push(media);
-        }
-        return Array.from(groups.entries())
-            .sort((a, b) => a[0] - b[0])
-            .map(([durationMs, items]) => ({ durationMs, items }));
-    }, [videoMediaItems]);
-
     const selectedPreset = useMemo(
         () => presets.find((preset) => preset.id === selectedPresetId) ?? null,
         [presets, selectedPresetId]
@@ -381,7 +365,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
     useEffect(() => {
         hydrateEditorFromPreset(selectedPreset);
-        setWizardStep(1);
     }, [selectedPresetId, selectedPreset]);
 
     const isDeviceOnline = (device: SyncDevice) => {
@@ -478,7 +461,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
     const openSavedPreset = (presetId: string) => {
         setSelectedPresetId(presetId);
-        setWizardStep(1);
+        setWizardStep(3);
         setErrorMessage(null);
     };
 
@@ -663,6 +646,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             className="m-4 min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.35)]"
         >
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+                {!activeSession ? (
+                    <>
                 <div className="rounded-2xl border border-amber-300 bg-[linear-gradient(90deg,rgba(252,211,77,0.14),rgba(251,191,36,0.07))] px-4 py-3">
                     <p className="text-sm font-semibold tracking-wide text-amber-900">
                         Los videos a reproducirse en sync deben durar exactamente lo mismo
@@ -739,7 +724,117 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     </p>
                 </section>
 
-                {wizardStep >= 2 ? (
+                {wizardStep === 2 ? (
+                    <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Assignment mode</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                                <input
+                                    type="radio"
+                                    name="sync-mode"
+                                    value={SYNC_PRESET_MODE.COMMON}
+                                    checked={mode === SYNC_PRESET_MODE.COMMON}
+                                    onChange={() => setMode(SYNC_PRESET_MODE.COMMON)}
+                                />
+                                Common media
+                            </label>
+                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                                <input
+                                    type="radio"
+                                    name="sync-mode"
+                                    value={SYNC_PRESET_MODE.PER_DEVICE}
+                                    checked={mode === SYNC_PRESET_MODE.PER_DEVICE}
+                                    onChange={() => setMode(SYNC_PRESET_MODE.PER_DEVICE)}
+                                />
+                                Per device media
+                            </label>
+                        </div>
+
+                        {mode === SYNC_PRESET_MODE.COMMON ? (
+                            <div className="mt-3">
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                    Common media for all devices
+                                </label>
+                                <select
+                                    data-testid="sync-common-media-select"
+                                    value={commonMediaId}
+                                    onChange={(event) => setCommonMediaId(event.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                                >
+                                    <option value="">Select common video</option>
+                                    {videoMediaItems.map((media) => (
+                                        <option
+                                            key={media.id}
+                                            value={media.id}
+                                            disabled={
+                                                typeof media.durationMs !== "number" ||
+                                                (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
+                                            }
+                                        >
+                                            {media.name} (
+                                            {typeof media.durationMs === "number"
+                                                ? msToSecondsLabel(media.durationMs)
+                                                : "no durationMs"}
+                                            {typeof durationLockMs === "number" &&
+                                            typeof media.durationMs === "number" &&
+                                            media.durationMs !== durationLockMs
+                                                ? ", different duration"
+                                                : ""}
+                                            )
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                {syncDevices.map((device) => (
+                                    <div key={device.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+                                        <p className="mb-2 text-sm font-semibold text-slate-900">{device.name}</p>
+                                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                            Assigned Media
+                                        </label>
+                                        <select
+                                            data-testid={`sync-device-media-select-${device.id}`}
+                                            value={assignedMediaByDevice[device.id] ?? ""}
+                                            onChange={(event) =>
+                                                setAssignedMediaByDevice((current) => ({
+                                                    ...current,
+                                                    [device.id]: event.target.value,
+                                                }))
+                                            }
+                                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                                        >
+                                            <option value="">Select media file</option>
+                                            {videoMediaItems.map((media) => (
+                                                <option
+                                                    key={media.id}
+                                                    value={media.id}
+                                                    disabled={
+                                                        typeof media.durationMs !== "number" ||
+                                                        (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
+                                                    }
+                                                >
+                                                    {media.name} (
+                                                    {typeof media.durationMs === "number"
+                                                        ? msToSecondsLabel(media.durationMs)
+                                                        : "no durationMs"}
+                                                    {typeof durationLockMs === "number" &&
+                                                    typeof media.durationMs === "number" &&
+                                                    media.durationMs !== durationLockMs
+                                                        ? ", different duration"
+                                                        : ""}
+                                                    )
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                ) : null}
+
+                {wizardStep === 3 ? (
                     <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
                     <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
                         <select
@@ -835,94 +930,18 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         )}
                     </div>
 
-                    <div className="mt-3 grid gap-3 lg:grid-cols-[1.2fr_1fr]">
-                        <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Preset name
-                            </label>
-                            <input
-                                data-testid="sync-preset-name-input"
-                                value={presetName}
-                                onChange={(event) => setPresetName(event.target.value)}
-                                placeholder="Video Wall Main Hall"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
-                            />
-                        </div>
-
-                        <div>
-                            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Mode
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
-                                    <input
-                                        type="radio"
-                                        name="sync-mode"
-                                        value={SYNC_PRESET_MODE.COMMON}
-                                        checked={mode === SYNC_PRESET_MODE.COMMON}
-                                        onChange={() => setMode(SYNC_PRESET_MODE.COMMON)}
-                                        disabled={wizardStep === 1}
-                                    />
-                                    Common media
-                                </label>
-                                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
-                                    <input
-                                        type="radio"
-                                        name="sync-mode"
-                                        value={SYNC_PRESET_MODE.PER_DEVICE}
-                                        checked={mode === SYNC_PRESET_MODE.PER_DEVICE}
-                                        onChange={() => setMode(SYNC_PRESET_MODE.PER_DEVICE)}
-                                        disabled={wizardStep === 1}
-                                    />
-                                    Per device media
-                                </label>
-                            </div>
-                        </div>
+                    <div className="mt-3">
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Preset name
+                        </label>
+                        <input
+                            data-testid="sync-preset-name-input"
+                            value={presetName}
+                            onChange={(event) => setPresetName(event.target.value)}
+                            placeholder="Video Wall Main Hall"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                        />
                     </div>
-
-                    {mode === SYNC_PRESET_MODE.COMMON ? (
-                        <div className="mt-3">
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Common media for all devices
-                            </label>
-                            <select
-                                data-testid="sync-common-media-select"
-                                value={commonMediaId}
-                                onChange={(event) => setCommonMediaId(event.target.value)}
-                                disabled={wizardStep === 1}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
-                            >
-                                <option value="">Select common video</option>
-                                {videoMediaItems.map((media) => (
-                                    <option
-                                        key={media.id}
-                                        value={media.id}
-                                        disabled={
-                                            typeof media.durationMs !== "number" ||
-                                            (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
-                                        }
-                                    >
-                                        {media.name} (
-                                        {typeof media.durationMs === "number"
-                                            ? msToSecondsLabel(media.durationMs)
-                                            : "no durationMs"}
-                                        {typeof durationLockMs === "number" &&
-                                        typeof media.durationMs === "number" &&
-                                        media.durationMs !== durationLockMs
-                                            ? ", different duration"
-                                            : ""}
-                                        )
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    ) : null}
-
-                    {wizardStep === 3 && offlineSyncDevices.length > 0 ? (
-                        <p className="mt-2 text-xs text-rose-700">
-                            Start blocked. Offline devices: {offlineSyncDevices.map((device) => device.name).join(", ")}
-                        </p>
-                    ) : null}
                     </section>
                 ) : null}
 
@@ -932,7 +951,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     </div>
                 ) : null}
 
-                <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+                {wizardStep === 1 ? (
+                    <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
                     <section
                         className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]"
                         onDragOver={(event) => event.preventDefault()}
@@ -1043,100 +1063,15 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                             </button>
                                         </div>
 
-                                        {mode === SYNC_PRESET_MODE.PER_DEVICE ? (
-                                            <>
-                                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                                    Assigned Media
-                                                </label>
-                                                <select
-                                                    data-testid={`sync-device-media-select-${device.id}`}
-                                                    value={assignedMediaByDevice[device.id] ?? ""}
-                                                    onChange={(event) =>
-                                                        setAssignedMediaByDevice((current) => ({
-                                                            ...current,
-                                                            [device.id]: event.target.value,
-                                                        }))
-                                                    }
-                                                    disabled={wizardStep === 1}
-                                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
-                                                >
-                                                    <option value="">Select media file</option>
-                                                    {videoMediaItems.map((media) => (
-                                                        <option
-                                                            key={media.id}
-                                                            value={media.id}
-                                                            disabled={
-                                                                typeof media.durationMs !== "number" ||
-                                                                (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
-                                                            }
-                                                        >
-                                                            {media.name} (
-                                                            {typeof media.durationMs === "number"
-                                                                ? msToSecondsLabel(media.durationMs)
-                                                                : "no durationMs"}
-                                                            {typeof durationLockMs === "number" &&
-                                                            typeof media.durationMs === "number" &&
-                                                            media.durationMs !== durationLockMs
-                                                                ? ", different duration"
-                                                                : ""}
-                                                            )
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {wizardStep === 1 ? (
-                                                    <p className="mt-1 text-xs text-slate-500">
-                                                        Go to Step 2 to assign videos per device.
-                                                    </p>
-                                                ) : null}
-                                            </>
-                                        ) : (
-                                            <p className="text-xs text-slate-500">Uses common media selection for all devices.</p>
-                                        )}
+                                        <p className="text-xs text-slate-500">
+                                            Device selection only. Assign videos in Step 2.
+                                        </p>
                                     </article>
                                 ))
                             )}
                         </div>
                     </section>
-                </div>
-
-                {wizardStep >= 2 ? (
-                    <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">Media</h3>
-                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                {videoMediaItems.length}
-                            </span>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                            {isLoading ? (
-                                <p className="text-sm text-slate-500">Loading media...</p>
-                            ) : groupedVideos.length === 0 ? (
-                                <p className="text-sm text-slate-500">No video files with durationMs found.</p>
-                            ) : (
-                                groupedVideos.map((group) => (
-                                    <div key={group.durationMs} className="rounded-xl border border-cyan-200 bg-cyan-50/60 px-3 py-2">
-                                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-800">
-                                            {msToSecondsLabel(group.durationMs)} duration group
-                                        </p>
-                                        <div className="space-y-2">
-                                            {group.items.map((media) => (
-                                                <div key={media.id} className="rounded-lg border border-cyan-100 bg-white px-2 py-1.5">
-                                                    <div className="mb-1 flex items-center gap-2">
-                                                        <Video className="h-4 w-4 text-slate-500" />
-                                                        <p className="truncate text-sm font-medium text-slate-900">{media.name}</p>
-                                                    </div>
-                                                    <p className="text-xs uppercase tracking-[0.08em] text-slate-500">{media.type}</p>
-                                                    <p className="mt-1 text-xs text-slate-500">
-                                                        Duration: {msToSecondsLabel(group.durationMs)}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </section>
+                    </div>
                 ) : null}
 
                 {wizardStep === 3 ? (
@@ -1213,7 +1148,31 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         </div>
                     </section>
                 ) : null}
+                    </>
+                ) : (
+                    <section className="sticky top-0 z-20 rounded-2xl border border-cyan-300 bg-[linear-gradient(135deg,rgba(6,182,212,0.12),rgba(14,165,233,0.16))] px-4 py-3 shadow-[0_16px_36px_-24px_rgba(6,182,212,0.55)]">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-900">Session Running</p>
+                                <p className="text-sm text-cyan-900">
+                                    Sync session is active. Stop the session to return to setup steps.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                data-testid="sync-stop-session-btn"
+                                onClick={stopSession}
+                                disabled={isStoppingSession}
+                                className="inline-flex items-center gap-2 rounded-lg border border-slate-400 bg-slate-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <Square className="h-4 w-4" />
+                                {isStoppingSession ? "Stopping..." : "Stop session"}
+                            </button>
+                        </div>
+                    </section>
+                )}
 
+                {activeSession ? (
                 <section data-testid="sync-health-panel" className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
                     <div className="mb-3 flex items-center justify-between">
                         <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">Session Health</h3>
@@ -1234,22 +1193,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                             <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
                                 {activeSession?.devices.length ?? 0} devices
                             </span>
-                            <button
-                                type="button"
-                                data-testid="sync-stop-session-btn"
-                                onClick={stopSession}
-                                disabled={!activeSession || isStoppingSession}
-                                className="inline-flex items-center gap-2 rounded-lg border border-slate-400 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <Square className="h-3.5 w-3.5" />
-                                {isStoppingSession ? "Stopping..." : "Stop"}
-                            </button>
                         </div>
                     </div>
-
-                    {!activeSession ? (
-                        <p className="text-sm text-slate-500">No active sync session.</p>
-                    ) : (
                         <div className="space-y-2">
                             {activeSession.devices.map((device) => (
                                 <div
@@ -1275,8 +1220,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 </div>
                             ))}
                         </div>
-                    )}
                 </section>
+                ) : null}
             </div>
         </div>
     );

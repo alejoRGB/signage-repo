@@ -61,6 +61,8 @@ describe("Sync session controls", () => {
 
         expect(screen.queryByTestId("sync-start-session-btn")).not.toBeInTheDocument();
         expect(screen.queryByTestId("sync-start-from-saved-btn")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("sync-health-panel")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("sync-stop-session-btn")).not.toBeInTheDocument();
         expect(screen.getByText(/Start bloqueado/i)).toBeInTheDocument();
 
         await waitFor(() => {

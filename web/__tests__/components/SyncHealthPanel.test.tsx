@@ -78,6 +78,8 @@ describe("Sync health panel", () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
         expect(await screen.findByTestId("sync-health-panel")).toBeInTheDocument();
+        expect(screen.queryByText("1. Devices")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("sync-step-next-btn")).not.toBeInTheDocument();
         expect(await screen.findByText("drift avg: 12.3ms")).toBeInTheDocument();
         expect(screen.getByText("drift max: 35.8ms")).toBeInTheDocument();
         expect(screen.getByText("clock offset: 4.2ms")).toBeInTheDocument();

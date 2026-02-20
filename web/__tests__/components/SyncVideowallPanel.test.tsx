@@ -80,11 +80,12 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Window to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
-        fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
-            target: { value: "Main Wall" },
-        });
         fireEvent.change(screen.getByTestId("sync-common-media-select"), {
             target: { value: "media-1" },
+        });
+        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
+        fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
+            target: { value: "Main Wall" },
         });
 
         fireEvent.click(screen.getByTestId("sync-save-preset-btn"));
@@ -137,9 +138,6 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Hall to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
-        fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
-            target: { value: "Per Device Same Video" },
-        });
         fireEvent.click(screen.getByRole("radio", { name: "Per device media" }));
 
         fireEvent.change(screen.getByTestId("sync-device-media-select-device-1"), {
@@ -147,6 +145,10 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         });
         fireEvent.change(screen.getByTestId("sync-device-media-select-device-3"), {
             target: { value: "media-1" },
+        });
+        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
+        fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
+            target: { value: "Per Device Same Video" },
         });
 
         fireEvent.click(screen.getByTestId("sync-save-preset-btn"));
@@ -172,11 +174,12 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
         fireEvent.click(screen.getByLabelText("Add Window to synchronized devices"));
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
-        fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
-            target: { value: "Offline Blocked Preset" },
-        });
         fireEvent.change(screen.getByTestId("sync-common-media-select"), {
             target: { value: "media-1" },
+        });
+        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
+        fireEvent.change(screen.getByTestId("sync-preset-name-input"), {
+            target: { value: "Offline Blocked Preset" },
         });
         fireEvent.click(screen.getByTestId("sync-save-preset-btn"));
 
@@ -184,11 +187,8 @@ describe("SyncVideowallPanel - wizard and presets", () => {
             expect(screen.getByTestId("sync-saved-preset-preset-new")).toBeInTheDocument();
         });
 
-        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
-        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
-
         await waitFor(() => {
-            expect(screen.getByText(/Start blocked\. Offline devices:/i)).toBeInTheDocument();
+            expect(screen.getByText(/offline and will block start/i)).toBeInTheDocument();
             const reviewStartBtn = screen.getByTestId("sync-start-from-saved-btn") as HTMLButtonElement;
             expect(reviewStartBtn.disabled).toBe(true);
         });

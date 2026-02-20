@@ -63,7 +63,7 @@ test.describe("Phase 4: Sync wizard QA (credentialed)", () => {
 
     await page.getByTestId("sync-step-next-btn").click();
 
-    await expect(page.getByText(/Start blocked\. Offline devices:/i)).toBeVisible();
+    await expect(page.getByText(/offline and will block start/i)).toBeVisible();
     await expect(page.getByTestId("sync-start-from-saved-btn")).toBeDisabled();
   });
 
