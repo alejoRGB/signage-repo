@@ -81,6 +81,25 @@ python execution/run_tests.py qa:sync:off --project=chromium
 - Active aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.
 - Repository history was sanitized after secret exposure; all local clones must sync with `fetch + hard reset` (or fresh clone) before continuing.
 
+## Canonical Deployment Rules (Updated Feb 20, 2026)
+- Scope classification is mandatory before deployment:
+  - `Web-only`: deploy/verify Vercel only.
+  - `Player-only`: deploy/verify Raspberry devices only.
+  - `Mixed`: run both workflows.
+- Do not trigger unnecessary deploy loops:
+  - If only player files changed, skip web redeploy validation.
+  - If only web files changed, skip Raspberry rollout.
+- For player sync fixes, deployment is complete only after:
+  - code copied to each target device,
+  - `signage-player` service is active,
+  - runtime logs show expected sync events for a live session.
+
+## Sync Runtime Verification (Player) (Updated Feb 20, 2026)
+- After deploying sync-related player changes, validate on a real running session:
+  - `journalctl -u signage-player -f` should include runtime sync signals (`VIDEOWALL_SYNC`, and when applicable `SOFT_CORRECTION` / `HARD_RESYNC`).
+  - DB runtime fields in `SyncSessionDevice` should move away from flat zero when drift exists (`avgDriftMs`, `maxDriftMs`, `resyncCount`).
+  - Session health panel should update `last heartbeat`, `drift avg`, and `drift max` continuously.
+
 ## Edge Deployment (Raspberry Pi)
 ### One-Line Install (Canonical)
 ```bash

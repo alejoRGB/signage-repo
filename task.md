@@ -1,5 +1,13 @@
 ## Issue Log
 
+- 2026-02-20: Closed - Session Health panel was stale for drift metrics.
+  - Root cause: heartbeat/runtime persistence and polling path were not reflecting drift updates reliably.
+  - Resolution: enabled no-cache health polling, fixed heartbeat/rate-limit interaction, and persisted real runtime drift fields (`avgDriftMs`, `maxDriftMs`, `resyncCount`).
+  - Validation: live session now updates `last heartbeat`, `drift avg`, and `drift max`.
+- 2026-02-20: Closed - Sync drift correction was not being applied consistently.
+  - Root cause: correction path depended on invalid timing basis in prior sync logic.
+  - Resolution: moved active drift correction loop to Python controller (`videowall_controller.py`) with epoch-based correction decisions and MPV speed/seek actions.
+  - Validation: deployed to Raspberry pilot devices and observed drift bounded in live sessions.
 - 2026-02-14: Closed - Devices tab showed persistent "Syncing..." under playlist selector.
   - Root cause: UI state depended on stale/partial sync signals.
   - Resolution: Added direct `/api/devices` polling in Devices manager and adjusted sync-label logic to require reported playback mismatch.

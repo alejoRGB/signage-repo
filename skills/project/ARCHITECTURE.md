@@ -91,3 +91,17 @@
    - Runtime health in `SyncSessionDevice` includes drift history, resync count/rate, clock offset, thermal/throttled flags.
    - Session quality summary persisted on stop:
      - `avgDriftMs`, `p50DriftMs`, `p90DriftMs`, `p95DriftMs`, `p99DriftMs`, `maxDriftMs`, `totalResyncs`, `devicesWithIssues`.
+14. **Directive Ownership Rule (implemented):**
+   - `Schedules` and `Sync/VideoWall` are mutually exclusive control modes at directive level.
+   - When `Schedules` becomes the active directive tab, any running Sync session must transition to stopped state.
+   - Device playlist assignment in `Schedules > Devices` is UI-locked while `Sync/VideoWall` is the active directive tab.
+15. **Sync Drift Correction Ownership (updated Feb 20, 2026):**
+   - Runtime correction is enforced in `player/videowall_controller.py` using epoch-based timing.
+   - Correction actions:
+     - soft correction via MPV playback speed nudges.
+     - hard resync via seek when thresholds are exceeded.
+   - Runtime correction emits operational events (`SOFT_CORRECTION`, `HARD_RESYNC`) and updates `resyncCount`.
+16. **Session Health Data Path (updated Feb 20, 2026):**
+   - Player heartbeat payload is the source of truth for drift runtime (`avgDriftMs`, `maxDriftMs`, `resyncCount`).
+   - Backend persists these values in `SyncSessionDevice`.
+   - Dashboard session health panel consumes active session data with no-cache polling to avoid stale values.
