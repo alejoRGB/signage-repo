@@ -71,6 +71,7 @@ class Player:
             seek_to_phase_ms=self.seek_mpv_to_phase_ms,
             set_pause=self.set_mpv_paused,
             is_playback_alive=self.is_mpv_alive,
+            set_playback_speed=self.set_mpv_playback_speed,
             get_playback_time_ms=self.get_mpv_time_pos_ms,
         )
         try:
@@ -256,6 +257,11 @@ class Player:
         if not self.is_mpv_alive():
             return False
         return self.send_ipc_command(["set_property", "pause", bool(paused)])
+
+    def set_mpv_playback_speed(self, speed: float) -> bool:
+        if not self.is_mpv_alive():
+            return False
+        return self.send_ipc_command(["set_property", "speed", float(speed)])
 
     def seek_mpv_to_phase_ms(self, phase_ms: int) -> bool:
         if not self.is_mpv_alive():

@@ -15,7 +15,12 @@ from state_machine import (
     SyncSessionContext,
     SyncStateMachine,
 )
-from videowall_drift import compute_target_phase_ms, compute_wrapped_drift_ms, round_to_frame
+from videowall_drift import (
+    compute_target_phase_ms,
+    compute_wrapped_drift_ms,
+    decide_correction,
+    round_to_frame,
+)
 
 
 class VideowallController:
@@ -28,6 +33,7 @@ class VideowallController:
         seek_to_phase_ms: Callable[[int], bool],
         set_pause: Callable[[bool], bool],
         is_playback_alive: Callable[[], bool],
+        set_playback_speed: Optional[Callable[[float], bool]] = None,
         get_playback_time_ms: Optional[Callable[[], Optional[float]]] = None,
     ):
         self.sync_manager = sync_manager
@@ -37,6 +43,7 @@ class VideowallController:
         self.seek_to_phase_ms = seek_to_phase_ms
         self.set_pause = set_pause
         self.is_playback_alive = is_playback_alive
+        self.set_playback_speed = set_playback_speed or (lambda _speed: True)
         self.get_playback_time_ms = get_playback_time_ms or (lambda: None)
 
         self.poll_interval_s = 1.0
@@ -58,6 +65,8 @@ class VideowallController:
         self._drift_abs_sum_ms = 0.0
         self._drift_max_abs_ms = 0.0
         self._last_drift_ms: Optional[float] = None
+        self._last_applied_speed = 1.0
+        self._last_soft_correction_log_ts = 0.0
         self._last_clock_health: Dict[str, object] = {
             "healthy": False,
             "critical": True,
@@ -72,6 +81,8 @@ class VideowallController:
         self._drift_abs_sum_ms = 0.0
         self._drift_max_abs_ms = 0.0
         self._last_drift_ms = None
+        self._last_applied_speed = 1.0
+        self._last_soft_correction_log_ts = 0.0
 
     def _resolve_prepare_local_path(self, raw_local_path: str) -> Optional[str]:
         """
@@ -284,6 +295,84 @@ class VideowallController:
                 warmup_ms,
             )
 
+    def _sample_current_drift(self, now_ms: int, context: SyncSessionContext) -> Optional[tuple[float, int]]:
+        target_phase = compute_target_phase_ms(now_ms, context.start_at_ms, context.duration_ms)
+        if target_phase is None or context.duration_ms <= 0:
+            return None
+
+        playback_time_ms = self.get_playback_time_ms()
+        if playback_time_ms is None:
+            return None
+
+        actual_phase_ms = float(playback_time_ms) % context.duration_ms
+        drift_ms = compute_wrapped_drift_ms(
+            actual_phase_ms=actual_phase_ms,
+            target_phase_ms=float(target_phase),
+            duration_ms=context.duration_ms,
+        )
+
+        abs_drift = abs(drift_ms)
+        self._last_drift_ms = drift_ms
+        self._drift_sample_count += 1
+        self._drift_abs_sum_ms += abs_drift
+        if abs_drift > self._drift_max_abs_ms:
+            self._drift_max_abs_ms = abs_drift
+
+        return drift_ms, int(target_phase)
+
+    def _apply_runtime_correction(self, now_ms: int, context: SyncSessionContext) -> None:
+        sampled = self._sample_current_drift(now_ms, context)
+        if not sampled:
+            return
+
+        drift_ms, target_phase_ms = sampled
+        in_warmup = self.state_machine.state == SYNC_STATE_WARMING_UP
+        decision = decide_correction(
+            drift_ms=drift_ms,
+            target_phase_ms=target_phase_ms,
+            in_warmup=in_warmup,
+        )
+
+        if decision.action == "hard" and decision.seek_to_ms is not None:
+            if self.seek_to_phase_ms(decision.seek_to_ms):
+                self._resync_count += 1
+                self.set_playback_speed(1.0)
+                self._last_applied_speed = 1.0
+                log_sync_event(
+                    "HARD_RESYNC",
+                    session_id=context.session_id,
+                    data={
+                        "reason": "runtime_drift",
+                        "drift_ms": drift_ms,
+                        "seek_to_ms": decision.seek_to_ms,
+                        "warmup": in_warmup,
+                    },
+                )
+            return
+
+        target_speed = decision.target_speed
+        if decision.action == "none":
+            target_speed = 1.0
+
+        if abs(target_speed - self._last_applied_speed) < 0.002:
+            return
+
+        if self.set_playback_speed(target_speed):
+            self._last_applied_speed = target_speed
+            if decision.action == "soft":
+                now_ts = time.time()
+                if now_ts - self._last_soft_correction_log_ts >= 5:
+                    self._last_soft_correction_log_ts = now_ts
+                    log_sync_event(
+                        "SOFT_CORRECTION",
+                        session_id=context.session_id,
+                        data={
+                            "drift_ms": drift_ms,
+                            "speed": target_speed,
+                            "warmup": in_warmup,
+                        },
+                    )
+
     def _handle_playback_failure(self, now_ms: int) -> None:
         context = self.state_machine.context
         if not context:
@@ -344,6 +433,8 @@ class VideowallController:
         seek_to_ms = round_to_frame(target_phase)
         self.seek_to_phase_ms(seek_to_ms)
         self._resync_count += 1
+        self.set_playback_speed(1.0)
+        self._last_applied_speed = 1.0
         self.set_pause(False)
         self.state_machine.transition(SYNC_STATE_WARMING_UP, force=True)
         self._enter_warmup(now_ms, rejoin=True)
@@ -395,9 +486,11 @@ class VideowallController:
                     logging.warning(
                         "[VIDEOWALL] Initial phase alignment failed for session %s (seek_to_ms=%s)",
                         context.session_id,
-                        seek_to_ms,
-                    )
+                            seek_to_ms,
+                        )
 
+            self.set_playback_speed(1.0)
+            self._last_applied_speed = 1.0
             self.set_pause(False)
             if self.state_machine.transition(SYNC_STATE_WARMING_UP):
                 self._enter_warmup(now_ms, rejoin=False)
@@ -411,6 +504,9 @@ class VideowallController:
                         "seek_to_ms": seek_to_ms,
                     },
                 )
+
+        if self.state_machine.state in {SYNC_STATE_WARMING_UP, SYNC_STATE_PLAYING}:
+            self._apply_runtime_correction(now_ms, context)
 
         if self.state_machine.state == SYNC_STATE_WARMING_UP:
             if self._warmup_until_ms is not None and now_ms >= self._warmup_until_ms:
@@ -437,23 +533,6 @@ class VideowallController:
             return None
 
         now_ms = int(time.time() * 1000)
-        target_phase = compute_target_phase_ms(now_ms, context.start_at_ms, context.duration_ms)
-        if target_phase is not None and context.duration_ms > 0:
-            playback_time_ms = self.get_playback_time_ms()
-            if playback_time_ms is not None:
-                actual_phase_ms = float(playback_time_ms) % context.duration_ms
-                drift_ms = compute_wrapped_drift_ms(
-                    actual_phase_ms=actual_phase_ms,
-                    target_phase_ms=float(target_phase),
-                    duration_ms=context.duration_ms,
-                )
-                abs_drift = abs(drift_ms)
-                self._last_drift_ms = drift_ms
-                self._drift_sample_count += 1
-                self._drift_abs_sum_ms += abs_drift
-                if abs_drift > self._drift_max_abs_ms:
-                    self._drift_max_abs_ms = abs_drift
-
         avg_drift_ms = (
             self._drift_abs_sum_ms / self._drift_sample_count
             if self._drift_sample_count > 0

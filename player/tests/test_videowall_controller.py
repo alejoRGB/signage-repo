@@ -301,27 +301,31 @@ def test_build_sync_runtime_reports_real_drift_metrics(mocker):
     machine.transition("PLAYING")
 
     playback_samples = iter([4200.0, 4700.0])
+    seeks = []
+    speeds = []
     controller = VideowallController(
         sync_manager=manager,
         state_machine=machine,
         start_sync_playback=lambda _context: True,
         stop_playback=lambda: None,
-        seek_to_phase_ms=lambda _phase_ms: True,
+        seek_to_phase_ms=lambda phase_ms: seeks.append(phase_ms) or True,
         set_pause=lambda _paused: True,
         is_playback_alive=lambda: True,
+        set_playback_speed=lambda speed: speeds.append(speed) or True,
         get_playback_time_ms=lambda: next(playback_samples, None),
     )
 
     mocker.patch("videowall_controller.time.time", return_value=10.0)
 
-    runtime_a = controller._build_sync_runtime()
-    runtime_b = controller._build_sync_runtime()
+    assert machine.context is not None
+    controller._apply_runtime_correction(now_ms=10_000, context=machine.context)
+    controller._apply_runtime_correction(now_ms=10_000, context=machine.context)
+    runtime = controller._build_sync_runtime()
 
-    assert runtime_a is not None
-    assert runtime_b is not None
-    assert abs(float(runtime_a["drift_ms"]) + 800.0) < 0.001
-    assert abs(float(runtime_a["avg_drift_ms"]) - 800.0) < 0.001
-    assert abs(float(runtime_a["max_drift_ms"]) - 800.0) < 0.001
-    assert abs(float(runtime_b["drift_ms"]) + 300.0) < 0.001
-    assert abs(float(runtime_b["avg_drift_ms"]) - 550.0) < 0.001
-    assert abs(float(runtime_b["max_drift_ms"]) - 800.0) < 0.001
+    assert runtime is not None
+    assert abs(float(runtime["drift_ms"]) + 300.0) < 0.001
+    assert abs(float(runtime["avg_drift_ms"]) - 550.0) < 0.001
+    assert abs(float(runtime["max_drift_ms"]) - 800.0) < 0.001
+    assert int(runtime["resync_count"]) == 1
+    assert len(seeks) == 1
+    assert len(speeds) >= 1
