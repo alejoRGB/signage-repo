@@ -1456,11 +1456,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
                                             <p>last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
                                             <p>drift avg: {typeof device.avgDriftMs === "number" ? `${device.avgDriftMs.toFixed(1)}ms` : "n/a"}</p>
-                                            <p>drift max: {typeof device.maxDriftMs === "number" ? `${device.maxDriftMs.toFixed(1)}ms` : "n/a"}</p>
-                                            <p>clock offset: {typeof device.clockOffsetMs === "number" ? `${device.clockOffsetMs.toFixed(1)}ms` : "n/a"}</p>
                                             <p>health: {typeof device.healthScore === "number" ? device.healthScore.toFixed(2) : "n/a"}</p>
                                             <p>resync count: {device.resyncCount ?? 0}</p>
-                                            <p>resync rate: {typeof device.resyncRate === "number" ? device.resyncRate.toFixed(2) : "n/a"}</p>
                                             <p>last correction: {correctionAgeLabel(correction?.lastEventAt ?? null)}</p>
                                             <p>
                                                 correction drift:{" "}

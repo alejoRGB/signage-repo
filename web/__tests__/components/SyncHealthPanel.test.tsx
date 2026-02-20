@@ -91,8 +91,8 @@ describe("Sync health panel", () => {
         expect(screen.queryByText("1. Devices")).not.toBeInTheDocument();
         expect(screen.queryByTestId("sync-step-next-btn")).not.toBeInTheDocument();
         expect(await screen.findByText("drift avg: 12.3ms")).toBeInTheDocument();
-        expect(screen.getByText("drift max: 35.8ms")).toBeInTheDocument();
-        expect(screen.getByText("clock offset: 4.2ms")).toBeInTheDocument();
+        expect(screen.queryByText(/drift max:/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/clock offset:/i)).not.toBeInTheDocument();
         expect(screen.getByText("health: 0.95")).toBeInTheDocument();
         expect(screen.getByText("Soft correction active")).toBeInTheDocument();
         expect(screen.getByText("correction drift: 38.2ms")).toBeInTheDocument();

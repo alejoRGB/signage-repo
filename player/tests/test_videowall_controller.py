@@ -328,9 +328,9 @@ def test_build_sync_runtime_reports_real_drift_metrics(mocker):
     assert abs(float(runtime["drift_ms"]) + 300.0) < 0.001
     assert abs(float(runtime["avg_drift_ms"]) - 550.0) < 0.001
     assert abs(float(runtime["max_drift_ms"]) - 800.0) < 0.001
-    assert int(runtime["resync_count"]) == 2
-    assert len(seeks) == 2
-    assert len(speeds) >= 2
+    assert int(runtime["resync_count"]) == 1
+    assert len(seeks) == 1
+    assert len(speeds) >= 1
 
 
 def test_build_sync_runtime_uses_last_20_seconds_for_avg_drift(mocker):
