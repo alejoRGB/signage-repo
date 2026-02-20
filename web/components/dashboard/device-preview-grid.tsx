@@ -21,7 +21,7 @@ type DashboardDevice = {
 };
 
 const ONLINE_STALE_MS = 5 * 60_000;
-const POLL_INTERVAL_MS = 5_000;
+const POLL_INTERVAL_MS = 20_000;
 
 function twoLineClampStyle() {
     return {

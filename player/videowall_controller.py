@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 import logging
 import os
 import time
@@ -24,6 +25,8 @@ from videowall_drift import (
 
 
 class VideowallController:
+    DRIFT_AVG_WINDOW_MS = 20_000
+
     def __init__(
         self,
         sync_manager,
@@ -46,8 +49,12 @@ class VideowallController:
         self.set_playback_speed = set_playback_speed or (lambda _speed: True)
         self.get_playback_time_ms = get_playback_time_ms or (lambda: None)
 
-        self.poll_interval_s = 1.0
-        self.status_interval_s = 2.0
+        # Runtime tuning defaults (P0 efficiency): slower idle polling, faster warm-up status.
+        self.command_poll_idle_interval_s = self._resolve_interval_env("SYNC_COMMAND_POLL_IDLE_S", 10.0)
+        self.command_poll_active_interval_s = self._resolve_interval_env("SYNC_COMMAND_POLL_ACTIVE_S", 2.0)
+        self.command_poll_critical_interval_s = self._resolve_interval_env("SYNC_COMMAND_POLL_CRITICAL_S", 1.0)
+        self.status_interval_critical_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_CRITICAL_S", 2.0)
+        self.status_interval_playing_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_PLAYING_S", 5.0)
         self.clock_check_interval_s = 10.0
         self.clock_max_offset_ms = 50.0
 
@@ -65,6 +72,7 @@ class VideowallController:
         self._drift_abs_sum_ms = 0.0
         self._drift_max_abs_ms = 0.0
         self._last_drift_ms: Optional[float] = None
+        self._drift_window_samples: deque[tuple[int, float]] = deque()
         self._last_applied_speed = 1.0
         self._last_soft_correction_log_ts = 0.0
         self._last_clock_health: Dict[str, object] = {
@@ -75,14 +83,50 @@ class VideowallController:
             "health_score": 0.0,
         }
 
+    @staticmethod
+    def _resolve_interval_env(name: str, default_value: float, minimum: float = 0.2) -> float:
+        raw = os.getenv(name)
+        if raw is None:
+            return default_value
+        try:
+            parsed = float(raw)
+        except ValueError:
+            return default_value
+        return max(minimum, parsed)
+
+    def _current_command_poll_interval_s(self) -> float:
+        if not self.state_machine.is_active():
+            return self.command_poll_idle_interval_s
+
+        state = self.state_machine.state
+        if state in {SYNC_STATE_PRELOADING, SYNC_STATE_READY, SYNC_STATE_WARMING_UP}:
+            return self.command_poll_critical_interval_s
+        if state == SYNC_STATE_PLAYING:
+            return self.command_poll_active_interval_s
+        return self.command_poll_idle_interval_s
+
+    def _current_status_interval_s(self) -> float:
+        state = self.state_machine.state
+        if state in {SYNC_STATE_READY, SYNC_STATE_WARMING_UP}:
+            return self.status_interval_critical_s
+        if state == SYNC_STATE_PLAYING:
+            return self.status_interval_playing_s
+        return self.status_interval_critical_s
+
     def _reset_runtime_metrics(self) -> None:
         self._resync_count = 0
         self._drift_sample_count = 0
         self._drift_abs_sum_ms = 0.0
         self._drift_max_abs_ms = 0.0
         self._last_drift_ms = None
+        self._drift_window_samples.clear()
         self._last_applied_speed = 1.0
         self._last_soft_correction_log_ts = 0.0
+
+    def _prune_drift_window(self, now_ms: int) -> None:
+        cutoff_ms = now_ms - self.DRIFT_AVG_WINDOW_MS
+        while self._drift_window_samples and self._drift_window_samples[0][0] < cutoff_ms:
+            self._drift_window_samples.popleft()
 
     def _resolve_prepare_local_path(self, raw_local_path: str) -> Optional[str]:
         """
@@ -117,13 +161,13 @@ class VideowallController:
     def tick(self) -> None:
         now_ts = time.time()
 
-        if now_ts - self._last_poll_ts >= self.poll_interval_s:
+        if now_ts - self._last_poll_ts >= self._current_command_poll_interval_s():
             self._last_poll_ts = now_ts
             self._poll_commands()
 
         self._advance_runtime_state()
 
-        if self.state_machine.is_active() and now_ts - self._last_status_ts >= self.status_interval_s:
+        if self.state_machine.is_active() and now_ts - self._last_status_ts >= self._current_status_interval_s():
             self._last_status_ts = now_ts
             self._report_status()
 
@@ -315,6 +359,8 @@ class VideowallController:
         self._last_drift_ms = drift_ms
         self._drift_sample_count += 1
         self._drift_abs_sum_ms += abs_drift
+        self._drift_window_samples.append((now_ms, abs_drift))
+        self._prune_drift_window(now_ms)
         if abs_drift > self._drift_max_abs_ms:
             self._drift_max_abs_ms = abs_drift
 
@@ -533,9 +579,10 @@ class VideowallController:
             return None
 
         now_ms = int(time.time() * 1000)
+        self._prune_drift_window(now_ms)
         avg_drift_ms = (
-            self._drift_abs_sum_ms / self._drift_sample_count
-            if self._drift_sample_count > 0
+            sum(sample[1] for sample in self._drift_window_samples) / len(self._drift_window_samples)
+            if self._drift_window_samples
             else 0.0
         )
         elapsed_minutes = max(0.0, (now_ms - context.start_at_ms) / 60000.0)

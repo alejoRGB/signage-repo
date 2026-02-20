@@ -7,6 +7,28 @@ import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
 export const dynamic = "force-dynamic";
 
 const MAX_PREVIEW_SIZE_BYTES = 8 * 1024 * 1024;
+const MASTER_REELECTION_THROTTLE_MS = 10_000;
+const MASTER_REELECTION_RETENTION_MS = 5 * 60_000;
+const lastMasterReelectionBySession = new Map<string, number>();
+
+function shouldRunMasterReelection(sessionId: string, nowMs: number) {
+    const lastRunMs = lastMasterReelectionBySession.get(sessionId);
+    if (typeof lastRunMs === "number" && nowMs - lastRunMs < MASTER_REELECTION_THROTTLE_MS) {
+        return false;
+    }
+
+    lastMasterReelectionBySession.set(sessionId, nowMs);
+
+    if (lastMasterReelectionBySession.size > 1000) {
+        for (const [trackedSessionId, trackedAtMs] of lastMasterReelectionBySession.entries()) {
+            if (nowMs - trackedAtMs > MASTER_REELECTION_RETENTION_MS) {
+                lastMasterReelectionBySession.delete(trackedSessionId);
+            }
+        }
+    }
+
+    return true;
+}
 
 export async function POST(request: Request) {
     try {
@@ -99,10 +121,13 @@ export async function POST(request: Request) {
 
         await persistDeviceSyncRuntime(device.id, syncRuntime);
         if (syncRuntime?.sessionId) {
-            try {
-                await maybeReelectMasterForSession(syncRuntime.sessionId);
-            } catch (error) {
-                console.error("[SYNC_MASTER_FAILOVER]", error);
+            const nowMs = Date.now();
+            if (shouldRunMasterReelection(syncRuntime.sessionId, nowMs)) {
+                try {
+                    await maybeReelectMasterForSession(syncRuntime.sessionId);
+                } catch (error) {
+                    console.error("[SYNC_MASTER_FAILOVER]", error);
+                }
             }
         }
 

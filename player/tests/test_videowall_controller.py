@@ -10,8 +10,10 @@ class DummySyncManager:
         self.clock_health = clock_health
         self.acks = []
         self.status_reports = []
+        self.poll_count = 0
 
     def poll_device_commands(self, limit=10):
+        self.poll_count += 1
         if not self._command_batches:
             return []
         return self._command_batches.pop(0)
@@ -329,3 +331,142 @@ def test_build_sync_runtime_reports_real_drift_metrics(mocker):
     assert int(runtime["resync_count"]) == 1
     assert len(seeks) == 1
     assert len(speeds) >= 1
+
+
+def test_build_sync_runtime_uses_last_20_seconds_for_avg_drift(mocker):
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.5,
+            "health_score": 0.97,
+            "throttled": False,
+        },
+    )
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-7",
+            start_at_ms=0,
+            duration_ms=10_000,
+            local_path="/tmp/video.mp4",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+    machine.transition("WARMING_UP")
+    machine.transition("PLAYING")
+
+    # At now_ms=10_000 target phase is 0 -> abs drift = 1000ms
+    # At now_ms=35_000 target phase is 5000 -> abs drift = 100ms
+    playback_samples = iter([1000.0, 5100.0])
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+        set_playback_speed=lambda _speed: True,
+        get_playback_time_ms=lambda: next(playback_samples, None),
+    )
+
+    assert machine.context is not None
+    controller._apply_runtime_correction(now_ms=10_000, context=machine.context)
+    controller._apply_runtime_correction(now_ms=35_000, context=machine.context)
+
+    mocker.patch("videowall_controller.time.time", return_value=35.0)
+    runtime = controller._build_sync_runtime()
+
+    assert runtime is not None
+    assert abs(float(runtime["avg_drift_ms"]) - 100.0) < 0.001
+
+
+def test_tick_uses_idle_command_poll_interval_when_no_active_session(mocker):
+    manager = DummySyncManager(
+        command_batches=[[], []],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=SyncStateMachine(),
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+    )
+
+    controller.command_poll_idle_interval_s = 10.0
+    controller._last_poll_ts = -100.0
+    controller._advance_runtime_state = lambda: None
+
+    mocker.patch("videowall_controller.time.time", side_effect=[0.0, 5.0, 10.1])
+
+    controller.tick()
+    controller.tick()
+    controller.tick()
+
+    assert manager.poll_count == 2
+
+
+def test_tick_uses_slower_status_interval_in_playing_state(mocker):
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-8",
+            start_at_ms=0,
+            duration_ms=10_000,
+            local_path="/tmp/video.mp4",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+    machine.transition("WARMING_UP")
+    machine.transition("PLAYING")
+
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+    )
+
+    controller.status_interval_playing_s = 5.0
+    controller._last_status_ts = -100.0
+    controller._poll_commands = lambda: None
+    controller._advance_runtime_state = lambda: None
+    controller._report_status = lambda: manager.status_reports.append({"ok": True})
+
+    mocker.patch("videowall_controller.time.time", side_effect=[0.0, 1.0, 4.9, 5.1])
+
+    controller.tick()
+    controller.tick()
+    controller.tick()
+    controller.tick()
+
+    assert len(manager.status_reports) == 2

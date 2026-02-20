@@ -74,6 +74,45 @@ describe("Device runtime sync persistence", () => {
         expect(maybeReelectMasterForSession).toHaveBeenCalledWith("session-1");
     });
 
+    it("throttles master reelection checks to once per 10 seconds per session", async () => {
+        (extractSyncRuntimeFromFormData as jest.Mock).mockReturnValue({
+            sessionId: "session-throttle",
+            status: "PLAYING",
+            driftMs: 3,
+        });
+
+        const nowSpy = jest.spyOn(Date, "now");
+        nowSpy
+            .mockReturnValueOnce(1_000)
+            .mockReturnValueOnce(5_000)
+            .mockReturnValueOnce(12_001);
+
+        try {
+            const buildRequest = () => {
+                const formData = new FormData();
+                formData.set("device_token", "token-1");
+                formData.set("sync_session_id", "session-throttle");
+                return new Request("http://localhost/api/device/heartbeat", {
+                    method: "POST",
+                    body: formData,
+                });
+            };
+
+            const response1 = await HEARTBEAT_POST(buildRequest());
+            const response2 = await HEARTBEAT_POST(buildRequest());
+            const response3 = await HEARTBEAT_POST(buildRequest());
+
+            expect(response1.status).toBe(200);
+            expect(response2.status).toBe(200);
+            expect(response3.status).toBe(200);
+            expect(maybeReelectMasterForSession).toHaveBeenCalledTimes(2);
+            expect(maybeReelectMasterForSession).toHaveBeenNthCalledWith(1, "session-throttle");
+            expect(maybeReelectMasterForSession).toHaveBeenNthCalledWith(2, "session-throttle");
+        } finally {
+            nowSpy.mockRestore();
+        }
+    });
+
     it("device sync route persists extracted runtime payload", async () => {
         (extractSyncRuntimeFromJson as jest.Mock).mockReturnValue({
             sessionId: "session-1",

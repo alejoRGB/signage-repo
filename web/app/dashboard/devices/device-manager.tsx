@@ -52,9 +52,9 @@ export default function DeviceManager({
         }
     }, []);
 
-    // Polling state (refresh list every 10s)
+    // Polling state (refresh list every 30s)
     useEffect(() => {
-        const interval = setInterval(refreshDevices, 10000);
+        const interval = setInterval(refreshDevices, 30000);
 
         return () => clearInterval(interval);
     }, [refreshDevices]);
