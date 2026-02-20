@@ -38,6 +38,7 @@ type ActiveSessionDevice = {
     id: string;
     deviceId: string;
     status: string;
+    lastSeenAt?: string | null;
     resyncCount?: number | null;
     clockOffsetMs?: number | null;
     healthScore?: number | null;
@@ -101,6 +102,25 @@ function msToSecondsLabel(ms: number) {
         return `${ms / 1000}s`;
     }
     return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function heartbeatAgeLabel(lastSeenAt?: string | null) {
+    if (!lastSeenAt) {
+        return "n/a";
+    }
+
+    const parsedMs = Date.parse(lastSeenAt);
+    if (Number.isNaN(parsedMs)) {
+        return "n/a";
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - parsedMs) / 1000));
+    if (elapsedSeconds < 60) {
+        return `${elapsedSeconds}s ago`;
+    }
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    return `${elapsedMinutes}m ago`;
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -900,6 +920,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         </span>
                                     </div>
                                     <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
+                                        <p>last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
                                         <p>drift avg: {typeof device.avgDriftMs === "number" ? `${device.avgDriftMs.toFixed(1)}ms` : "n/a"}</p>
                                         <p>drift max: {typeof device.maxDriftMs === "number" ? `${device.maxDriftMs.toFixed(1)}ms` : "n/a"}</p>
                                         <p>clock offset: {typeof device.clockOffsetMs === "number" ? `${device.clockOffsetMs.toFixed(1)}ms` : "n/a"}</p>

@@ -50,6 +50,7 @@ describe("Sync health panel", () => {
                                         id: "ssd-1",
                                         deviceId: "device-1",
                                         status: "PLAYING",
+                                        lastSeenAt: new Date().toISOString(),
                                         avgDriftMs: 12.3,
                                         maxDriftMs: 35.8,
                                         clockOffsetMs: 4.2,
@@ -81,5 +82,6 @@ describe("Sync health panel", () => {
         expect(screen.getByText("drift max: 35.8ms")).toBeInTheDocument();
         expect(screen.getByText("clock offset: 4.2ms")).toBeInTheDocument();
         expect(screen.getByText("health: 0.95")).toBeInTheDocument();
+        expect(screen.getByText(/last heartbeat:/i)).toBeInTheDocument();
     });
 });
