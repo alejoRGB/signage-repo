@@ -454,6 +454,66 @@ class SyncManager:
             logging.error(f"[DOWNLOAD] ✗ Error downloading {filename}: {e}")
             return False
     
+    def ensure_sync_media_available(
+        self,
+        media_id: Optional[str],
+        local_path: str,
+    ) -> Optional[str]:
+        """
+        Ensure sync media referenced by sync.prepare exists locally.
+        If missing, download it via authenticated media endpoint.
+        """
+        basename = os.path.basename(str(local_path))
+        if not basename:
+            return None
+
+        target_path = os.path.join(self.media_dir, basename)
+        if os.path.exists(target_path):
+            return target_path
+
+        if os.path.isabs(local_path) and os.path.exists(local_path):
+            return local_path
+
+        if not media_id:
+            logging.error("[SYNC] Cannot download sync media without media_id (path=%s)", basename)
+            return None
+
+        if not self.server_url or not self.device_token:
+            logging.error("[SYNC] Cannot download sync media: missing server_url/device_token")
+            return None
+
+        download_url = f"{self.server_url}/api/media/download/{media_id}?token={self.device_token}"
+        temp_path = f"{target_path}.part"
+
+        try:
+            logging.info("[SYNC] Sync media missing. Downloading %s (media_id=%s)", basename, media_id)
+            response = requests.get(download_url, stream=True, timeout=90)
+            if response.status_code != 200:
+                logging.error(
+                    "[SYNC] Failed sync media download %s (status=%s)",
+                    basename,
+                    response.status_code,
+                )
+                return None
+
+            with open(temp_path, "wb") as file_handle:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        file_handle.write(chunk)
+
+            os.replace(temp_path, target_path)
+            logging.info("[SYNC] Sync media ready locally: %s", target_path)
+            return target_path
+        except Exception as error:
+            logging.error("[SYNC] Error downloading sync media %s: %s", basename, error)
+            return None
+        finally:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+
     def sync(self, playing_playlist_id: Optional[str] = None) -> bool:
         """Sync schedule and download new media"""
         data = self.fetch_sync_data(playing_playlist_id)

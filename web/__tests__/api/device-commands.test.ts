@@ -116,4 +116,42 @@ describe("Device commands API", () => {
         expect(body.idempotent).toBe(true);
         expect(prisma.syncDeviceCommand.update).not.toHaveBeenCalled();
     });
+
+    it("POST /ack maps FAILED command without runtime to ERRORED sync status", async () => {
+        (prisma.syncDeviceCommand.findFirst as jest.Mock).mockResolvedValue({
+            id: "cmd-1",
+            sessionId: "session-1",
+            status: "PENDING",
+        });
+
+        const response = await ACK_COMMAND(
+            new Request("http://localhost/api/device/ack", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    device_token: "token-1",
+                    command_id: "cmd-1",
+                    status: "FAILED",
+                    error: "Local media not found",
+                }),
+            })
+        );
+
+        expect(response.status).toBe(200);
+        expect(prisma.syncDeviceCommand.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    status: "FAILED",
+                    error: "Local media not found",
+                }),
+            })
+        );
+        expect(persistDeviceSyncRuntime).toHaveBeenCalledWith(
+            "device-1",
+            expect.objectContaining({
+                sessionId: "session-1",
+                status: "ERRORED",
+            })
+        );
+    });
 });

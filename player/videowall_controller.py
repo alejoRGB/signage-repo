@@ -213,7 +213,19 @@ class VideowallController:
         local_path = media.get("local_path") or media.get("localPath")
         if not local_path:
             return False, "Missing media.local_path in sync.prepare"
+        media_id = media.get("media_id") or media.get("mediaId")
         resolved_local_path = self._resolve_prepare_local_path(str(local_path))
+        if (
+            not resolved_local_path
+            and hasattr(self.sync_manager, "ensure_sync_media_available")
+        ):
+            downloaded_local_path = self.sync_manager.ensure_sync_media_available(
+                str(media_id) if media_id is not None else None,
+                str(local_path),
+            )
+            if downloaded_local_path:
+                resolved_local_path = self._resolve_prepare_local_path(downloaded_local_path)
+
         if not resolved_local_path:
             return False, f"Local media not found: {local_path}"
 

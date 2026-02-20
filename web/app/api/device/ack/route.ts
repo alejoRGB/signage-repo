@@ -62,12 +62,15 @@ export async function POST(request: Request) {
             },
         });
 
+        const fallbackSyncStatus =
+            result.data.sync_status ??
+            (result.data.status === "FAILED" ? "ERRORED" : null);
         const runtimePayload =
             result.data.sync_runtime ??
-            (result.data.sync_status
+            (fallbackSyncStatus
                 ? {
                       session_id: command.sessionId,
-                      status: result.data.sync_status,
+                      status: fallbackSyncStatus,
                   }
                 : null);
         if (runtimePayload) {
