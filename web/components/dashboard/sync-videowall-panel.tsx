@@ -62,7 +62,7 @@ type ActiveSession = {
 
 type DragOrigin = "available" | "sync";
 type WizardStep = 1 | 2 | 3;
-type EntryView = "menu" | "builder";
+type EntryView = "menu" | "wizard" | "saved";
 
 type ValidationResult =
     | { valid: false; error: string }
@@ -472,6 +472,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         setSelectedPresetId(presetId);
         setWizardStep(3);
         setErrorMessage(null);
+        setEntryView("wizard");
     };
 
     const validatePresetDraft = (): ValidationResult => {
@@ -541,16 +542,15 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
     const openNewSessionFlow = () => {
         createNewPresetDraft();
-        setEntryView("builder");
+        setEntryView("wizard");
     };
 
     const openSavedSessionsFlow = () => {
         if (!selectedPresetId && presets.length > 0) {
             setSelectedPresetId(presets[0].id);
         }
-        setWizardStep(3);
         setErrorMessage(null);
-        setEntryView("builder");
+        setEntryView("saved");
     };
 
     const deletePreset = async () => {
@@ -701,6 +701,111 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                     Start bloqueado: activa el checkbox de la directiva Sync para permitir inicio.
                                 </p>
                             ) : null}
+                        </section>
+                    ) : entryView === "saved" ? (
+                        <section className="mx-auto w-full max-w-6xl rounded-2xl border border-slate-300 bg-white/90 p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.45)]">
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-700">Sesiones guardadas</p>
+                                    <h2 className="mt-1 text-xl font-semibold text-slate-900">Elegi un preset de sync</h2>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEntryView("menu");
+                                            setErrorMessage(null);
+                                        }}
+                                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                                    >
+                                        Volver al menu
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={openNewSessionFlow}
+                                        className="rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-700"
+                                    >
+                                        Nueva sesion
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
+                                <select
+                                    data-testid="sync-preset-select"
+                                    value={selectedPresetId}
+                                    onChange={(event) => setSelectedPresetId(event.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                                >
+                                    <option value="">Select preset</option>
+                                    {presets.map((preset) => (
+                                        <option key={preset.id} value={preset.id}>
+                                            {preset.name} ({preset.mode})
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    data-testid="sync-open-selected-preset-btn"
+                                    onClick={() => selectedPresetId && openSavedPreset(selectedPresetId)}
+                                    disabled={!selectedPresetId}
+                                    className="rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Abrir en Step 3
+                                </button>
+                                <button
+                                    type="button"
+                                    data-testid="sync-delete-preset-btn"
+                                    onClick={deletePreset}
+                                    disabled={!selectedPresetId || isDeletingPreset}
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                </button>
+                                <button
+                                    type="button"
+                                    data-testid="sync-new-preset-btn"
+                                    onClick={openNewSessionFlow}
+                                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                                >
+                                    New
+                                </button>
+                            </div>
+
+                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Saved Sync Sessions</h4>
+                                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                                        {presets.length}
+                                    </span>
+                                </div>
+                                {presets.length === 0 ? (
+                                    <p className="text-xs text-slate-500">No saved sessions yet. Create one from the new session wizard.</p>
+                                ) : (
+                                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                        {presets.map((preset) => (
+                                            <button
+                                                key={preset.id}
+                                                type="button"
+                                                data-testid={`sync-saved-preset-${preset.id}`}
+                                                onClick={() => openSavedPreset(preset.id)}
+                                                className={`rounded-lg border px-3 py-2 text-left transition ${
+                                                    selectedPresetId === preset.id
+                                                        ? "border-cyan-500 bg-cyan-50"
+                                                        : "border-slate-200 bg-white hover:border-cyan-300"
+                                                }`}
+                                            >
+                                                <p className="truncate text-sm font-semibold text-slate-900">{preset.name}</p>
+                                                <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-slate-500">
+                                                    {preset.mode} - {preset.devices.length} devices - {msToSecondsLabel(preset.durationMs)}
+                                                </p>
+                                                <p className="mt-1 text-[11px] text-slate-500">Click to open in Step 3</p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </section>
                     ) : (
                     <>
@@ -960,112 +1065,49 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
                 {wizardStep === 3 ? (
                     <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
-                    <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
-                        <select
-                            data-testid="sync-preset-select"
-                            value={selectedPresetId}
-                            onChange={(event) => setSelectedPresetId(event.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
-                        >
-                            <option value="">New preset draft</option>
-                            {presets.map((preset) => (
-                                <option key={preset.id} value={preset.id}>
-                                    {preset.name} ({preset.mode})
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            data-testid="sync-new-preset-btn"
-                            onClick={createNewPresetDraft}
-                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
-                        >
-                            New
-                        </button>
-                        <button
-                            type="button"
-                            data-testid="sync-save-preset-btn"
-                            onClick={() => savePreset()}
-                            disabled={isSavingPreset || isLoading}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <Save className="h-4 w-4" />
-                            {isSavingPreset ? "Saving..." : "Save Preset"}
-                        </button>
-                        <button
-                            type="button"
-                            data-testid="sync-delete-preset-btn"
-                            onClick={deletePreset}
-                            disabled={!selectedPresetId || isDeletingPreset}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                        </button>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            data-testid="sync-save-as-new-preset-btn"
-                            onClick={() => savePreset({ forceCreate: true })}
-                            disabled={isSavingPreset || isLoading}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            Save As New
-                        </button>
-                        <p className="text-xs text-slate-500">
-                            Saved sessions are managed via Sync Presets and can be reopened for editing.
-                        </p>
-                    </div>
-
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                        <div className="mb-2 flex items-center justify-between">
-                            <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Saved Sync Sessions</h4>
-                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                                {presets.length}
-                            </span>
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">Session preset</p>
+                            <button
+                                type="button"
+                                onClick={openSavedSessionsFlow}
+                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                            >
+                                Ver sesiones guardadas
+                            </button>
                         </div>
-                        {presets.length === 0 ? (
-                            <p className="text-xs text-slate-500">No saved sessions yet. Save the current draft to create one.</p>
-                        ) : (
-                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                                {presets.map((preset) => (
-                                    <button
-                                        key={preset.id}
-                                        type="button"
-                                        data-testid={`sync-saved-preset-${preset.id}`}
-                                        onClick={() => openSavedPreset(preset.id)}
-                                        className={`rounded-lg border px-3 py-2 text-left transition ${
-                                            selectedPresetId === preset.id
-                                                ? "border-cyan-500 bg-cyan-50"
-                                                : "border-slate-200 bg-white hover:border-cyan-300"
-                                        }`}
-                                    >
-                                        <p className="truncate text-sm font-semibold text-slate-900">{preset.name}</p>
-                                        <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-slate-500">
-                                            {preset.mode} - {preset.devices.length} devices - {msToSecondsLabel(preset.durationMs)}
-                                        </p>
-                                        <p className="mt-1 text-[11px] text-slate-500">
-                                            {selectedPresetId === preset.id ? "Currently loaded" : "Click to load"}
-                                        </p>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-3">
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                            Preset name
-                        </label>
-                        <input
-                            data-testid="sync-preset-name-input"
-                            value={presetName}
-                            onChange={(event) => setPresetName(event.target.value)}
-                            placeholder="Video Wall Main Hall"
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
-                        />
-                    </div>
+                        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+                            <input
+                                data-testid="sync-preset-name-input"
+                                value={presetName}
+                                onChange={(event) => setPresetName(event.target.value)}
+                                placeholder="Video Wall Main Hall"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                            />
+                            <button
+                                type="button"
+                                data-testid="sync-save-preset-btn"
+                                onClick={() => savePreset()}
+                                disabled={isSavingPreset || isLoading}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Save className="h-4 w-4" />
+                                {isSavingPreset ? "Saving..." : "Save Preset"}
+                            </button>
+                            <button
+                                type="button"
+                                data-testid="sync-save-as-new-preset-btn"
+                                onClick={() => savePreset({ forceCreate: true })}
+                                disabled={isSavingPreset || isLoading}
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Save As New
+                            </button>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500">
+                            {selectedPresetId
+                                ? "Current draft is linked to a saved preset."
+                                : "Save this configuration as a preset before starting the session."}
+                        </p>
                     </section>
                 ) : null}
 

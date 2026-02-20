@@ -109,8 +109,8 @@ describe("SyncVideowallPanel - wizard and presets", () => {
                 { deviceId: "device-2", mediaItemId: null },
             ]);
         });
-
-        expect(screen.getByTestId("sync-saved-preset-preset-new")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: /Ver sesiones guardadas/i }));
+        expect(await screen.findByTestId("sync-saved-preset-preset-new")).toBeInTheDocument();
     });
 
     it("keeps wizard on Step 1 when fewer than 2 devices are selected", async () => {
@@ -190,7 +190,10 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         fireEvent.click(screen.getByTestId("sync-save-preset-btn"));
 
         await waitFor(() => {
-            expect(screen.getByTestId("sync-saved-preset-preset-new")).toBeInTheDocument();
+            const postCall = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.find(
+                ([url, init]) => url === "/api/sync/presets" && init?.method === "POST"
+            );
+            expect(postCall).toBeTruthy();
         });
 
         await waitFor(() => {
@@ -205,6 +208,15 @@ describe("SyncVideowallPanel - wizard and presets", () => {
 
         expect(await screen.findByTestId("sync-entry-new-session-btn")).toBeInTheDocument();
         expect(screen.getByTestId("sync-entry-saved-sessions-btn")).toBeInTheDocument();
+        expect(screen.queryByText("Available Devices")).not.toBeInTheDocument();
+    });
+
+    it("opens saved sessions in a separate view from entry menu", async () => {
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        fireEvent.click(await screen.findByTestId("sync-entry-saved-sessions-btn"));
+
+        expect(await screen.findByText("Sesiones guardadas")).toBeInTheDocument();
         expect(screen.queryByText("Available Devices")).not.toBeInTheDocument();
     });
 });
