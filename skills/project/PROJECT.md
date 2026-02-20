@@ -13,6 +13,7 @@
   - Dashboard is Source of Truth for configuration.
   - Player syncs via HTTP APIs and reports active state ("True Sync").
   - Sync/VideoWall control plane is command-queue + heartbeat based (`/api/device/commands`, `/api/device/ack`, `/api/device/heartbeat`, `/api/device/logs`).
+  - Sync/VideoWall runtime supports hybrid timing: cloud control plane + optional LAN beacon data plane (master -> followers) with automatic cloud fallback.
 - **Authentication:**
   - **Users:** NextAuth (Email/Password) against `User` table.
   - **Admins:** NextAuth against `Admin` table. Separate credentials.
@@ -106,6 +107,18 @@
   - Canonical baseline is always the latest successful `master` deployment.
   - Canonical URL aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.
 - **Repository Security Cleanup:** git history was sanitized after credential exposure. Any historical local clone must run fetch+hard reset (or a fresh clone) before resuming work.
+
+## Canonical Notes (2026-02-20)
+- **Sync LAN Hybrid Mode (implemented):**
+  - Sync session orchestration remains in cloud APIs (`SYNC_PREPARE`/`SYNC_STOP`, heartbeat, command queue).
+  - During active playback, precise timing can use LAN UDP beacons from master to followers.
+  - If LAN beacons are unavailable/late, followers automatically fall back to cloud timing without stopping playback.
+- **Prepare Payload Contract (updated):**
+  - `sync.prepare` now includes `target_device_id` and `sync_config.lan` block.
+  - `sync_config.lan` keys: `enabled`, `beacon_hz`, `beacon_port`, `timeout_ms`, `fallback_to_cloud`.
+- **Runtime Health Contract (updated):**
+  - Player heartbeat runtime may include `lan_mode` and `lan_beacon_age_ms` for diagnostics.
+  - Accepted `lan_mode` values in runtime: `master`, `follower`, `cloud_fallback`, `disabled`.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.

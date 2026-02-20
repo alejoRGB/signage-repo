@@ -34,11 +34,12 @@
    - **Web Loop:** Used for `web` playlists with Chromium playback and schedule-based switching.
    - **Native Media Loop:** Optimized mode for homogeneous video media playlists (MPV native loop).
 2. **Offline First:** Player *must* continue working if network fails.
-3. **No Web sockets (baseline):** Communication is HTTP polling-based.
+3. **No Cloud WebSockets (baseline):** Cloud communication remains HTTP polling-based.
    - Device schedule sync: `/api/device/sync`
    - Device command channel: `/api/device/commands` + `/api/device/ack`
    - Device runtime updates: `/api/device/heartbeat`
    - Structured device events: `/api/device/logs`
+   - Sync timing on local networks may use LAN UDP beacon channel (master -> followers) when enabled.
 4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`) and refreshes device state from `/api/devices` every 10s in Devices UI.
    - "Syncing..." is shown only while there is explicit mismatch between active playlist and a reported `playingPlaylistId`, or during optimistic update.
 5. **API Security:** 
@@ -105,3 +106,17 @@
    - Player heartbeat payload is the source of truth for drift runtime (`avgDriftMs`, `maxDriftMs`, `resyncCount`).
    - Backend persists these values in `SyncSessionDevice`.
    - Dashboard session health panel consumes active session data with no-cache polling to avoid stale values.
+17. **LAN Sync Hybrid Architecture (updated Feb 20, 2026):**
+   - Control plane stays cloud-native:
+     - session lifecycle, command queue, acks, heartbeat persistence, and master failover.
+   - Data plane for precision timing is optional LAN UDP:
+     - master emits frequent beacons (`session_id`, `master_device_id`, `seq`, `sent_at_ms`, `phase_ms`, `duration_ms`, `playback_speed`),
+     - followers compute target phase from beacon age and apply existing drift correction loop.
+   - Fallback behavior:
+     - if beacon age exceeds timeout, follower switches to cloud epoch target (`cloud_fallback`) without interrupting playback.
+   - Tunables:
+     - `SYNC_LAN_ENABLED`
+     - `SYNC_LAN_BEACON_HZ`
+     - `SYNC_LAN_BEACON_PORT`
+     - `SYNC_LAN_TIMEOUT_MS`
+     - `SYNC_LAN_FALLBACK_TO_CLOUD`

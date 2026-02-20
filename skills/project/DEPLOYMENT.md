@@ -9,6 +9,11 @@
   - `NEXTAUTH_SECRET`: Auth secret.
   - `NEXT_PUBLIC_APP_URL`: Canonical URL for the app (prevents Host Header Injection in sync).
   - `SYNC_VIDEOWALL_ENABLED`: Feature gate for Sync UI + Sync session control (`true`/`false`, default `false`).
+  - `SYNC_LAN_ENABLED`: Enables LAN beacon timing in sync sessions (`true`/`false`, default `false`).
+  - `SYNC_LAN_BEACON_HZ`: Master beacon frequency in Hz (default `20`).
+  - `SYNC_LAN_BEACON_PORT`: UDP port for LAN beacons (default `39051`).
+  - `SYNC_LAN_TIMEOUT_MS`: Follower timeout before cloud fallback (default `1500`).
+  - `SYNC_LAN_FALLBACK_TO_CLOUD`: Enables automatic follower fallback to cloud timing (`true`/`false`, default `true`).
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
   - `E2E_USERNAME` / `E2E_PASSWORD`: Required for credentialed E2E testing (DO NOT hardcode in tests).
   - `E2E_ADMIN_USERNAME` (or `E2E_ADMIN_EMAIL`) / `E2E_ADMIN_PASSWORD`: Required for credentialed admin E2E testing on `/admin`.
@@ -27,6 +32,9 @@
 ## Sync Release Checklist (Vercel)
 1. Confirm env vars in target environment:
    - `SYNC_VIDEOWALL_ENABLED=true` (only when rollout stage enables Sync)
+   - If LAN timing rollout is enabled:
+     - `SYNC_LAN_ENABLED=true`
+     - `SYNC_LAN_BEACON_HZ`, `SYNC_LAN_BEACON_PORT`, `SYNC_LAN_TIMEOUT_MS`, `SYNC_LAN_FALLBACK_TO_CLOUD` set as intended
    - `NEXT_PUBLIC_APP_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_SECRET` valid.
 2. Deploy web from `master`.
 3. Run DB migrations in deployed environment:
@@ -99,6 +107,9 @@ python execution/run_tests.py qa:sync:off --project=chromium
   - `journalctl -u signage-player -f` should include runtime sync signals (`VIDEOWALL_SYNC`, and when applicable `SOFT_CORRECTION` / `HARD_RESYNC`).
   - DB runtime fields in `SyncSessionDevice` should move away from flat zero when drift exists (`avgDriftMs`, `maxDriftMs`, `resyncCount`).
   - Session health panel should update `last heartbeat`, `drift avg`, and `drift max` continuously.
+  - In LAN-enabled sessions, runtime should report LAN diagnostics:
+    - `lan_mode` expected as `master` (master device) or `follower` (followers),
+    - on beacon loss, `lan_mode` transitions to `cloud_fallback` without session interruption.
 
 ## Edge Deployment (Raspberry Pi)
 ### One-Line Install (Canonical)
