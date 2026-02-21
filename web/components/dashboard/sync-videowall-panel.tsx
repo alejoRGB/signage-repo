@@ -1098,54 +1098,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     </section>
                 ) : null}
 
-                {wizardStep === 3 ? (
-                    <section className="rounded-2xl border border-slate-300 bg-white/80 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-600">Session preset</p>
-                            <button
-                                type="button"
-                                onClick={openSavedSessionsFlow}
-                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
-                            >
-                                Ver sesiones guardadas
-                            </button>
-                        </div>
-                        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-                            <input
-                                data-testid="sync-preset-name-input"
-                                value={presetName}
-                                onChange={(event) => setPresetName(event.target.value)}
-                                placeholder="Video Wall Main Hall"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
-                            />
-                            <button
-                                type="button"
-                                data-testid="sync-save-preset-btn"
-                                onClick={() => savePreset()}
-                                disabled={isSavingPreset || isLoading}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <Save className="h-4 w-4" />
-                                {isSavingPreset ? "Saving..." : "Save Preset"}
-                            </button>
-                            <button
-                                type="button"
-                                data-testid="sync-save-as-new-preset-btn"
-                                onClick={() => savePreset({ forceCreate: true })}
-                                disabled={isSavingPreset || isLoading}
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Save As New
-                            </button>
-                        </div>
-                        <p className="mt-2 text-xs text-slate-500">
-                            {selectedPresetId
-                                ? "Current draft is linked to a saved preset."
-                                : "Save this configuration as a preset before starting the session."}
-                        </p>
-                    </section>
-                ) : null}
-
                 {errorMessage ? (
                     <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                         {errorMessage}
@@ -1294,6 +1246,27 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 {reviewRows.length} devices
                             </span>
                         </div>
+                        <div className="mb-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+                            <input
+                                data-testid="sync-preset-name-input"
+                                value={presetName}
+                                onChange={(event) => setPresetName(event.target.value)}
+                                placeholder="Video Wall Main Hall"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                            />
+                            <button
+                                type="button"
+                                onClick={openSavedSessionsFlow}
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                            >
+                                Ver sesiones guardadas
+                            </button>
+                        </div>
+                        <p className="mb-3 text-xs text-slate-500">
+                            {selectedPresetId
+                                ? "Current draft is linked to a saved preset."
+                                : "Save this configuration as a preset before starting the session."}
+                        </p>
                         {!selectedPresetId ? (
                             <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                                 Save this configuration as a preset before starting the session.
@@ -1338,6 +1311,16 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                             </table>
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                data-testid="sync-save-preset-btn"
+                                onClick={() => savePreset()}
+                                disabled={isSavingPreset || isLoading}
+                                className="inline-flex items-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Save className="h-3.5 w-3.5" />
+                                {isSavingPreset ? "Saving..." : "Save Preset"}
+                            </button>
                             <button
                                 type="button"
                                 data-testid="sync-start-from-saved-btn"
