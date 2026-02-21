@@ -1403,11 +1403,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 </tbody>
                             </table>
                         </div>
-                        <div className="mt-3">
-                            <p className="text-xs text-slate-500">
-                                Traceability: session start stores `presetId` in `SyncSession` and keeps command history per device.
-                            </p>
-                        </div>
                         {!isDirectiveActive ? (
                             <p className="mt-2 text-xs text-amber-700">
                                 Start seguirá bloqueado hasta activar el checkbox de la directiva Sync.
