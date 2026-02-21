@@ -16,8 +16,8 @@ const formSchema = z.object({
     email: z.string().email("Email invalido"),
     phone: z.string().min(8, "Telefono invalido"),
     businessType: z.string().min(2, "Indica tu rubro"),
-    screens: z.coerce.number().int().min(1, "Cantidad requerida"),
-    branches: z.coerce.number().int().min(1, "Cantidad requerida"),
+    screens: z.number().int().min(1, "Cantidad requerida"),
+    branches: z.number().int().min(1, "Cantidad requerida"),
     zone: z.string().min(2, "Indica tu zona"),
     message: z.string().max(2000, "Mensaje demasiado largo").optional(),
 });
