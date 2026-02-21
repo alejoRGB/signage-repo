@@ -152,20 +152,6 @@ function getMediaDurationMs(media?: SyncMediaItem | null) {
     return null;
 }
 
-function correctionAgeLabel(lastEventAt?: string | null) {
-    if (!lastEventAt) {
-        return "n/a";
-    }
-
-    const parsedMs = Date.parse(lastEventAt);
-    if (Number.isNaN(parsedMs)) {
-        return "n/a";
-    }
-
-    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - parsedMs) / 1000));
-    return `${elapsedSeconds}s ago`;
-}
-
 function correctionBadgeClass(event: string | null, isActive: boolean) {
     if (!event) {
         return "bg-slate-100 text-slate-700";
@@ -174,6 +160,45 @@ function correctionBadgeClass(event: string | null, isActive: boolean) {
         return isActive ? "bg-amber-100 text-amber-900" : "bg-amber-50 text-amber-700";
     }
     return isActive ? "bg-cyan-100 text-cyan-900" : "bg-cyan-50 text-cyan-700";
+}
+
+function driftHealthVisual(avgDriftMs?: number | null) {
+    if (typeof avgDriftMs !== "number" || Number.isNaN(avgDriftMs)) {
+        return {
+            valueLabel: "n/a",
+            trackClass: "bg-slate-200",
+            fillClass: "bg-slate-400",
+            widthPercent: 12,
+        };
+    }
+
+    const absoluteMs = Math.abs(avgDriftMs);
+    const widthPercent = Math.max(8, Math.min(100, (absoluteMs / 150) * 100));
+
+    if (absoluteMs <= 50) {
+        return {
+            valueLabel: `${absoluteMs.toFixed(1)}ms`,
+            trackClass: "bg-emerald-100",
+            fillClass: "bg-emerald-500",
+            widthPercent,
+        };
+    }
+
+    if (absoluteMs <= 100) {
+        return {
+            valueLabel: `${absoluteMs.toFixed(1)}ms`,
+            trackClass: "bg-amber-100",
+            fillClass: "bg-amber-500",
+            widthPercent,
+        };
+    }
+
+    return {
+        valueLabel: `${absoluteMs.toFixed(1)}ms`,
+        trackClass: "bg-rose-100",
+        fillClass: "bg-rose-500",
+        widthPercent,
+    };
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -742,6 +767,21 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         isDeletingPreset ||
         wizardStep !== 3 ||
         offlineSyncDevices.length > 0;
+    const orderedSessionDevices = useMemo(() => {
+        if (!activeSession) {
+            return [];
+        }
+
+        return [...activeSession.devices].sort((a, b) => {
+            const nameComparison = (a.device.name ?? "").localeCompare(b.device.name ?? "", "es", {
+                sensitivity: "base",
+            });
+            if (nameComparison !== 0) {
+                return nameComparison;
+            }
+            return a.deviceId.localeCompare(b.deviceId, "es", { sensitivity: "base" });
+        });
+    }, [activeSession]);
 
     return (
         <div
@@ -1409,13 +1449,14 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         </div>
                         </div>
                         <div className="space-y-2">
-                            {activeSession.devices.map((device) => {
+                            {orderedSessionDevices.map((device) => {
                                 const correction = activeSession.correctionTelemetryByDeviceId?.[device.deviceId] ?? null;
                                 const correctionLabel = correction?.lastEvent
                                     ? correction.lastEvent === "HARD_RESYNC"
                                         ? "Hard resync"
                                         : "Soft correction"
                                     : "No correction";
+                                const driftVisual = driftHealthVisual(device.avgDriftMs);
 
                                 return (
                                     <div
@@ -1442,14 +1483,18 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         </div>
                                         <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
                                             <p>last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
-                                            <p>drift avg: {typeof device.avgDriftMs === "number" ? `${device.avgDriftMs.toFixed(1)}ms` : "n/a"}</p>
-                                            <p>health: {typeof device.healthScore === "number" ? device.healthScore.toFixed(2) : "n/a"}</p>
-                                            <p>resync count: {device.resyncCount ?? 0}</p>
-                                            <p>last correction: {correctionAgeLabel(correction?.lastEventAt ?? null)}</p>
-                                            <p>
-                                                correction drift:{" "}
-                                                {typeof correction?.lastDriftMs === "number" ? `${correction.lastDriftMs.toFixed(1)}ms` : "n/a"}
-                                            </p>
+                                            <div className="sm:col-span-1 xl:col-span-3">
+                                                <p className="mb-1 flex items-center justify-between">
+                                                    <span>drift avg:</span>
+                                                    <span className="font-semibold text-slate-800">{driftVisual.valueLabel}</span>
+                                                </p>
+                                                <div className={`h-2 w-full overflow-hidden rounded-full ${driftVisual.trackClass}`}>
+                                                    <div
+                                                        className={`h-full rounded-full ${driftVisual.fillClass} animate-pulse transition-[width] duration-700 ease-out`}
+                                                        style={{ width: `${driftVisual.widthPercent}%` }}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 );
