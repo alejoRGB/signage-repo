@@ -213,6 +213,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
     const [isDeletingPreset, setIsDeletingPreset] = useState(false);
     const [isStartingSession, setIsStartingSession] = useState(false);
     const [isStoppingSession, setIsStoppingSession] = useState(false);
+    const [isSessionBootstrapLoading, setIsSessionBootstrapLoading] = useState(true);
 
     const deviceById = useMemo(
         () =>
@@ -376,9 +377,16 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
 
         const load = async () => {
             await Promise.all([refreshBuilderData(), refreshActiveSession()]);
+            if (!disposed) {
+                setIsSessionBootstrapLoading(false);
+            }
         };
 
-        void load().catch(() => undefined);
+        void load().catch(() => {
+            if (!disposed) {
+                setIsSessionBootstrapLoading(false);
+            }
+        });
 
         const intervalId = window.setInterval(() => {
             if (!disposed) {
@@ -742,7 +750,18 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         >
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
                 {!activeSession ? (
-                    entryView === "menu" ? (
+                    isSessionBootstrapLoading ? (
+                        <section
+                            data-testid="sync-initial-loading"
+                            className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-300 bg-white/90 p-6 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.45)]"
+                        >
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-700">Sync</p>
+                            <h2 className="mt-1 text-2xl font-semibold text-slate-900">Cargando sesión activa...</h2>
+                            <p className="mt-2 text-sm text-slate-600">
+                                Esperá un momento mientras verificamos el estado actual de Sync.
+                            </p>
+                        </section>
+                    ) : entryView === "menu" ? (
                         <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-300 bg-white/90 p-6 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.45)]">
                             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-700">Sync</p>
                             <h2 className="mt-1 text-2xl font-semibold text-slate-900">¿Cómo querés continuar?</h2>

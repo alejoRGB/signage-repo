@@ -273,6 +273,70 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         expect(screen.queryByText("Available Devices")).not.toBeInTheDocument();
     });
 
+    it("does not flash entry menu when an active session exists", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => mockDevices,
+                    } as Response;
+                }
+
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => mockMedia,
+                    } as Response;
+                }
+
+                if (url.includes("/api/sync/presets") && !init?.method) {
+                    return { ok: true, json: async () => [] } as Response;
+                }
+
+                if (url.includes("/api/sync/session/active")) {
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            session: {
+                                id: "session-1",
+                                status: "RUNNING",
+                                presetId: "preset-1",
+                                masterDeviceId: "device-1",
+                                devices: [
+                                    {
+                                        id: "session-device-1",
+                                        deviceId: "device-1",
+                                        status: "PLAYING",
+                                        device: {
+                                            id: "device-1",
+                                            name: "Lobby",
+                                        },
+                                    },
+                                ],
+                            },
+                            correctionTelemetryByDeviceId: {},
+                        }),
+                    } as Response;
+                }
+
+                return { ok: true, json: async () => ({}) } as Response;
+            }) as unknown as typeof fetch
+        );
+
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        expect(screen.getByTestId("sync-initial-loading")).toBeInTheDocument();
+        expect(screen.queryByTestId("sync-entry-new-session-btn")).not.toBeInTheDocument();
+
+        expect(await screen.findByTestId("sync-health-panel")).toBeInTheDocument();
+        expect(screen.queryByTestId("sync-entry-new-session-btn")).not.toBeInTheDocument();
+    });
+
     it("starts new session from clean state even when saved presets exist", async () => {
         vi.stubGlobal(
             "fetch",
