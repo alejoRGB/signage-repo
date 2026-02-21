@@ -1326,20 +1326,33 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 {reviewRows.length} devices
                             </span>
                         </div>
-                        <div className="mb-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
                             <input
                                 data-testid="sync-preset-name-input"
                                 value={presetName}
                                 onChange={(event) => setPresetName(event.target.value)}
                                 placeholder="Video Wall Main Hall"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none sm:w-auto sm:min-w-[280px] sm:max-w-[420px] sm:flex-1"
                             />
                             <button
                                 type="button"
-                                onClick={openSavedSessionsFlow}
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700"
+                                data-testid="sync-start-from-saved-btn"
+                                onClick={startSession}
+                                disabled={startDisabled}
+                                className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Ver sesiones guardadas
+                                <Play className="h-3.5 w-3.5" />
+                                Start from saved session
+                            </button>
+                            <button
+                                type="button"
+                                data-testid="sync-save-preset-btn"
+                                onClick={() => savePreset()}
+                                disabled={isSavingPreset || isLoading}
+                                className="inline-flex items-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Save className="h-3.5 w-3.5" />
+                                {isSavingPreset ? "Saving..." : "Save Preset"}
                             </button>
                         </div>
                         <p className="mb-3 text-xs text-slate-500">
@@ -1390,27 +1403,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 </tbody>
                             </table>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                data-testid="sync-save-preset-btn"
-                                onClick={() => savePreset()}
-                                disabled={isSavingPreset || isLoading}
-                                className="inline-flex items-center gap-2 rounded-lg border border-cyan-500 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <Save className="h-3.5 w-3.5" />
-                                {isSavingPreset ? "Saving..." : "Save Preset"}
-                            </button>
-                            <button
-                                type="button"
-                                data-testid="sync-start-from-saved-btn"
-                                onClick={startSession}
-                                disabled={startDisabled}
-                                className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <Play className="h-3.5 w-3.5" />
-                                Start from saved session
-                            </button>
+                        <div className="mt-3">
                             <p className="text-xs text-slate-500">
                                 Traceability: session start stores `presetId` in `SyncSession` and keeps command history per device.
                             </p>

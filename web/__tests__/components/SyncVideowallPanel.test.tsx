@@ -109,8 +109,6 @@ describe("SyncVideowallPanel - wizard and presets", () => {
                 { deviceId: "device-2", mediaItemId: null },
             ]);
         });
-        fireEvent.click(screen.getByRole("button", { name: /Ver sesiones guardadas/i }));
-        expect(await screen.findByTestId("sync-saved-preset-preset-new")).toBeInTheDocument();
     });
 
     it("keeps wizard on Step 1 when fewer than 2 devices are selected", async () => {
