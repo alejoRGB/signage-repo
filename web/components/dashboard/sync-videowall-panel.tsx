@@ -732,7 +732,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         isStartingSession ||
         isSavingPreset ||
         isDeletingPreset ||
-        !isDirectiveActive ||
         wizardStep !== 3 ||
         offlineSyncDevices.length > 0;
 
@@ -1335,6 +1334,11 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                 Traceability: session start stores `presetId` in `SyncSession` and keeps command history per device.
                             </p>
                         </div>
+                        {!isDirectiveActive ? (
+                            <p className="mt-2 text-xs text-amber-700">
+                                Start seguirá bloqueado hasta activar el checkbox de la directiva Sync.
+                            </p>
+                        ) : null}
                     </section>
                 ) : null}
                     </>
