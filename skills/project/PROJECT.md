@@ -139,6 +139,16 @@
 - **Sync QA Coverage (expanded):**
   - Added opt-in chaos test `qa_automation/tests/4_sync_failover.spec.ts` for LAN failover validation (`SYNC-E2E-05`).
   - Test requires explicit enablement (`E2E_SYNC_FAILOVER_RUN=true`) plus per-master stop/start commands via env vars.
+- **Session Health UI (updated):**
+  - Device cards keep a stable deterministic order.
+  - Health metric is presented as centered `Drift Average` with animated threshold bar:
+    - green `<= 50ms`
+    - yellow `50..100ms`
+    - red `> 100ms`
+  - Per-device fields `last correction`, `correction drift`, `health`, and `resync count` were removed from the panel.
+- **Stop Session UX (fixed):**
+  - After `Stop session`, the panel must return directly to the entry menu without transient reappearance of `Session Running`.
+  - Client now ignores stale `/api/sync/session/active` echoes for the just-stopped `sessionId` during a short suppression window.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
