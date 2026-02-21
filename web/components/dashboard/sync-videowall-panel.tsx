@@ -1462,9 +1462,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                     <div
                                         key={device.id}
                                         data-testid={`sync-device-health-${device.deviceId}`}
-                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5"
                                     >
-                                        <div className="mb-1 flex items-center justify-between gap-2">
+                                        <div className="mb-0.5 flex items-center justify-between gap-2">
                                             <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
                                             <div className="flex items-center gap-1.5">
                                                 <span
@@ -1481,11 +1481,11 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
+                                        <div className="flex items-center gap-3 text-xs text-slate-600">
                                             <p className="text-sm text-slate-700">last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
-                                            <div className="sm:col-span-2 xl:col-span-4">
+                                            <div className="flex flex-1 flex-col items-center justify-center">
                                                 <p className="text-center text-sm font-semibold text-slate-700">Drift Average</p>
-                                                <p className="mb-2 text-center text-base font-semibold text-slate-800">
+                                                <p className="mb-1 text-center text-base font-semibold text-slate-800">
                                                     {driftVisual.valueLabel}
                                                 </p>
                                                 <div className="mx-auto w-1/3">
