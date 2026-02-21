@@ -13,6 +13,40 @@ import { buildPreparePayload } from "@/lib/sync-command-service";
 import { selectInitialMasterDeviceId } from "@/lib/sync-master-election";
 import { SYNC_DEVICE_COMMAND_TYPE } from "@/types/sync";
 
+const INITIAL_START_HOLD_MS = 12 * 60 * 60 * 1000;
+
+function isPositiveInteger(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function resolveSessionDurationMs(
+    preset: {
+        mode: "COMMON" | "PER_DEVICE";
+        durationMs: number;
+        presetMedia?: { durationMs: number | null } | null;
+        devices: Array<{ mediaItem?: { durationMs: number | null } | null }>;
+    }
+) {
+    if (preset.mode === "COMMON") {
+        return isPositiveInteger(preset.presetMedia?.durationMs)
+            ? preset.presetMedia.durationMs
+            : preset.durationMs;
+    }
+
+    const deviceDurations = preset.devices
+        .map((assignment) => assignment.mediaItem?.durationMs)
+        .filter(isPositiveInteger);
+
+    if (deviceDurations.length === preset.devices.length && deviceDurations.length > 0) {
+        const firstDuration = deviceDurations[0];
+        if (deviceDurations.every((durationMs) => durationMs === firstDuration)) {
+            return firstDuration;
+        }
+    }
+
+    return preset.durationMs;
+}
+
 async function requireUserSession() {
     const session = await getServerSession(authOptions);
 
@@ -72,6 +106,7 @@ export async function POST(request: Request) {
                         width: true,
                         height: true,
                         fps: true,
+                        durationMs: true,
                     },
                 },
                 devices: {
@@ -90,6 +125,7 @@ export async function POST(request: Request) {
                                 width: true,
                                 height: true,
                                 fps: true,
+                                durationMs: true,
                             },
                         },
                     },
@@ -184,8 +220,9 @@ export async function POST(request: Request) {
                 lastSeenAt: assignment.device.lastSeenAt,
             }))
         );
-        const startAtMs = nowMs + preparationBufferMs;
+        const startAtMs = nowMs + INITIAL_START_HOLD_MS;
         const timeoutAtMs = nowMs + result.data.startTimeoutMs;
+        const sessionDurationMs = resolveSessionDurationMs(preset);
 
         const createdSession = await prisma.$transaction(async (tx) => {
             const session = await tx.syncSession.create({
@@ -193,7 +230,7 @@ export async function POST(request: Request) {
                     userId: auth.userId,
                     presetId: preset.id,
                     status: "STARTING",
-                    durationMs: preset.durationMs,
+                    durationMs: sessionDurationMs,
                     preparationBufferMs,
                     startAtMs: BigInt(startAtMs),
                     masterDeviceId: initialMasterDeviceId,
@@ -230,7 +267,7 @@ export async function POST(request: Request) {
                         presetId: preset.id,
                         mode: preset.mode,
                         startAtMs,
-                        durationMs: preset.durationMs,
+                        durationMs: sessionDurationMs,
                         deviceId: assignment.deviceId,
                         masterDeviceId: initialMasterDeviceId,
                         media: {

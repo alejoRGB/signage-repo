@@ -73,6 +73,7 @@ class Player:
             is_playback_alive=self.is_mpv_alive,
             set_playback_speed=self.set_mpv_playback_speed,
             get_playback_time_ms=self.get_mpv_time_pos_ms,
+            get_playback_duration_ms=self.get_mpv_duration_ms,
         )
         try:
             self.videowall_controller.clock_max_offset_ms = float(
@@ -211,14 +212,14 @@ class Player:
             logging.warning(f"[PLAYER] IPC Command failed: {e}")
             return False
 
-    def get_mpv_time_pos_ms(self) -> Optional[float]:
-        """Query MPV current playback position in milliseconds."""
+    def _get_mpv_numeric_property(self, property_name: str) -> Optional[float]:
+        """Query an MPV numeric property over IPC and return it as float seconds."""
         import socket
 
         if not self.is_mpv_alive():
             return None
 
-        payload = json.dumps({"command": ["get_property", "time-pos"]}).encode() + b"\n"
+        payload = json.dumps({"command": ["get_property", property_name]}).encode() + b"\n"
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
                 client.settimeout(1.0)
@@ -226,7 +227,7 @@ class Player:
                 client.sendall(payload)
                 response = client.recv(4096)
         except Exception as error:
-            logging.debug(f"[PLAYER] IPC get time-pos failed: {error}")
+            logging.debug(f"[PLAYER] IPC get_property '{property_name}' failed: {error}")
             return None
 
         if not response:
@@ -248,7 +249,21 @@ class Player:
         if not isinstance(value, (int, float)):
             return None
 
-        return max(0.0, float(value) * 1000.0)
+        return max(0.0, float(value))
+
+    def get_mpv_time_pos_ms(self) -> Optional[float]:
+        """Query MPV current playback position in milliseconds."""
+        value_seconds = self._get_mpv_numeric_property("time-pos")
+        if value_seconds is None:
+            return None
+        return value_seconds * 1000.0
+
+    def get_mpv_duration_ms(self) -> Optional[float]:
+        """Query MPV media duration in milliseconds."""
+        value_seconds = self._get_mpv_numeric_property("duration")
+        if value_seconds is None:
+            return None
+        return value_seconds * 1000.0
 
     def is_mpv_alive(self) -> bool:
         return self.mpv_process is not None and self.mpv_process.poll() is None
@@ -311,20 +326,8 @@ class Player:
         if os.path.exists(videowall_conf):
             cmd.append(f"--include={videowall_conf}")
 
-        lua_script = os.path.join(os.path.dirname(__file__), "lua", "videowall_sync.lua")
-        if os.path.exists(lua_script):
-            cmd.append(f"--script={lua_script}")
-            cmd.append(
-                "--script-opts="
-                f"videowall-session_id={context.session_id},"
-                f"videowall-start_at_ms={context.start_at_ms},"
-                f"videowall-duration_ms={context.duration_ms},"
-                "videowall-hard_resync_threshold_ms=500,"
-                "videowall-soft_min_ms=25,"
-                "videowall-soft_max_ms=500,"
-                "videowall-deadband_ms=25,"
-                "videowall-warmup_loops=3"
-            )
+        # Drift correction ownership is Python-only (VideowallController).
+        # Do not attach Lua correction script to avoid dual correction loops.
 
         try:
             self.mpv_process = subprocess.Popen(cmd)

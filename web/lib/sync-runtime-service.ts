@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, SyncSessionDeviceStatus, SyncSessionStatus } from "@prisma/client";
+import { buildPreparePayload } from "@/lib/sync-command-service";
+import { SYNC_DEVICE_COMMAND_TYPE } from "@/types/sync";
 
 type SyncRuntimeInput = {
     sessionId?: string | null;
@@ -38,6 +40,46 @@ const SESSION_STATUSES_BEFORE_WARMUP: SyncSessionStatus[] = [
     SyncSessionStatus.CREATED,
 ];
 
+const READY_BARRIER_MIN_LEAD_MS = 1500;
+const READY_BARRIER_MAX_LEAD_MS = 12000;
+
+type SessionPrepareMedia = {
+    id: string;
+    filename: string | null;
+    width: number | null;
+    height: number | null;
+    fps: number | null;
+};
+
+function resolveSessionMediaByDevice(
+    session: {
+        preset: {
+            mode: "COMMON" | "PER_DEVICE";
+            presetMedia: SessionPrepareMedia | null;
+            devices: Array<{
+                deviceId: string;
+                mediaItem: SessionPrepareMedia | null;
+            }>;
+        };
+    },
+    deviceId: string
+) {
+    if (session.preset.mode === "COMMON") {
+        return session.preset.presetMedia;
+    }
+
+    const assigned = session.preset.devices.find((item) => item.deviceId === deviceId);
+    return assigned?.mediaItem ?? null;
+}
+
+function computeReadyBarrierStartAtMs(preparationBufferMs: number) {
+    const leadMs = Math.max(
+        READY_BARRIER_MIN_LEAD_MS,
+        Math.min(READY_BARRIER_MAX_LEAD_MS, preparationBufferMs)
+    );
+    return Date.now() + leadMs;
+}
+
 function normalizeSyncStatus(value?: string | null): SyncSessionDeviceStatus | null {
     if (!value) {
         return null;
@@ -74,6 +116,19 @@ function toOptionalBoolean(value: unknown): boolean | null {
     return null;
 }
 
+function toOptionalLanMode(value: unknown): string | null {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+
+    return normalized.slice(0, 32);
+}
+
 export function extractSyncRuntimeFromJson(payload: unknown): SyncRuntimeInput | null {
     if (!payload || typeof payload !== "object") {
         return null;
@@ -99,7 +154,7 @@ export function extractSyncRuntimeFromJson(payload: unknown): SyncRuntimeInput |
         avgDriftMs: toOptionalNumber(runtimeRecord.avg_drift_ms ?? runtimeRecord.avgDriftMs),
         maxDriftMs: toOptionalNumber(runtimeRecord.max_drift_ms ?? runtimeRecord.maxDriftMs),
         resyncRate: toOptionalNumber(runtimeRecord.resync_rate ?? runtimeRecord.resyncRate),
-        lanMode: (runtimeRecord.lan_mode as string | undefined) ?? (runtimeRecord.lanMode as string | undefined) ?? null,
+        lanMode: toOptionalLanMode(runtimeRecord.lan_mode ?? runtimeRecord.lanMode),
         lanBeaconAgeMs: toOptionalNumber(runtimeRecord.lan_beacon_age_ms ?? runtimeRecord.lanBeaconAgeMs),
     };
 }
@@ -124,7 +179,7 @@ export function extractSyncRuntimeFromFormData(formData: FormData): SyncRuntimeI
         avgDriftMs: toOptionalNumber(formData.get("sync_avg_drift_ms")),
         maxDriftMs: toOptionalNumber(formData.get("sync_max_drift_ms")),
         resyncRate: toOptionalNumber(formData.get("sync_resync_rate")),
-        lanMode: typeof formData.get("sync_lan_mode") === "string" ? (formData.get("sync_lan_mode") as string) : null,
+        lanMode: toOptionalLanMode(formData.get("sync_lan_mode")),
         lanBeaconAgeMs: toOptionalNumber(formData.get("sync_lan_beacon_age_ms")),
     };
 }
@@ -203,6 +258,10 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
     if (runtime.cpuTemp !== null && runtime.cpuTemp !== undefined) updateData.cpuTemp = runtime.cpuTemp;
     if (runtime.throttled !== null && runtime.throttled !== undefined) updateData.throttled = runtime.throttled;
     if (runtime.healthScore !== null && runtime.healthScore !== undefined) updateData.healthScore = runtime.healthScore;
+    if (runtime.lanMode !== null && runtime.lanMode !== undefined) updateData.lanMode = runtime.lanMode;
+    if (runtime.lanBeaconAgeMs !== null && runtime.lanBeaconAgeMs !== undefined) {
+        updateData.lanBeaconAgeMs = Math.max(0, Math.round(runtime.lanBeaconAgeMs));
+    }
 
     await prisma.syncSessionDevice.update({
         where: { id: sessionDevice.id },
@@ -238,11 +297,119 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
         });
 
         if (nonReadyCount === 0) {
-            await prisma.syncSession.update({
-                where: { id: sessionDevice.sessionId },
-                data: {
-                    status: SyncSessionStatus.WARMING_UP,
-                },
+            await prisma.$transaction(async (tx) => {
+                const sessionForBarrier = await tx.syncSession.findFirst({
+                    where: {
+                        id: sessionDevice.sessionId,
+                        status: { in: SESSION_STATUSES_BEFORE_WARMUP },
+                    },
+                    select: {
+                        id: true,
+                        presetId: true,
+                        durationMs: true,
+                        preparationBufferMs: true,
+                        masterDeviceId: true,
+                        preset: {
+                            select: {
+                                mode: true,
+                                presetMedia: {
+                                    select: {
+                                        id: true,
+                                        filename: true,
+                                        width: true,
+                                        height: true,
+                                        fps: true,
+                                    },
+                                },
+                                devices: {
+                                    select: {
+                                        deviceId: true,
+                                        mediaItem: {
+                                            select: {
+                                                id: true,
+                                                filename: true,
+                                                width: true,
+                                                height: true,
+                                                fps: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        devices: {
+                            select: {
+                                deviceId: true,
+                                status: true,
+                            },
+                        },
+                    },
+                });
+
+                if (!sessionForBarrier) {
+                    return;
+                }
+
+                const coordinatedStartAtMs = computeReadyBarrierStartAtMs(
+                    sessionForBarrier.preparationBufferMs
+                );
+
+                const sessionUpdated = await tx.syncSession.updateMany({
+                    where: {
+                        id: sessionForBarrier.id,
+                        status: { in: SESSION_STATUSES_BEFORE_WARMUP },
+                    },
+                    data: {
+                        status: SyncSessionStatus.WARMING_UP,
+                        startAtMs: BigInt(coordinatedStartAtMs),
+                    },
+                });
+
+                if (sessionUpdated.count === 0) {
+                    return;
+                }
+
+                const prepareCommands = sessionForBarrier.devices
+                    .filter((device) => device.status !== SyncSessionDeviceStatus.ERRORED)
+                    .map((device) => {
+                        const media = resolveSessionMediaByDevice(sessionForBarrier, device.deviceId);
+                        if (!media) {
+                            throw new Error(
+                                `Sync session ${sessionForBarrier.id} is missing media mapping for device ${device.deviceId}`
+                            );
+                        }
+
+                        return {
+                            deviceId: device.deviceId,
+                            sessionId: sessionForBarrier.id,
+                            type: SYNC_DEVICE_COMMAND_TYPE.SYNC_PREPARE,
+                            payload: buildPreparePayload({
+                                sessionId: sessionForBarrier.id,
+                                presetId: sessionForBarrier.presetId,
+                                mode: sessionForBarrier.preset.mode,
+                                startAtMs: coordinatedStartAtMs,
+                                durationMs: sessionForBarrier.durationMs,
+                                deviceId: device.deviceId,
+                                masterDeviceId: sessionForBarrier.masterDeviceId,
+                                media: {
+                                    mediaId: media.id,
+                                    filename: media.filename ?? null,
+                                    width: media.width ?? null,
+                                    height: media.height ?? null,
+                                    fps: media.fps ?? null,
+                                },
+                            }),
+                            dedupeKey: `${sessionForBarrier.id}:READY_BARRIER:${coordinatedStartAtMs}:${device.deviceId}`,
+                            status: "PENDING" as const,
+                        };
+                    });
+
+                if (prepareCommands.length > 0) {
+                    await tx.syncDeviceCommand.createMany({
+                        data: prepareCommands,
+                        skipDuplicates: true,
+                    });
+                }
             });
         }
     }

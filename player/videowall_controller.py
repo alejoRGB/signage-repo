@@ -39,6 +39,7 @@ class VideowallController:
         is_playback_alive: Callable[[], bool],
         set_playback_speed: Optional[Callable[[float], bool]] = None,
         get_playback_time_ms: Optional[Callable[[], Optional[float]]] = None,
+        get_playback_duration_ms: Optional[Callable[[], Optional[float]]] = None,
         lan_sync: Optional[LanSyncService] = None,
     ):
         self.sync_manager = sync_manager
@@ -50,6 +51,7 @@ class VideowallController:
         self.is_playback_alive = is_playback_alive
         self.set_playback_speed = set_playback_speed or (lambda _speed: True)
         self.get_playback_time_ms = get_playback_time_ms or (lambda: None)
+        self.get_playback_duration_ms = get_playback_duration_ms or (lambda: None)
 
         # Runtime tuning defaults (P0 efficiency): slower idle polling, faster warm-up status.
         self.command_poll_idle_interval_s = self._resolve_interval_env("SYNC_COMMAND_POLL_IDLE_S", 10.0)
@@ -356,6 +358,25 @@ class VideowallController:
 
         return None
 
+    def _read_runtime_duration_ms(self, expected_duration_ms: int) -> int:
+        """
+        Use MPV-reported media duration when available to avoid drift caused by
+        preset duration rounding (e.g. nominal 10000ms vs real 9643ms).
+        """
+        for _ in range(15):
+            actual_duration_ms = self.get_playback_duration_ms()
+            if actual_duration_ms is not None and actual_duration_ms > 0:
+                resolved_duration_ms = max(1, int(round(actual_duration_ms)))
+                if abs(resolved_duration_ms - expected_duration_ms) >= 5:
+                    logging.info(
+                        "[VIDEOWALL] Using runtime media duration %sms (payload=%sms)",
+                        resolved_duration_ms,
+                        expected_duration_ms,
+                    )
+                return resolved_duration_ms
+            time.sleep(0.1)
+        return expected_duration_ms
+
     def is_active(self) -> bool:
         return self.state_machine.is_active()
 
@@ -503,6 +524,9 @@ class VideowallController:
         if not self.start_sync_playback(context):
             self.state_machine.transition(SYNC_STATE_ERRORED, force=True)
             return False, "Failed to start MPV in sync mode"
+
+        context.duration_ms = self._read_runtime_duration_ms(context.duration_ms)
+        duration_ms = context.duration_ms
 
         if not self.state_machine.transition(SYNC_STATE_READY):
             self.state_machine.transition(SYNC_STATE_ERRORED, force=True)
