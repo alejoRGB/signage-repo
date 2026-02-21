@@ -2,6 +2,7 @@ import { RateLimiterMemory } from "rate-limiter-flexible";
 
 type RateLimitScope =
     | "default"
+    | "contact"
     | "device_register"
     | "device_sync"
     | "device_status"
@@ -13,6 +14,7 @@ type RateLimitScope =
 
 const RATE_LIMIT_CONFIG: Record<RateLimitScope, { points: number; duration: number }> = {
     default: { points: 60, duration: 60 },
+    contact: { points: 6, duration: 60 },
     device_register: { points: 20, duration: 60 },
     device_sync: { points: 120, duration: 60 },
     device_status: { points: 60, duration: 60 },

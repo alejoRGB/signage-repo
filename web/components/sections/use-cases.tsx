@@ -1,55 +1,55 @@
-
-import { Utensils, ShoppingBag, Building2, Stethoscope } from "lucide-react"
-import { GlassCard } from "@/components/ui/glass-card"
+import { Utensils, ShoppingBag, Store, Megaphone } from "lucide-react";
+import { GlassCard } from "@/components/ui/glass-card";
 
 const useCases = [
     {
         icon: Utensils,
-        title: "Gastronomía",
-        description: "Actualizá el menú del día en todas tus sucursales con un clic. Programá ofertas de Happy Hour automáticas.",
+        title: "Gastronomia",
+        description: "Actualiza menu del dia y promos por horario en una o varias sucursales sin cambios manuales.",
     },
     {
         icon: ShoppingBag,
         title: "Retail",
-        description: "Mostrá las ofertas de la semana y nuevos ingresos. Videos de producto en alta definición en la vidriera.",
+        description: "Publica ofertas semanales, lanzamientos y piezas de vidriera en minutos para aumentar conversion.",
     },
     {
-        icon: Building2,
-        title: "Corporativo",
-        description: "Comunicación interna efectiva. Mostrá métricas de ventas en tiempo real y novedades de HR en el comedor.",
+        icon: Store,
+        title: "Franquicias",
+        description: "Mantiene consistencia de marca y promociones en todos los locales con gestion centralizada.",
     },
     {
-        icon: Stethoscope,
-        title: "Salud",
-        description: "Reducí la ansiedad en la sala de espera con contenido entretenido y llamá a los pacientes por su nombre.",
+        icon: Megaphone,
+        title: "Campanas locales",
+        description: "Adapta contenido por barrio, zona o sucursal para comunicar mejor en CABA y GBA.",
     },
-]
+];
 
 export function UseCases() {
     return (
         <section id="uses" className="container mx-auto px-4 py-24 md:px-6 md:py-32">
-            <div className="flex flex-col items-center justify-center gap-4 text-center mb-16">
+            <div className="mb-16 flex flex-col items-center justify-center gap-4 text-center">
                 <h2 className="text-3xl font-bold tracking-tighter text-white sm:text-4xl">
-                    Adaptable a tu industria
+                    Casos de uso para negocios que necesitan escalar
                 </h2>
-                <p className="max-w-[600px] text-slate-400 md:text-xl/relaxed">
-                    Desde cafeterías hasta grandes oficinas, Expanded Signage se ajusta a tus necesidades.
+                <p className="max-w-[700px] text-slate-400 md:text-xl/relaxed">
+                    Desde un local independiente hasta redes de sucursales, Expanded Signage se adapta a la operacion
+                    comercial de pymes en CABA y GBA.
                 </p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                {useCases.map((useCase, i) => (
-                    <GlassCard key={i} className="group p-6 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)] flex flex-col justify-between">
+                {useCases.map((useCase) => (
+                    <GlassCard key={useCase.title} className="group flex flex-col justify-between p-6 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]">
                         <div>
-                            <div className="mb-4 inline-flex items-center justify-center rounded-full bg-indigo-500/10 p-3 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300 transition-colors">
+                            <div className="mb-4 inline-flex items-center justify-center rounded-full bg-indigo-500/10 p-3 text-indigo-400 transition-colors group-hover:bg-indigo-500/20 group-hover:text-indigo-300">
                                 <useCase.icon className="h-6 w-6" />
                             </div>
                             <h3 className="mb-2 text-xl font-bold text-white">{useCase.title}</h3>
-                            <p className="text-sm text-slate-400 leading-relaxed">{useCase.description}</p>
+                            <p className="text-sm leading-relaxed text-slate-400">{useCase.description}</p>
                         </div>
                     </GlassCard>
                 ))}
             </div>
         </section>
-    )
+    );
 }

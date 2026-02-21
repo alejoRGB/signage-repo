@@ -15,15 +15,16 @@ export function Navbar() {
                     <span className="text-slate-50 tracking-tight">Expanded Signage</span>
                 </Link>
                 <nav className="hidden md:flex gap-6 text-sm font-medium text-slate-400">
-                    <Link href="#product" className="hover:text-indigo-400 transition-colors">Producto</Link>
-                    <Link href="#features" className="hover:text-indigo-400 transition-colors">Features</Link>
-                    <Link href="#uses" className="hover:text-indigo-400 transition-colors">Casos de Uso</Link>
-                    <Link href="#about" className="hover:text-indigo-400 transition-colors">Nosotros</Link>
+                    <Link href="/#how-it-works" className="hover:text-indigo-400 transition-colors">Producto</Link>
+                    <Link href="/#features" className="hover:text-indigo-400 transition-colors">Features</Link>
+                    <Link href="/#uses" className="hover:text-indigo-400 transition-colors">Casos de Uso</Link>
+                    <Link href="/carteleria-digital-buenos-aires" className="hover:text-indigo-400 transition-colors">Soluciones</Link>
+                    <Link href="/cotizacion-carteleria-digital" className="hover:text-indigo-400 transition-colors">Cotizacion</Link>
                 </nav>
                 <div className="flex items-center gap-4">
                     <AuthButton />
                     <Button asChild size="sm" variant="glow" className="hidden md:flex text-xs uppercase tracking-widest font-bold">
-                        <Link href="#contact">Contactar</Link>
+                        <Link href="/cotizacion-carteleria-digital">Solicitar cotizacion</Link>
                     </Button>
                 </div>
             </div>

@@ -82,6 +82,21 @@ export const UpdateUserSchema = z.object({
     role: z.enum(["USER", "ADMIN"]).optional(),
 });
 
+export const ContactLeadSchema = z.object({
+    name: z.string().min(2, "Name is required").max(120).transform(sanitize),
+    company: z.string().min(2, "Company is required").max(120).transform(sanitize),
+    email: z.string().email("Invalid email address").max(254).transform((value) => sanitize(value.toLowerCase())),
+    phone: z.string().min(8, "Phone is required").max(30).transform(sanitize),
+    businessType: z.string().min(2, "Business type is required").max(80).transform(sanitize),
+    screens: z.coerce.number().int().min(1).max(2000),
+    branches: z.coerce.number().int().min(1).max(500),
+    zone: z.string().min(2, "Zone is required").max(80).transform(sanitize),
+    message: z.preprocess(
+        (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+        z.string().max(2000).optional()
+    ).transform((value) => (value ? sanitize(value) : undefined)),
+});
+
 export const CreateMediaItemSchema = z.object({
     name: z.string().min(1, "Name is required").transform(sanitize),
     url: z.string().url("Invalid URL").transform(sanitize),
