@@ -1488,11 +1488,13 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                                     <span>drift avg:</span>
                                                     <span className="font-semibold text-slate-800">{driftVisual.valueLabel}</span>
                                                 </p>
-                                                <div className={`h-2 w-full overflow-hidden rounded-full ${driftVisual.trackClass}`}>
-                                                    <div
-                                                        className={`h-full rounded-full ${driftVisual.fillClass} animate-pulse transition-[width] duration-700 ease-out`}
-                                                        style={{ width: `${driftVisual.widthPercent}%` }}
-                                                    />
+                                                <div className="mx-auto w-1/3">
+                                                    <div className={`h-2 w-full overflow-hidden rounded-full ${driftVisual.trackClass}`}>
+                                                        <div
+                                                            className={`h-full rounded-full ${driftVisual.fillClass} animate-pulse transition-[width] duration-700 ease-out`}
+                                                            style={{ width: `${driftVisual.widthPercent}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
