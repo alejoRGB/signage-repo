@@ -1484,9 +1484,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
                                             <p>last heartbeat: {heartbeatAgeLabel(device.lastSeenAt)}</p>
                                             <div className="sm:col-span-1 xl:col-span-3">
-                                                <p className="mb-1 flex items-center justify-between">
-                                                    <span>drift avg:</span>
-                                                    <span className="font-semibold text-slate-800">{driftVisual.valueLabel}</span>
+                                                <p className="text-center text-sm font-semibold text-slate-700 sm:text-base">Drift Average</p>
+                                                <p className="mb-2 text-center text-base font-semibold text-slate-800 sm:text-lg">
+                                                    {driftVisual.valueLabel}
                                                 </p>
                                                 <div className="mx-auto w-1/3">
                                                     <div className={`h-2 w-full overflow-hidden rounded-full ${driftVisual.trackClass}`}>
