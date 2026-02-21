@@ -139,6 +139,57 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         expect(differentDurationOption?.disabled).toBe(false);
     });
 
+    it("enables common media option when video has duration (seconds) but no durationMs", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => mockDevices,
+                    } as Response;
+                }
+
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => [
+                            { id: "media-legacy", name: "Legacy Clip", type: "video", duration: 11, durationMs: null },
+                            { id: "media-2", name: "Promo B", type: "video", durationMs: 10000 },
+                        ],
+                    } as Response;
+                }
+
+                if (url.includes("/api/sync/presets") && !init?.method) {
+                    return { ok: true, json: async () => [] } as Response;
+                }
+
+                if (url.includes("/api/sync/session/active")) {
+                    return { ok: true, json: async () => ({ session: null }) } as Response;
+                }
+
+                return {
+                    ok: true,
+                    json: async () => ({}),
+                } as Response;
+            }) as unknown as typeof fetch
+        );
+
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        await openNewSessionBuilder();
+        fireEvent.click(screen.getByLabelText("Add Lobby to synchronized devices"));
+        fireEvent.click(screen.getByLabelText("Add Hall to synchronized devices"));
+        fireEvent.click(screen.getByTestId("sync-step-next-btn"));
+
+        const commonSelect = screen.getByTestId("sync-common-media-select") as HTMLSelectElement;
+        const legacyOption = [...commonSelect.options].find((option) => option.value === "media-legacy");
+        expect(legacyOption).toBeDefined();
+        expect(legacyOption?.disabled).toBe(false);
+    });
+
     it("allows assigning the same video to multiple devices in PER_DEVICE mode", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 

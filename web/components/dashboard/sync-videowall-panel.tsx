@@ -18,6 +18,7 @@ type SyncMediaItem = {
     name: string;
     type: "image" | "video" | "web";
     durationMs?: number | null;
+    duration?: number | null;
 };
 
 type SyncPresetDevice = {
@@ -135,6 +136,22 @@ function heartbeatAgeLabel(lastSeenAt?: string | null) {
     return `${elapsedMinutes}m ago`;
 }
 
+function getMediaDurationMs(media?: SyncMediaItem | null) {
+    if (!media) {
+        return null;
+    }
+
+    if (typeof media.durationMs === "number" && Number.isFinite(media.durationMs) && media.durationMs > 0) {
+        return Math.round(media.durationMs);
+    }
+
+    if (typeof media.duration === "number" && Number.isFinite(media.duration) && media.duration > 0) {
+        return Math.max(1, Math.round(media.duration * 1000));
+    }
+
+    return null;
+}
+
 function correctionAgeLabel(lastEventAt?: string | null) {
     if (!lastEventAt) {
         return "n/a";
@@ -237,8 +254,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 continue;
             }
             const media = videoMediaById[mediaId];
-            if (media && typeof media.durationMs === "number") {
-                return media.durationMs;
+            const durationMs = getMediaDurationMs(media);
+            if (typeof durationMs === "number") {
+                return durationMs;
             }
         }
         return null;
@@ -247,7 +265,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
     const durationLockMs = useMemo(() => {
         if (mode === SYNC_PRESET_MODE.COMMON) {
             const media = videoMediaById[commonMediaId];
-            return media && typeof media.durationMs === "number" ? media.durationMs : null;
+            return getMediaDurationMs(media);
         }
         return perDeviceDurationLockMs;
     }, [mode, commonMediaId, perDeviceDurationLockMs, videoMediaById]);
@@ -273,10 +291,11 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             if (!media || media.type !== "video") {
                 return { valid: false, error: "Sync only supports video media" };
             }
-            if (typeof media.durationMs !== "number") {
+            const durationMs = getMediaDurationMs(media);
+            if (typeof durationMs !== "number") {
                 return { valid: false, error: "Selected video must include durationMs" };
             }
-            return { valid: true, durationMs: media.durationMs };
+            return { valid: true, durationMs };
         }
 
         const durations = new Set<number>();
@@ -292,11 +311,12 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 return { valid: false, error: "Sync only supports video media" };
             }
 
-            if (typeof media.durationMs !== "number") {
+            const durationMs = getMediaDurationMs(media);
+            if (typeof durationMs !== "number") {
                 return { valid: false, error: "All assigned videos must include durationMs" };
             }
 
-            durations.add(media.durationMs);
+            durations.add(durationMs);
         }
 
         if (durations.size !== 1) {
@@ -453,7 +473,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                     deviceName: device.name,
                     isOnline: isDeviceOnline(device),
                     mediaName: media?.name ?? "Not assigned",
-                    durationMs: typeof media?.durationMs === "number" ? media.durationMs : null,
+                    durationMs: getMediaDurationMs(media),
                 };
             }),
         [assignedMediaByDevice, commonMediaId, mode, syncDevices, videoMediaById]
@@ -1002,19 +1022,22 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
                                 >
                                     <option value="">Select common video</option>
-                                    {videoMediaItems.map((media) => (
-                                        <option
-                                            key={media.id}
-                                            value={media.id}
-                                            disabled={typeof media.durationMs !== "number"}
-                                        >
-                                            {media.name} (
-                                            {typeof media.durationMs === "number"
-                                                ? msToSecondsLabel(media.durationMs)
-                                                : "no durationMs"}
-                                            )
-                                        </option>
-                                    ))}
+                                    {videoMediaItems.map((media) => {
+                                        const mediaDurationMs = getMediaDurationMs(media);
+                                        return (
+                                            <option
+                                                key={media.id}
+                                                value={media.id}
+                                                disabled={typeof mediaDurationMs !== "number"}
+                                            >
+                                                {media.name} (
+                                                {typeof mediaDurationMs === "number"
+                                                    ? msToSecondsLabel(mediaDurationMs)
+                                                    : "no duration"}
+                                                )
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
                         ) : (
@@ -1042,27 +1065,31 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none"
                                         >
                                             <option value="">Select media file</option>
-                                            {videoMediaItems.map((media) => (
-                                                <option
-                                                    key={media.id}
-                                                    value={media.id}
-                                                    disabled={
-                                                        typeof media.durationMs !== "number" ||
-                                                        (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
-                                                    }
-                                                >
-                                                    {media.name} (
-                                                    {typeof media.durationMs === "number"
-                                                        ? msToSecondsLabel(media.durationMs)
-                                                        : "no durationMs"}
-                                                    {typeof durationLockMs === "number" &&
-                                                    typeof media.durationMs === "number" &&
-                                                    media.durationMs !== durationLockMs
-                                                        ? ", different duration"
-                                                        : ""}
-                                                    )
-                                                </option>
-                                            ))}
+                                            {videoMediaItems.map((media) => {
+                                                const mediaDurationMs = getMediaDurationMs(media);
+                                                return (
+                                                    <option
+                                                        key={media.id}
+                                                        value={media.id}
+                                                        disabled={
+                                                            typeof mediaDurationMs !== "number" ||
+                                                            (typeof durationLockMs === "number" &&
+                                                                mediaDurationMs !== durationLockMs)
+                                                        }
+                                                    >
+                                                        {media.name} (
+                                                        {typeof mediaDurationMs === "number"
+                                                            ? msToSecondsLabel(mediaDurationMs)
+                                                            : "no duration"}
+                                                        {typeof durationLockMs === "number" &&
+                                                        typeof mediaDurationMs === "number" &&
+                                                        mediaDurationMs !== durationLockMs
+                                                            ? ", different duration"
+                                                            : ""}
+                                                        )
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
                                 ))}

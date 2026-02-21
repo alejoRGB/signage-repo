@@ -14,6 +14,11 @@ type ValidateSyncPresetInput = {
     devices: SyncPresetDeviceInput[];
 };
 
+type MediaWithDuration = {
+    durationMs: number | null;
+    duration: number;
+};
+
 type ValidateSyncPresetResult = {
     presetMediaId: string | null;
     assignments: Array<{ deviceId: string; mediaItemId: string | null }>;
@@ -91,6 +96,7 @@ async function validateVideoMediaByIds(userId: string, mediaIds: string[], durat
         select: {
             id: true,
             durationMs: true,
+            duration: true,
         },
     });
 
@@ -98,9 +104,19 @@ async function validateVideoMediaByIds(userId: string, mediaIds: string[], durat
         throw new SyncPresetValidationError("One or more media items are invalid, not videos, or not owned by user", 403);
     }
 
-    const invalidDuration = mediaItems.find(
-        (media) => typeof media.durationMs !== "number" || media.durationMs !== durationMs
-    );
+    const toDurationMs = (media: MediaWithDuration) => {
+        if (typeof media.durationMs === "number" && Number.isFinite(media.durationMs) && media.durationMs > 0) {
+            return media.durationMs;
+        }
+
+        if (typeof media.duration === "number" && Number.isFinite(media.duration) && media.duration > 0) {
+            return Math.max(1, Math.round(media.duration * 1000));
+        }
+
+        return null;
+    };
+
+    const invalidDuration = mediaItems.find((media) => toDurationMs(media) !== durationMs);
 
     if (invalidDuration) {
         throw new SyncPresetValidationError(

@@ -82,6 +82,30 @@ describe("Sync presets API", () => {
         expect(prisma.syncPreset.create).toHaveBeenCalled();
     });
 
+    it("creates COMMON preset for legacy video with duration seconds but null durationMs", async () => {
+        (prisma.device.findMany as jest.Mock).mockResolvedValue([{ id: "device-1" }, { id: "device-2" }]);
+        (prisma.mediaItem.findMany as jest.Mock).mockResolvedValue([
+            { id: "media-legacy", durationMs: null, duration: 10 },
+        ]);
+        (prisma.syncPreset.create as jest.Mock).mockResolvedValue({ id: "preset-legacy" });
+
+        const request = new Request("http://localhost/api/sync/presets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: "Legacy Duration Preset",
+                mode: "COMMON",
+                durationMs: 10000,
+                presetMediaId: "media-legacy",
+                devices: [{ deviceId: "device-1" }, { deviceId: "device-2" }],
+            }),
+        });
+
+        const response = await CREATE_PRESET(request);
+        expect(response.status).toBe(201);
+        expect(prisma.syncPreset.create).toHaveBeenCalled();
+    });
+
     it("rejects preset creation when device is not owned by user", async () => {
         (prisma.device.findMany as jest.Mock).mockResolvedValue([]);
 
