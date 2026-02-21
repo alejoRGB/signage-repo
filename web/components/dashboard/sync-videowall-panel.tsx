@@ -1006,20 +1006,12 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         <option
                                             key={media.id}
                                             value={media.id}
-                                            disabled={
-                                                typeof media.durationMs !== "number" ||
-                                                (typeof durationLockMs === "number" && media.durationMs !== durationLockMs)
-                                            }
+                                            disabled={typeof media.durationMs !== "number"}
                                         >
                                             {media.name} (
                                             {typeof media.durationMs === "number"
                                                 ? msToSecondsLabel(media.durationMs)
                                                 : "no durationMs"}
-                                            {typeof durationLockMs === "number" &&
-                                            typeof media.durationMs === "number" &&
-                                            media.durationMs !== durationLockMs
-                                                ? ", different duration"
-                                                : ""}
                                             )
                                         </option>
                                     ))}

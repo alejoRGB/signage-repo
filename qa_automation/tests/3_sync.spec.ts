@@ -67,7 +67,7 @@ test.describe("Phase 4: Sync wizard QA (credentialed)", () => {
     await expect(page.getByTestId("sync-start-from-saved-btn")).toBeDisabled();
   });
 
-  test("[SYNC-E2E-03] Duration filter disables videos with different duration", async ({ page }) => {
+  test("[SYNC-E2E-03] COMMON mode allows selecting videos with different durations", async ({ page }) => {
     await loginAsUser(page, USERNAME!, USER_PASSWORD!);
     await openSyncPanel(page);
 
@@ -78,15 +78,43 @@ test.describe("Phase 4: Sync wizard QA (credentialed)", () => {
     await addButtons.nth(1).click();
     await page.getByTestId("sync-step-next-btn").click();
 
-    const commonMediaSelect = page.getByTestId("sync-common-media-select");
-    const firstMediaOption = commonMediaSelect.locator("option:not([value=''])").first();
-    const firstValue = await firstMediaOption.getAttribute("value");
-    test.skip(!firstValue, "No selectable media found");
-    await commonMediaSelect.selectOption(firstValue);
+    const mediaResponse = await page.request.get("/api/media");
+    test.skip(!mediaResponse.ok(), "Unable to read media catalog from API");
+    const mediaPayload = (await mediaResponse.json()) as Array<{
+      id?: string;
+      type?: string;
+      durationMs?: number | null;
+      duration?: number | null;
+    }>;
 
-    const mismatchedOptions = commonMediaSelect.locator('option[disabled]:has-text("different duration")');
-    test.skip((await mismatchedOptions.count()) === 0, "Environment has no mixed-duration videos to assert");
-    await expect(mismatchedOptions.first()).toBeDisabled();
+    const videosWithDuration = mediaPayload
+      .filter((item) => item.type === "video")
+      .map((item) => ({
+        id: item.id,
+        durationMs:
+          typeof item.durationMs === "number"
+            ? item.durationMs
+            : typeof item.duration === "number"
+              ? item.duration * 1000
+              : null,
+      }))
+      .filter(
+        (item): item is { id: string; durationMs: number } =>
+          typeof item.id === "string" && typeof item.durationMs === "number"
+      );
+
+    test.skip(videosWithDuration.length < 2, "Need at least two videos with valid duration");
+
+    const firstVideo = videosWithDuration[0];
+    const differentDurationVideo = videosWithDuration.find(
+      (video) => video.id !== firstVideo.id && video.durationMs !== firstVideo.durationMs
+    );
+    test.skip(!differentDurationVideo, "Need mixed-duration videos to validate common-mode behavior");
+
+    const commonMediaSelect = page.getByTestId("sync-common-media-select");
+    await commonMediaSelect.selectOption(firstVideo.id);
+
+    await expect(commonMediaSelect.locator(`option[value="${differentDurationVideo.id}"]`)).toBeEnabled();
   });
 
   test("[SYNC-E2E-04] PER_DEVICE mode allows assigning the same video to multiple devices", async ({ page }) => {

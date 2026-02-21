@@ -124,7 +124,7 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         expect(showToast).toHaveBeenCalledWith("Select at least 2 devices to continue", "error");
     });
 
-    it("disables mismatched-duration videos after selecting the first common video", async () => {
+    it("keeps mixed-duration videos enabled in COMMON mode", async () => {
         render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
         await openNewSessionBuilder();
@@ -133,8 +133,10 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         fireEvent.click(screen.getByTestId("sync-step-next-btn"));
         fireEvent.change(screen.getByTestId("sync-common-media-select"), { target: { value: "media-1" } });
 
-        const mismatchedOption = screen.getByRole("option", { name: /Promo C.*different duration/i });
-        expect(mismatchedOption).toBeDisabled();
+        const commonSelect = screen.getByTestId("sync-common-media-select") as HTMLSelectElement;
+        const differentDurationOption = [...commonSelect.options].find((option) => option.value === "media-3");
+        expect(differentDurationOption).toBeDefined();
+        expect(differentDurationOption?.disabled).toBe(false);
     });
 
     it("allows assigning the same video to multiple devices in PER_DEVICE mode", async () => {
