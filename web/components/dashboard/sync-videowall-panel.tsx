@@ -437,8 +437,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         [syncDevices]
     );
 
-    const syncOnlineCount = syncDevices.length - offlineSyncDevices.length;
-
     const perDeviceAssignedCount = useMemo(
         () => syncDeviceIds.reduce((count, deviceId) => (assignedMediaByDevice[deviceId] ? count + 1 : count), 0),
         [assignedMediaByDevice, syncDeviceIds]
@@ -875,42 +873,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         Volver al menú
                     </button>
                 </div>
-                <section className="rounded-2xl border border-slate-300 bg-[linear-gradient(145deg,rgba(248,250,252,0.94),rgba(226,232,240,0.5))] p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
-                    <div className="grid gap-3 lg:grid-cols-[1.2fr_auto_auto]">
-                        <div className="rounded-xl border border-amber-300 bg-[linear-gradient(90deg,rgba(252,211,77,0.16),rgba(251,191,36,0.1))] px-4 py-3">
-                            <p className="text-sm font-semibold tracking-wide text-amber-900">
-                                Los videos a reproducirse en sync deben durar exactamente lo mismo
-                            </p>
-                            {typeof durationLockMs === "number" ? (
-                                <p className="mt-1 text-xs text-amber-900">
-                                    Duration lock active: {msToSecondsLabel(durationLockMs)}
-                                </p>
-                            ) : (
-                                <p className="mt-1 text-xs text-amber-900">Duration lock pending until first valid assignment.</p>
-                            )}
-                            {!isDirectiveActive ? (
-                                <p className="mt-1 text-xs text-amber-800">
-                                    Start bloqueado: activa el checkbox de la directiva Sync para permitir inicio.
-                                </p>
-                            ) : null}
-                        </div>
-                        <div className="rounded-xl border border-cyan-200 bg-cyan-50/90 px-4 py-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-800">Selected devices</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-900">{syncDevices.length}</p>
-                            <p className="mt-1 text-xs text-slate-600">
-                                {syncOnlineCount} online - {offlineSyncDevices.length} offline
-                            </p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-white/90 px-4 py-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Video assignment</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-900">
-                                {mode === SYNC_PRESET_MODE.COMMON ? (commonMediaId ? "1/1" : "0/1") : `${perDeviceAssignedCount}/${syncDeviceIds.length || 0}`}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-600">{mode === SYNC_PRESET_MODE.COMMON ? "Common mode" : "Per device mode"}</p>
-                        </div>
-                    </div>
-                </section>
-
                 <section className="rounded-2xl border border-slate-300 bg-white/90 p-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.8)]">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="grid flex-1 gap-2 sm:grid-cols-3">

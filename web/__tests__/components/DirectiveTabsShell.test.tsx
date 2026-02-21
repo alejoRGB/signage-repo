@@ -91,9 +91,7 @@ describe("DirectiveTabsShell", () => {
         fireEvent.click(screen.getByText("Sync"));
 
         expect(await screen.findByTestId("directive-sync-videowall-panel")).toBeInTheDocument();
-        expect(
-            screen.getByText("Los videos a reproducirse en sync deben durar exactamente lo mismo")
-        ).toBeInTheDocument();
+        expect(screen.getByTestId("sync-entry-new-session-btn")).toBeInTheDocument();
     });
 
     it("checkbox click updates active directive only and keeps current visible tab", async () => {
