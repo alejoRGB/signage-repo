@@ -71,3 +71,22 @@ Behavior:
 - If webhook is configured, leads are forwarded as JSON.
 - If both are configured, both are attempted.
 - If neither is configured, API returns `202` and logs a warning.
+
+## SEO Measurement Setup (GA4 + Search Console)
+
+### Environment variables
+
+Set these in Vercel Project Settings -> Environment Variables:
+
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID` (example: `G-XXXXXXXXXX`)
+- `GOOGLE_SITE_VERIFICATION` (Search Console verification token)
+- Optional: `NEXT_PUBLIC_WHATSAPP_NUMBER` (digits only, used for WhatsApp CTA)
+
+### Tracked events
+
+- `generate_lead` when quote form is submitted successfully
+- `submit_quote_form` custom event for form conversion
+- `click_cta_principal` for main quote CTAs
+- `click_cta_nav` for quote CTA in navbar
+- `click_cta_secundario` for secondary hero CTA
+- `click_whatsapp` for WhatsApp clicks

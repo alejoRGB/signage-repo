@@ -72,12 +72,26 @@ export function SocialProof() {
                         </ul>
                     </div>
                     <div className="md:justify-self-end">
-                        <Link
-                            href="/cotizacion-carteleria-digital"
-                            className="inline-flex rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400"
-                        >
-                            Solicitar cotizacion
-                        </Link>
+                        <div className="flex flex-wrap gap-3">
+                            <Link
+                                href="/cotizacion-carteleria-digital"
+                                className="inline-flex rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400"
+                                data-analytics-event="click_cta_principal"
+                                data-analytics-label="social_proof_solicitar_cotizacion"
+                                data-analytics-location="social_proof"
+                            >
+                                Solicitar cotizacion
+                            </Link>
+                            <Link
+                                href="/recursos"
+                                className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                                data-analytics-event="click_recurso"
+                                data-analytics-label="social_proof_ver_recursos"
+                                data-analytics-location="social_proof"
+                            >
+                                Ver recursos
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </GlassCard>

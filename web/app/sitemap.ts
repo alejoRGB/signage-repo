@@ -1,9 +1,16 @@
 import type { MetadataRoute } from "next";
+import { seoResources } from "@/lib/seo-resources";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const now = new Date();
+    const resourcesUrls: MetadataRoute.Sitemap = seoResources.map((resource) => ({
+        url: `${siteUrl}/recursos/${resource.slug}`,
+        lastModified: new Date(resource.updatedAt),
+        changeFrequency: "monthly",
+        priority: 0.7,
+    }));
 
     return [
         {
@@ -48,6 +55,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: "weekly",
             priority: 0.85,
         },
+        {
+            url: `${siteUrl}/recursos`,
+            lastModified: now,
+            changeFrequency: "weekly",
+            priority: 0.75,
+        },
+        ...resourcesUrls,
         {
             url: `${siteUrl}/privacy`,
             lastModified: now,

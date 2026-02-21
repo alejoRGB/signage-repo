@@ -19,12 +19,36 @@ export function Navbar() {
                     <Link href="/#features" className="hover:text-indigo-400 transition-colors">Features</Link>
                     <Link href="/#uses" className="hover:text-indigo-400 transition-colors">Casos de Uso</Link>
                     <Link href="/carteleria-digital-buenos-aires" className="hover:text-indigo-400 transition-colors">Soluciones</Link>
-                    <Link href="/cotizacion-carteleria-digital" className="hover:text-indigo-400 transition-colors">Cotizacion</Link>
+                    <Link
+                        href="/recursos"
+                        className="hover:text-indigo-400 transition-colors"
+                        data-analytics-event="click_recurso"
+                        data-analytics-label="nav_recursos"
+                        data-analytics-location="navbar"
+                    >
+                        Recursos
+                    </Link>
+                    <Link
+                        href="/cotizacion-carteleria-digital"
+                        className="hover:text-indigo-400 transition-colors"
+                        data-analytics-event="click_cta_nav"
+                        data-analytics-label="nav_cotizacion"
+                        data-analytics-location="navbar"
+                    >
+                        Cotizacion
+                    </Link>
                 </nav>
                 <div className="flex items-center gap-4">
                     <AuthButton />
                     <Button asChild size="sm" variant="glow" className="hidden md:flex text-xs uppercase tracking-widest font-bold">
-                        <Link href="/cotizacion-carteleria-digital">Solicitar cotizacion</Link>
+                        <Link
+                            href="/cotizacion-carteleria-digital"
+                            data-analytics-event="click_cta_principal"
+                            data-analytics-label="navbar_solicitar_cotizacion"
+                            data-analytics-location="navbar"
+                        >
+                            Solicitar cotizacion
+                        </Link>
                     </Button>
                 </div>
             </div>

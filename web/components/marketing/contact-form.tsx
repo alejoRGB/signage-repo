@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { trackEvent } from "@/lib/analytics";
 
 const formSchema = z.object({
     name: z.string().min(2, "El nombre es muy corto"),
@@ -54,6 +55,14 @@ export function ContactForm() {
             }
 
             setIsSuccess(true);
+            trackEvent("generate_lead", {
+                form_name: "cotizacion",
+                lead_source: "web_form",
+            });
+            trackEvent("submit_quote_form", {
+                form_name: "cotizacion",
+                location: window.location.pathname,
+            });
             reset();
         } catch {
             setError("Hubo un error al enviar la cotizacion. Intenta nuevamente.");

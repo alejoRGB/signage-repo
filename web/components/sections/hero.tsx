@@ -28,7 +28,12 @@ export function Hero() {
 
                     <div className="flex w-full flex-col justify-center gap-6 pt-4 sm:flex-row">
                         <Button size="lg" variant="glow" className="h-14 rounded-full px-10 text-lg" asChild>
-                            <Link href="/cotizacion-carteleria-digital">
+                            <Link
+                                href="/cotizacion-carteleria-digital"
+                                data-analytics-event="click_cta_principal"
+                                data-analytics-label="hero_solicitar_cotizacion"
+                                data-analytics-location="hero"
+                            >
                                 Solicitar cotizacion <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
@@ -38,7 +43,14 @@ export function Hero() {
                             className="h-14 rounded-full border-white/10 px-10 text-lg text-slate-300 hover:bg-white/5"
                             asChild
                         >
-                            <Link href="#how-it-works">Ver como funciona</Link>
+                            <Link
+                                href="#how-it-works"
+                                data-analytics-event="click_cta_secundario"
+                                data-analytics-label="hero_ver_como_funciona"
+                                data-analytics-location="hero"
+                            >
+                                Ver como funciona
+                            </Link>
                         </Button>
                     </div>
 

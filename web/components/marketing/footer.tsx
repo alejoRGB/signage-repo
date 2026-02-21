@@ -22,6 +22,7 @@ export function Footer() {
                         <li><Link href="/#how-it-works" className="transition-colors hover:text-indigo-400">Como funciona</Link></li>
                         <li><Link href="/#features" className="transition-colors hover:text-indigo-400">Features</Link></li>
                         <li><Link href="/cotizacion-carteleria-digital" className="transition-colors hover:text-indigo-400">Solicitar cotizacion</Link></li>
+                        <li><Link href="/recursos" className="transition-colors hover:text-indigo-400">Recursos</Link></li>
                     </ul>
                 </div>
 

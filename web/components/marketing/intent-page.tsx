@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ContactForm } from "@/components/marketing/contact-form";
+import { seoResources } from "@/lib/seo-resources";
 
 type FaqItem = {
     question: string;
@@ -33,6 +34,8 @@ export function IntentPage({
     faqTitle,
     faqs,
 }: IntentPageProps) {
+    const relatedResources = seoResources.slice(0, 3);
+
     return (
         <div className="container mx-auto space-y-16 px-4 py-20 md:px-6 md:py-28">
             <section className="grid gap-10 lg:grid-cols-2 lg:gap-16">
@@ -99,6 +102,39 @@ export function IntentPage({
                             <p className="text-slate-300">{faq.answer}</p>
                         </GlassCard>
                     ))}
+                </div>
+            </section>
+
+            <section className="space-y-6">
+                <h2 className="text-3xl font-bold text-white">Recursos recomendados</h2>
+                <div className="grid gap-4 md:grid-cols-3">
+                    {relatedResources.map((resource) => (
+                        <GlassCard key={resource.slug} className="p-5">
+                            <p className="text-xs font-semibold tracking-wider text-indigo-300 uppercase">{resource.category}</p>
+                            <h3 className="mt-2 text-lg font-semibold text-white">{resource.title}</h3>
+                            <p className="mt-2 text-sm text-slate-300">{resource.description}</p>
+                            <Link
+                                href={`/recursos/${resource.slug}`}
+                                className="mt-4 inline-flex text-sm font-semibold text-indigo-300 hover:text-indigo-200"
+                                data-analytics-event="click_recurso_relacionado"
+                                data-analytics-label={`landing_recurso_${resource.slug}`}
+                                data-analytics-location="intent_page"
+                            >
+                                Leer recurso
+                            </Link>
+                        </GlassCard>
+                    ))}
+                </div>
+                <div>
+                    <Link
+                        href="/recursos"
+                        className="inline-flex rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                        data-analytics-event="click_recurso"
+                        data-analytics-label="intent_page_ver_todos_recursos"
+                        data-analytics-location="intent_page"
+                    >
+                        Ver todos los recursos
+                    </Link>
                 </div>
             </section>
         </div>

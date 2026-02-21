@@ -1,8 +1,12 @@
 import { ContactForm } from "@/components/marketing/contact-form";
-import { Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageCircle, MessageSquare } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 
 export function Contact() {
+    const whatsappNumberRaw = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
+    const whatsappNumber = whatsappNumberRaw.replace(/\D/g, "");
+    const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
+
     return (
         <section id="contact" className="container mx-auto px-4 py-24 md:px-6 md:py-32">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-24">
@@ -35,6 +39,23 @@ export function Contact() {
                             </div>
                         </div>
                     </div>
+
+                    {whatsappHref ? (
+                        <div className="pt-6">
+                            <a
+                                href={whatsappHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                                data-analytics-event="click_whatsapp"
+                                data-analytics-label="contact_section_whatsapp"
+                                data-analytics-location="contact_section"
+                            >
+                                <MessageCircle className="h-4 w-4" />
+                                Escribinos por WhatsApp
+                            </a>
+                        </div>
+                    ) : null}
                 </div>
 
                 <GlassCard className="p-6 md:p-8">
