@@ -275,9 +275,7 @@ export async function maybeReelectMasterForSession(
         return { changed: false as const, reason: "MASTER_UNCHANGED" as const };
     }
 
-    const commandTargets = session.devices.filter(
-        (device) => device.deviceId !== nextMaster.deviceId && device.status !== "ERRORED"
-    );
+    const commandTargets = session.devices.filter((device) => device.status !== "ERRORED");
 
     const updateResult = await prisma.$transaction(async (tx) => {
         const updated = await tx.syncSession.updateMany({

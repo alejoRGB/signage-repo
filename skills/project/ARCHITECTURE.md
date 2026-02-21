@@ -87,9 +87,11 @@
    - Master election and failover:
      - Initial master selected on session start.
      - Automatic re-election when master heartbeat expires.
+     - Re-election re-queues `SYNC_PREPARE` for all non-errored devices, including the new master.
 13. **Sync Observability Architecture (implemented):**
    - Structured sync logs are persisted in `DeviceLog` (`event`, `sessionId`, `data`).
    - Runtime health in `SyncSessionDevice` includes drift history, resync count/rate, clock offset, thermal/throttled flags.
+   - LAN diagnostics in `SyncSessionDevice` include `lanMode` and `lanBeaconAgeMs`.
    - Session quality summary persisted on stop:
      - `avgDriftMs`, `p50DriftMs`, `p90DriftMs`, `p95DriftMs`, `p99DriftMs`, `maxDriftMs`, `totalResyncs`, `devicesWithIssues`.
 14. **Directive Ownership Rule (implemented):**

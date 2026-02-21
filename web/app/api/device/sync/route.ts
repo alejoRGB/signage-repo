@@ -111,7 +111,8 @@ export async function POST(request: Request) {
         await persistDeviceSyncRuntime(device.id, syncRuntime);
 
         // Helper to format a playlist
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const requestOrigin = new URL(request.url).origin;
+        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || requestOrigin).replace(/\/$/, "");
 
         const formatPlaylist = (playlist: any) => {
             if (!playlist) return null;

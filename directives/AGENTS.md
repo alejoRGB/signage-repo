@@ -6,6 +6,7 @@ This file consolidates the responsibilities, capabilities, and tools for all age
 ---
 
 ## Canonical Context
+- **Project:** `skills/project/PROJECT.md`
 - **Deployment:** `skills/project/DEPLOYMENT.md`
 - **Architecture:** `skills/project/ARCHITECTURE.md`
 
@@ -57,6 +58,16 @@ Required steps:
 3. Report deployment result per device (IP/hostname + status).
 
 If IP, username, or password/credential is missing, the agent must ask the user for those values before attempting deployment.
+
+### Non-Interactive Deployment Policy (Mandatory)
+All Raspberry deployments must run in non-interactive mode to avoid blocked sessions:
+
+1. Never use commands that wait for terminal prompts (password, host-key acceptance, `Read-Host`, sudo prompt).
+2. Prefer `plink`/`pscp` with `-batch`, `-pw`, and pinned `-hostkey` for Windows environments.
+3. If using OpenSSH, require equivalent non-interactive flags (for example `BatchMode=yes` and explicit host-key strategy) and pass all required parameters up front.
+4. Do not run `powershell .\deploy.ps1` without arguments that avoid prompts. Always provide `-PlayerIp` and `-PlayerUser` (and any other required inputs) explicitly.
+5. If host key is unknown, first collect and pin it in a non-interactive-safe way, then retry deployment.
+6. If a command blocks or waits for input, abort that path immediately and switch to a non-interactive command sequence.
 
 For `Web-only` changes, Raspberry deployment is **not required** unless explicitly requested by the user.
 
@@ -122,7 +133,8 @@ For `Web-only` changes, Raspberry deployment is **not required** unless explicit
 - **Offline**: Caches content for offline playback.
 
 ### Execution Tools
-- **Deploy**: `powershell .\deploy.ps1` (Deploys code & config to RPi; username-agnostic via `~/signage-player`)
+- **Deploy (preferred, non-interactive)**: `plink` + `pscp` with `-batch`, `-pw`, `-hostkey`
+- **Deploy (scripted alternative)**: `powershell .\deploy.ps1 -PlayerIp <IP> -PlayerUser <USER>` (only when it can run fully non-interactive)
 - **Start Local**: `python execution/player_ops.py start`
 - **Remote Control**: `python execution/player_ops.py remote_<action>` (start, stop, restart, status)
 

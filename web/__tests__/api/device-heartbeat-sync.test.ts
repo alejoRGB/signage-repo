@@ -220,4 +220,62 @@ describe("Device runtime sync persistence", () => {
         expect(body.schedule).toBeNull();
         expect(body.default_playlist).toBeNull();
     });
+
+    it("device sync route uses request origin when NEXT_PUBLIC_APP_URL is missing", async () => {
+        (extractSyncRuntimeFromJson as jest.Mock).mockReturnValue(null);
+
+        const previousBaseUrl = process.env.NEXT_PUBLIC_APP_URL;
+        delete process.env.NEXT_PUBLIC_APP_URL;
+
+        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
+            id: "device-1",
+            token: "token-1",
+            name: "Device 1",
+            user: { isActive: true, activeDirectiveTab: "SCHEDULES" },
+            schedule: null,
+            defaultPlaylist: null,
+            activePlaylist: {
+                id: "playlist-default",
+                name: "Default Playlist",
+                orientation: "landscape",
+                items: [
+                    {
+                        id: "pi-2",
+                        order: 1,
+                        duration: 10,
+                        mediaItem: {
+                            id: "m-2",
+                            type: "image",
+                            url: "/media/m-2.jpg",
+                            name: "Image 2",
+                            filename: "m-2.jpg",
+                            duration: null,
+                        },
+                    },
+                ],
+            },
+        });
+
+        try {
+            const response = await DEVICE_SYNC_POST(
+                new Request("https://senaldigital.xyz/api/device/sync", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ device_token: "token-1" }),
+                })
+            );
+
+            expect(response.status).toBe(200);
+            const body = await response.json();
+            expect(body.playlist.items[0].url).toBe(
+                "https://senaldigital.xyz/api/media/download/m-2?token=token-1"
+            );
+        } finally {
+            if (typeof previousBaseUrl === "string") {
+                process.env.NEXT_PUBLIC_APP_URL = previousBaseUrl;
+            } else {
+                delete process.env.NEXT_PUBLIC_APP_URL;
+            }
+        }
+    });
 });

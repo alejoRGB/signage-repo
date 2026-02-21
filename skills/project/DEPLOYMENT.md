@@ -64,6 +64,32 @@ python execution/run_tests.py qa:sync:off --project=chromium
    - Redeploy web
    - Keep Schedules path operational.
 
+## Canonical Notes (2026-02-21)
+- **Failover re-prepare guarantee:**
+  - In failover, backend now enqueues `SYNC_PREPARE` for the newly elected master as well (not only followers/old master).
+  - Validation anchor: `web/__tests__/api/sync-master-failover.test.ts`.
+- **LAN diagnostics persisted in DB:**
+  - `SyncSessionDevice` includes `lanMode` and `lanBeaconAgeMs`.
+  - Migration required in target env:
+```bash
+cd web
+npx prisma migrate deploy
+npx prisma generate
+```
+- **Device sync base URL fallback:**
+  - `/api/device/sync` now falls back to request origin when `NEXT_PUBLIC_APP_URL` is unset.
+  - Validation anchor: `web/__tests__/api/device-heartbeat-sync.test.ts`.
+- **QA failover chaos test (opt-in):**
+  - Added `qa_automation/tests/4_sync_failover.spec.ts`.
+  - Run manually only when explicitly enabled:
+```powershell
+cd qa_automation
+$env:E2E_SYNC_FAILOVER_RUN="true"
+$env:E2E_SYNC_STOP_CMD_<MASTER_KEY>="<stop command>"
+$env:E2E_SYNC_START_CMD_<MASTER_KEY>="<start command>"
+npx playwright test tests/4_sync_failover.spec.ts
+```
+
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
 - Production QA runs use:
   - `E2E_BASE_URL=https://senaldigital.xyz`

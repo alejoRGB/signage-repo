@@ -106,6 +106,16 @@ Criterio de aprobacion:
 ### 7.2 Caida de master y failover (obligatorio)
 Objetivo: validar reeleccion de master sin interrumpir sesion.
 
+Automatizacion opcional (Playwright):
+```powershell
+cd qa_automation
+$env:E2E_SYNC_FAILOVER_RUN="true"
+# Definir comandos stop/start para el master esperado (ejemplo RP4)
+$env:E2E_SYNC_STOP_CMD_RP4="<comando para detener signage-player en RP4>"
+$env:E2E_SYNC_START_CMD_RP4="<comando para iniciar signage-player en RP4>"
+npx playwright test tests/4_sync_failover.spec.ts
+```
+
 Pasos:
 1. Identificar `masterDeviceId` en UI (panel Sync).
 2. Forzar caida del player master:

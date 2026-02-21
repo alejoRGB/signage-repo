@@ -120,6 +120,26 @@
   - Player heartbeat runtime may include `lan_mode` and `lan_beacon_age_ms` for diagnostics.
   - Accepted `lan_mode` values in runtime: `master`, `follower`, `cloud_fallback`, `disabled`.
 
+## Canonical Notes (2026-02-21)
+- **Master Failover Commanding (fixed):**
+  - During automatic master re-election, `SYNC_PREPARE` is now queued for all non-errored devices, including the newly elected master.
+  - This prevents stale playback state after failover and keeps session devices aligned.
+- **LAN Runtime Persistence (extended):**
+  - `SyncSessionDevice` now persists LAN runtime diagnostics from heartbeat:
+    - `lanMode`
+    - `lanBeaconAgeMs`
+  - Backend normalization rules:
+    - `lanMode` is trimmed/lowercased before persistence.
+    - `lanBeaconAgeMs` is clamped to non-negative integer values.
+- **Device Sync URL Base (hardened):**
+  - `/api/device/sync` now resolves media download base URL from:
+    - `NEXT_PUBLIC_APP_URL` when present, otherwise
+    - request origin (`new URL(request.url).origin`).
+  - This avoids localhost URL leakage when public app URL env is unset.
+- **Sync QA Coverage (expanded):**
+  - Added opt-in chaos test `qa_automation/tests/4_sync_failover.spec.ts` for LAN failover validation (`SYNC-E2E-05`).
+  - Test requires explicit enablement (`E2E_SYNC_FAILOVER_RUN=true`) plus per-master stop/start commands via env vars.
+
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
 2. **Schedule Sync:** Device polls `/api/device/sync` -> Downloads media -> Reports `playingPlaylistId` -> Plays.

@@ -96,7 +96,7 @@ describe("SYNC-014 master election and failover", () => {
                 createMany: jest.fn().mockResolvedValue({ count: 2 }),
             },
             syncDeviceCommand: {
-                createMany: jest.fn().mockResolvedValue({ count: 2 }),
+                createMany: jest.fn().mockResolvedValue({ count: 3 }),
             },
         };
         (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(tx));
@@ -200,6 +200,10 @@ describe("SYNC-014 master election and failover", () => {
         expect(tx.syncDeviceCommand.createMany).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.arrayContaining([
+                    expect.objectContaining({
+                        deviceId: "device-next-master",
+                        type: "SYNC_PREPARE",
+                    }),
                     expect.objectContaining({
                         deviceId: "device-old-master",
                         type: "SYNC_PREPARE",

@@ -15,3 +15,4 @@ qa_automation/playwright-report/
 qa_automation/test-results/
 __pycache__/
 *.pyc
+.tmp/
