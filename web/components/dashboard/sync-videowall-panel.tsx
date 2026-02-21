@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, GripVertical, Monitor, Play, Plus, Save, Square, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
@@ -92,6 +92,7 @@ const SYNC_STATUS_LABELS: Record<string, string> = {
     ERRORED: "errored",
     DISCONNECTED: "disconnected",
 };
+const STOP_SESSION_SUPPRESSION_WINDOW_MS = 10000;
 
 function statusClass(status: string) {
     switch (status) {
@@ -239,6 +240,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
     const [isStartingSession, setIsStartingSession] = useState(false);
     const [isStoppingSession, setIsStoppingSession] = useState(false);
     const [isSessionBootstrapLoading, setIsSessionBootstrapLoading] = useState(true);
+    const stoppedSessionSuppressionRef = useRef<{ sessionId: string; untilMs: number } | null>(null);
 
     const deviceById = useMemo(
         () =>
@@ -360,10 +362,24 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 session: ActiveSession | null;
                 correctionTelemetryByDeviceId?: Record<string, ActiveSessionCorrection>;
             }>("/api/sync/session/active", { cache: "no-store" });
+            const suppression = stoppedSessionSuppressionRef.current;
 
             if (!active.session) {
+                if (suppression) {
+                    stoppedSessionSuppressionRef.current = null;
+                }
                 setActiveSession(null);
                 return;
+            }
+
+            if (suppression) {
+                if (active.session.id === suppression.sessionId) {
+                    if (Date.now() < suppression.untilMs) {
+                        setActiveSession(null);
+                        return;
+                    }
+                }
+                stoppedSessionSuppressionRef.current = null;
             }
 
             setActiveSession({
@@ -721,6 +737,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ presetId: selectedPresetId }),
             });
+            stoppedSessionSuppressionRef.current = null;
             setActiveSession(data.session);
             showToast("Sync session started", "success");
         } catch (error) {
@@ -738,14 +755,19 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             return;
         }
 
+        const stoppingSessionId = activeSession.id;
         setIsStoppingSession(true);
         setErrorMessage(null);
         try {
             await fetchJson<{ session: ActiveSession }>("/api/sync/session/stop", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sessionId: activeSession.id, reason: "USER_STOP" }),
+                body: JSON.stringify({ sessionId: stoppingSessionId, reason: "USER_STOP" }),
             });
+            stoppedSessionSuppressionRef.current = {
+                sessionId: stoppingSessionId,
+                untilMs: Date.now() + STOP_SESSION_SUPPRESSION_WINDOW_MS,
+            };
             setActiveSession(null);
             setEntryView("menu");
             showToast("Sync session stopped", "info");

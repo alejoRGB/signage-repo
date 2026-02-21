@@ -337,6 +337,94 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         expect(screen.queryByTestId("sync-entry-new-session-btn")).not.toBeInTheDocument();
     });
 
+    it("keeps entry menu visible after stop even if active-session poll returns stale data", async () => {
+        let activeSessionCalls = 0;
+        let staleResponseResolved = false;
+
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => mockDevices,
+                    } as Response;
+                }
+
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => mockMedia,
+                    } as Response;
+                }
+
+                if (url.includes("/api/sync/presets") && !init?.method) {
+                    return { ok: true, json: async () => [] } as Response;
+                }
+
+                if (url.includes("/api/sync/session/active")) {
+                    activeSessionCalls += 1;
+                    if (activeSessionCalls === 2) {
+                        await new Promise((resolve) => setTimeout(resolve, 80));
+                        staleResponseResolved = true;
+                    }
+                    if (activeSessionCalls <= 2) {
+                        return {
+                            ok: true,
+                            json: async () => ({
+                                session: {
+                                    id: "session-1",
+                                    status: "RUNNING",
+                                    presetId: "preset-1",
+                                    masterDeviceId: "device-1",
+                                    devices: [
+                                        {
+                                            id: "session-device-1",
+                                            deviceId: "device-1",
+                                            status: "PLAYING",
+                                            device: {
+                                                id: "device-1",
+                                                name: "Lobby",
+                                            },
+                                        },
+                                    ],
+                                },
+                                correctionTelemetryByDeviceId: {},
+                            }),
+                        } as Response;
+                    }
+                    return { ok: true, json: async () => ({ session: null }) } as Response;
+                }
+
+                if (url.includes("/api/sync/session/stop")) {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            session: {
+                                id: "session-1",
+                            },
+                        }),
+                    } as Response;
+                }
+
+                return { ok: true, json: async () => ({}) } as Response;
+            }) as unknown as typeof fetch
+        );
+
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+        await screen.findByTestId("sync-health-panel");
+
+        fireEvent.click(screen.getByTestId("sync-stop-session-btn"));
+        await screen.findByTestId("sync-entry-new-session-btn");
+
+        await waitFor(() => {
+            expect(staleResponseResolved).toBe(true);
+        });
+        expect(screen.queryByTestId("sync-health-panel")).not.toBeInTheDocument();
+    });
+
     it("keeps session health cards in stable order", async () => {
         vi.stubGlobal(
             "fetch",
