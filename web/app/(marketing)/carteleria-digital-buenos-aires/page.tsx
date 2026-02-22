@@ -92,6 +92,11 @@ export default function CarteleriaDigitalBuenosAiresPage() {
                 ]}
                 faqTitle="Preguntas frecuentes sobre carteleria digital en Buenos Aires"
                 faqs={faqs}
+                relatedResourceSlugs={[
+                    "costos-carteleria-digital-pymes",
+                    "implementar-carteleria-digital-multiples-sucursales",
+                    "medir-roi-carteleria-digital",
+                ]}
             />
         </>
     );

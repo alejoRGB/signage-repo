@@ -79,3 +79,38 @@
 - [ ] Staging verification.
 - [ ] Production activation via feature flag.
 - [ ] Post-deploy monitor and decide legacy cleanup.
+
+## SEO Fase 3 (Local + Autoridad) - Seguimiento
+
+- 2026-02-22: Revisado - Fase 3 con implementación parcial en código.
+  - Implementado (web):
+    - Hub de recursos `/recursos` + páginas de detalle por slug.
+    - 5 piezas de contenido de soporte (objetivo del plan: 4-6).
+    - Enlazado interno desde landings/hero/navbar/footer/social-proof hacia recursos/cotización.
+    - Tracking de eventos (CTA, recursos, WhatsApp, envío de cotización) con GA.
+    - Inclusión de recursos en `sitemap`.
+  - Pendiente (operativo / off-page):
+    - Optimización de Google Business Profile (área de servicio CABA y GBA).
+    - Estrategia inicial de enlaces (directorios B2B, cámaras empresariales, partners tecnológicos).
+    - Evidencia de ejecución (links publicados, perfiles/citas creadas, estado de outreach).
+  - Pendiente (mejora web):
+    - Relevancia de "recursos relacionados" (evitar selección fija por orden).
+
+### Fase 3 - Checklist de cierre
+
+- [ ] Google Business Profile
+  - [ ] Definir categoría principal/secundarias.
+  - [ ] Configurar área de servicio (CABA + GBA).
+  - [ ] Completar servicios, descripción y atributos.
+  - [ ] Subir imágenes/portadas y CTA a cotización.
+  - [ ] Registrar evidencia (fecha + capturas + URL perfil).
+- [ ] Enlaces / autoridad
+  - [ ] Armar lista inicial de prospectos (directorios B2B / cámaras / partners).
+  - [ ] Priorizar por relevancia local/comercial.
+  - [ ] Preparar copy/plantillas de outreach.
+  - [ ] Registrar estado por prospecto (pendiente/contactado/publicado/rechazado).
+  - [ ] Registrar URLs publicados y anchor text.
+- [ ] Mejora web (supporting SEO)
+  - [x] Ajustar algoritmo de recursos relacionados por relevancia temática.
+  - [x] Documentar runbook/checklist operativa de Fase 3 en `docs/`.
+  - [ ] Ejecutar checklist operativo con acceso a GBP/directorios y registrar evidencia real.

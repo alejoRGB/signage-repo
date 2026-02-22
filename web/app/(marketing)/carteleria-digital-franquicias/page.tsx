@@ -87,6 +87,11 @@ export default function CarteleriaDigitalFranquiciasPage() {
                 ]}
                 faqTitle="FAQ para carteleria digital en franquicias"
                 faqs={faqs}
+                relatedResourceSlugs={[
+                    "errores-carteleria-digital-franquicias",
+                    "implementar-carteleria-digital-multiples-sucursales",
+                    "medir-roi-carteleria-digital",
+                ]}
             />
         </>
     );

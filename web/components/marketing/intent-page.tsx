@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ContactForm } from "@/components/marketing/contact-form";
-import { seoResources } from "@/lib/seo-resources";
+import { getSeoResourcesBySlugs, seoResources } from "@/lib/seo-resources";
 
 type FaqItem = {
     question: string;
@@ -20,6 +20,7 @@ type IntentPageProps = {
     solutions: string[];
     faqTitle: string;
     faqs: FaqItem[];
+    relatedResourceSlugs?: string[];
 };
 
 export function IntentPage({
@@ -33,8 +34,12 @@ export function IntentPage({
     solutions,
     faqTitle,
     faqs,
+    relatedResourceSlugs,
 }: IntentPageProps) {
-    const relatedResources = seoResources.slice(0, 3);
+    const relatedResources =
+        relatedResourceSlugs && relatedResourceSlugs.length > 0
+            ? getSeoResourcesBySlugs(relatedResourceSlugs)
+            : seoResources.slice(0, 3);
 
     return (
         <div className="container mx-auto space-y-16 px-4 py-20 md:px-6 md:py-28">

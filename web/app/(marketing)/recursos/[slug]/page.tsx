@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
-import { getSeoResourceBySlug, seoResources } from "@/lib/seo-resources";
+import { getRelatedSeoResources, getSeoResourceBySlug, seoResources } from "@/lib/seo-resources";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 
@@ -52,7 +52,7 @@ export default async function ResourceArticlePage({ params }: ResourcePageProps)
         notFound();
     }
 
-    const related = seoResources.filter((item) => item.slug !== resource.slug).slice(0, 3);
+    const related = getRelatedSeoResources(resource.slug, 3);
 
     const articleJsonLd = {
         "@context": "https://schema.org",

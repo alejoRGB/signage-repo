@@ -302,3 +302,83 @@ export const seoResources: ResourceArticle[] = [
 export function getSeoResourceBySlug(slug: string) {
     return seoResources.find((item) => item.slug === slug);
 }
+
+const TOKEN_STOPWORDS = new Set([
+    "de",
+    "la",
+    "el",
+    "los",
+    "las",
+    "y",
+    "o",
+    "en",
+    "para",
+    "con",
+    "sin",
+    "por",
+    "como",
+    "que",
+    "un",
+    "una",
+    "del",
+    "al",
+]);
+
+function tokenizeResource(resource: ResourceArticle) {
+    const source = [resource.title, resource.description, ...resource.keywords].join(" ").toLowerCase();
+    return new Set(
+        source
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9\s-]/g, " ")
+            .split(/\s+/)
+            .filter((token) => token.length >= 3 && !TOKEN_STOPWORDS.has(token))
+    );
+}
+
+function countTokenOverlap(a: Set<string>, b: Set<string>) {
+    let matches = 0;
+    for (const token of a) {
+        if (b.has(token)) {
+            matches += 1;
+        }
+    }
+    return matches;
+}
+
+export function getSeoResourcesBySlugs(slugs: string[]) {
+    const order = new Map(slugs.map((slug, index) => [slug, index]));
+    return seoResources
+        .filter((resource) => order.has(resource.slug))
+        .sort((a, b) => (order.get(a.slug) ?? 0) - (order.get(b.slug) ?? 0));
+}
+
+export function getRelatedSeoResources(currentSlug: string, limit = 3) {
+    const current = getSeoResourceBySlug(currentSlug);
+    if (!current) {
+        return [];
+    }
+
+    const currentTokens = tokenizeResource(current);
+
+    return seoResources
+        .filter((resource) => resource.slug !== currentSlug)
+        .map((resource) => {
+            const tokens = tokenizeResource(resource);
+            const overlap = countTokenOverlap(currentTokens, tokens);
+            const score = (resource.category === current.category ? 100 : 0) + overlap;
+
+            return { resource, score, overlap };
+        })
+        .sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+            if (b.overlap !== a.overlap) {
+                return b.overlap - a.overlap;
+            }
+            return a.resource.title.localeCompare(b.resource.title);
+        })
+        .slice(0, limit)
+        .map((item) => item.resource);
+}

@@ -87,6 +87,11 @@ export default function CarteleriaDigitalRetailPage() {
                 ]}
                 faqTitle="Preguntas frecuentes de carteleria digital para retail"
                 faqs={faqs}
+                relatedResourceSlugs={[
+                    "estrategia-contenido-pantallas-retail",
+                    "costos-carteleria-digital-pymes",
+                    "medir-roi-carteleria-digital",
+                ]}
             />
         </>
     );

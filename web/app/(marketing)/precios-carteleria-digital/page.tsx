@@ -87,6 +87,11 @@ export default function PreciosCarteleriaDigitalPage() {
                 ]}
                 faqTitle="Preguntas frecuentes sobre precios"
                 faqs={faqs}
+                relatedResourceSlugs={[
+                    "costos-carteleria-digital-pymes",
+                    "medir-roi-carteleria-digital",
+                    "implementar-carteleria-digital-multiples-sucursales",
+                ]}
             />
         </>
     );

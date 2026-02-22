@@ -87,6 +87,11 @@ export default function MenuDigitalParaRestaurantesPage() {
                 ]}
                 faqTitle="FAQ sobre menu digital para restaurantes"
                 faqs={faqs}
+                relatedResourceSlugs={[
+                    "estrategia-contenido-pantallas-retail",
+                    "costos-carteleria-digital-pymes",
+                    "medir-roi-carteleria-digital",
+                ]}
             />
         </>
     );
