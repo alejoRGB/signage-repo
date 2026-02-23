@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import DeviceManager from "./device-manager";
+import { getDeviceConnectivityStatus } from "@/lib/device-connectivity";
 
 export const metadata = {
     title: "Devices | Cloud Signage",
@@ -59,19 +60,7 @@ export default async function DevicesPage() {
     // Transform devices to ensure name is string, dates are strings, and calculate status
     const formattedDevices = devices.map(d => {
         const { syncSessionDevices, ...deviceBase } = d;
-        // Calculate dynamic status based on lastSeenAt
-        let status = "offline";
-
-        if (d.lastSeenAt) {
-            const lastSeenTime = new Date(d.lastSeenAt).getTime();
-            const now = Date.now();
-            const thresholdInMs = 2 * 60 * 1000; // 2 minutes (Player pings every 60s)
-
-            // Device is online if it checked in within the threshold
-            if (now - lastSeenTime < thresholdInMs) {
-                status = "online";
-            }
-        }
+        const status = getDeviceConnectivityStatus(d.lastSeenAt);
 
         const latestRuntime = syncSessionDevices[0] ?? null;
         return {

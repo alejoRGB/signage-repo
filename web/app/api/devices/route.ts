@@ -3,6 +3,7 @@ import { CreateDeviceSchema } from "@/lib/validations";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDeviceConnectivityStatus } from "@/lib/device-connectivity";
 
 export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
@@ -88,18 +89,7 @@ export async function GET(request: Request) {
     // Calculate dynamic status based on lastSeenAt
     const devicesWithStatus = devices.map(device => {
         const { syncSessionDevices, ...deviceBase } = device;
-        let status = "offline";
-
-        if (device.lastSeenAt) {
-            const lastSeenTime = new Date(device.lastSeenAt).getTime();
-            const now = Date.now();
-            const fiveMinutesInMs = 5 * 60 * 1000;
-
-            // Device is online if it checked in within the last 5 minutes
-            if (now - lastSeenTime < fiveMinutesInMs) {
-                status = "online";
-            }
-        }
+        const status = getDeviceConnectivityStatus(device.lastSeenAt);
 
         const latestRuntime = syncSessionDevices[0] ?? null;
         return {

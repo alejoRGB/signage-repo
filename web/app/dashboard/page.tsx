@@ -3,8 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Monitor, HardDrive, PlaySquare } from "lucide-react";
 import DevicePreviewGrid from "@/components/dashboard/device-preview-grid";
-
-const ONLINE_STALE_MS = 5 * 60_000;
+import { getDeviceConnectivityStatus } from "@/lib/device-connectivity";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -129,7 +128,7 @@ export default async function DashboardPage() {
                         ...deviceBase,
                         createdAt: device.createdAt.toISOString(),
                         lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
-                        connectivityStatus: device.lastSeenAt && (Date.now() - device.lastSeenAt.getTime()) < ONLINE_STALE_MS ? "online" : "offline",
+                        connectivityStatus: getDeviceConnectivityStatus(device.lastSeenAt),
                         cpuTemp: latestRuntime?.cpuTemp ?? null,
                         cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
                         contentPreview: device.currentContentName

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, FileVideo, Globe, Thermometer } from "lucide-react";
+import { isDeviceConsideredOnline } from "@/lib/device-connectivity";
 
 type DashboardDevice = {
     id: string;
@@ -22,7 +23,6 @@ type DashboardDevice = {
     schedule?: { id: string; name: string } | null;
 };
 
-const ONLINE_STALE_MS = 5 * 60_000;
 const POLL_INTERVAL_MS = 20_000;
 
 function twoLineClampStyle() {
@@ -39,8 +39,7 @@ function isDeviceOnline(device: DashboardDevice) {
         return device.connectivityStatus === "online";
     }
 
-    if (!device.lastSeenAt) return false;
-    return Date.now() - new Date(device.lastSeenAt).getTime() <= ONLINE_STALE_MS;
+    return isDeviceConsideredOnline(device.lastSeenAt);
 }
 
 function cpuTempBadge(device: DashboardDevice, online: boolean) {

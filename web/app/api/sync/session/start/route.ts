@@ -12,6 +12,7 @@ import {
 import { buildPreparePayload } from "@/lib/sync-command-service";
 import { selectInitialMasterDeviceId } from "@/lib/sync-master-election";
 import { SYNC_DEVICE_COMMAND_TYPE } from "@/types/sync";
+import { isDeviceConsideredOnline } from "@/lib/device-connectivity";
 
 const INITIAL_START_HOLD_MS = 12 * 60 * 60 * 1000;
 
@@ -171,12 +172,10 @@ export async function POST(request: Request) {
         }
 
         const nowMs = Date.now();
-        const ONLINE_HEARTBEAT_WINDOW_MS = 5 * 60 * 1000;
         const offlineDevices = preset.devices
             .map((assignment) => {
                 const lastSeenAt = assignment.device.lastSeenAt;
-                const ageMs = lastSeenAt ? nowMs - lastSeenAt.getTime() : Number.POSITIVE_INFINITY;
-                const isOnline = !!lastSeenAt && ageMs <= ONLINE_HEARTBEAT_WINDOW_MS;
+                const isOnline = isDeviceConsideredOnline(lastSeenAt, nowMs);
 
                 if (isOnline) {
                     return null;
