@@ -72,7 +72,7 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="e.g. Corporate Dashboard"
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
                             />
                         </div>
 
@@ -83,24 +83,8 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
                                 placeholder="https://..."
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
                             />
-                        </div>
-
-
-
-
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                id="offline-mode"
-                                checked={cacheForOffline}
-                                onChange={(e) => setCacheForOffline(e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor="offline-mode" className="text-sm text-gray-700">
-                                Save for offline presentation
-                            </label>
                         </div>
 
                         <div className="flex items-center gap-2">
