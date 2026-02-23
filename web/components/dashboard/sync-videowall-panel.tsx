@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, GripVertical, Monitor, Play, Plus, Save, Square, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
+import { getDeviceStatusPollIntervalMs } from "@/lib/device-connectivity";
 import { SYNC_PRESET_MODE, type SyncPresetMode } from "@/types/sync";
 
 type SyncDevice = {
@@ -94,6 +95,7 @@ const SYNC_STATUS_LABELS: Record<string, string> = {
     DISCONNECTED: "disconnected",
 };
 const STOP_SESSION_SUPPRESSION_WINDOW_MS = 10000;
+const SYNC_DEVICE_STATUS_POLL_MS = getDeviceStatusPollIntervalMs(DIRECTIVE_TAB.SYNC_VIDEOWALL);
 
 function statusClass(status: string) {
     switch (status) {
@@ -400,11 +402,20 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         }
     };
 
+    const refreshSyncDevices = useCallback(async () => {
+        try {
+            const devicesData = await fetchJson<SyncDevice[]>("/api/devices?order=created_asc", { cache: "no-store" });
+            setDevices(Array.isArray(devicesData) ? devicesData : []);
+        } catch (error) {
+            console.error("Sync panel device polling failed", error);
+        }
+    }, []);
+
     const refreshBuilderData = async () => {
         setIsLoading(true);
         try {
             const [devicesData, mediaData, presetsData] = await Promise.all([
-                fetchJson<SyncDevice[]>("/api/devices?order=created_asc"),
+                fetchJson<SyncDevice[]>("/api/devices?order=created_asc", { cache: "no-store" }),
                 fetchJson<SyncMediaItem[]>("/api/media"),
                 fetchJson<SyncPreset[]>("/api/sync/presets"),
             ]);
@@ -449,6 +460,21 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             window.clearInterval(intervalId);
         };
     }, []);
+
+    useEffect(() => {
+        let disposed = false;
+
+        const intervalId = window.setInterval(() => {
+            if (!disposed) {
+                void refreshSyncDevices();
+            }
+        }, SYNC_DEVICE_STATUS_POLL_MS);
+
+        return () => {
+            disposed = true;
+            window.clearInterval(intervalId);
+        };
+    }, [refreshSyncDevices]);
 
     const hydrateEditorFromPreset = (preset: SyncPreset | null) => {
         if (!preset) {

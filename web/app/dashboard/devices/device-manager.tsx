@@ -11,6 +11,7 @@ import EditDeviceModal from "@/components/devices/edit-device-modal";
 import { useToast } from "@/components/ui/toast-context";
 import { useDirectiveTabs } from "@/components/dashboard/directive-tabs-context";
 import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
+import { getDeviceStatusPollIntervalMs } from "@/lib/device-connectivity";
 
 export default function DeviceManager({
     devices: initialDevices,
@@ -19,6 +20,7 @@ export default function DeviceManager({
     devices: Device[];
     playlists: Playlist[];
 }) {
+    const schedulesDevicePollMs = getDeviceStatusPollIntervalMs(DIRECTIVE_TAB.SCHEDULES);
     const { showToast } = useToast();
     const { activeDirectiveTab } = useDirectiveTabs();
     const isPlaylistSelectionLocked = activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL;
@@ -49,12 +51,12 @@ export default function DeviceManager({
         }
     }, []);
 
-    // Polling state (refresh list every 30s)
+    // Poll device connectivity/data while the Schedules tab content is visible.
     useEffect(() => {
-        const interval = setInterval(refreshDevices, 30000);
+        const interval = setInterval(refreshDevices, schedulesDevicePollMs);
 
         return () => clearInterval(interval);
-    }, [refreshDevices]);
+    }, [refreshDevices, schedulesDevicePollMs]);
 
     // Toast Logic replaced by useToast hook
 

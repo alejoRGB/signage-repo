@@ -95,18 +95,20 @@ export async function POST(request: Request) {
             );
         }
 
-        // Update device status and last seen
-        // Force cast to any to avoid Prisma type errors during build
+        // Sync fetch should not update liveness. Heartbeat is the single source of device connectivity.
+        // Force cast to any to avoid Prisma type errors during build.
         const updateData: any = {
-            status: "online",
-            lastSeenAt: new Date(),
             playingPlaylistId: playing_playlist_id ?? undefined,
         };
+        const hasDeviceUpdate =
+            Object.values(updateData).some((value) => value !== undefined);
 
-        await prisma.device.update({
-            where: { id: device.id },
-            data: updateData,
-        });
+        if (hasDeviceUpdate) {
+            await prisma.device.update({
+                where: { id: device.id },
+                data: updateData,
+            });
+        }
 
         await persistDeviceSyncRuntime(device.id, syncRuntime);
 

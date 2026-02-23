@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, FileVideo, Globe, Thermometer } from "lucide-react";
-import { isDeviceConsideredOnline } from "@/lib/device-connectivity";
+import { getDeviceStatusPollIntervalMs, isDeviceConsideredOnline } from "@/lib/device-connectivity";
+import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
 
 type DashboardDevice = {
     id: string;
@@ -23,7 +24,7 @@ type DashboardDevice = {
     schedule?: { id: string; name: string } | null;
 };
 
-const POLL_INTERVAL_MS = 20_000;
+const POLL_INTERVAL_MS = getDeviceStatusPollIntervalMs(DIRECTIVE_TAB.SCHEDULES);
 
 function twoLineClampStyle() {
     return {

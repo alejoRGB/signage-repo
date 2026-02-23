@@ -144,6 +144,35 @@ describe("Device runtime sync persistence", () => {
         );
     });
 
+    it("device sync route does not update device liveness fields", async () => {
+        (extractSyncRuntimeFromJson as jest.Mock).mockReturnValue(null);
+
+        const response = await DEVICE_SYNC_POST(
+            new Request("http://localhost/api/device/sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    device_token: "token-1",
+                    playing_playlist_id: "playlist-1",
+                }),
+            })
+        );
+
+        expect(response.status).toBe(200);
+        expect(prisma.device.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: "device-1" },
+                data: expect.objectContaining({
+                    playingPlaylistId: "playlist-1",
+                }),
+            })
+        );
+
+        const updateArgs = (prisma.device.update as jest.Mock).mock.calls[0][0];
+        expect(updateArgs.data.lastSeenAt).toBeUndefined();
+        expect(updateArgs.data.status).toBeUndefined();
+    });
+
     it("device sync route suppresses schedule/default payload when Sync tab is active", async () => {
         (extractSyncRuntimeFromJson as jest.Mock).mockReturnValue(null);
 

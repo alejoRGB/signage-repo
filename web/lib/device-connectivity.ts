@@ -1,4 +1,13 @@
-export const DEVICE_ONLINE_WINDOW_MS = 5 * 60_000;
+import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
+
+// Player reports heartbeat every ~5s. We allow a small buffer before declaring offline.
+export const DEVICE_HEARTBEAT_INTERVAL_MS = 5_000;
+export const DEVICE_ONLINE_WINDOW_MS = 15_000;
+
+export const DEVICE_STATUS_POLL_INTERVAL_MS_BY_TAB: Record<DirectiveTab, number> = {
+    [DIRECTIVE_TAB.SCHEDULES]: 15_000,
+    [DIRECTIVE_TAB.SYNC_VIDEOWALL]: 5_000,
+};
 
 type LastSeenInput = Date | string | null | undefined;
 
@@ -26,4 +35,8 @@ export function isDeviceConsideredOnline(lastSeenAt: LastSeenInput, nowMs = Date
 
 export function getDeviceConnectivityStatus(lastSeenAt: LastSeenInput, nowMs = Date.now()) {
     return isDeviceConsideredOnline(lastSeenAt, nowMs) ? "online" : "offline";
+}
+
+export function getDeviceStatusPollIntervalMs(tab: DirectiveTab) {
+    return DEVICE_STATUS_POLL_INTERVAL_MS_BY_TAB[tab];
 }

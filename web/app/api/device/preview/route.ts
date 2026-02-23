@@ -42,16 +42,11 @@ export async function POST(request: Request) {
         }
 
         const updateData: {
-            status: string;
-            lastSeenAt: Date;
             playingPlaylistId?: string | null;
             currentContentName?: string | null;
             previewImageUrl?: string;
             previewCapturedAt?: Date;
-        } = {
-            status: "online",
-            lastSeenAt: new Date(),
-        };
+        } = {};
 
         if (typeof playingPlaylistIdValue === "string") {
             updateData.playingPlaylistId = playingPlaylistIdValue || null;
@@ -90,10 +85,12 @@ export async function POST(request: Request) {
 
         }
 
-        await prisma.device.update({
-            where: { id: device.id },
-            data: updateData,
-        });
+        if (Object.keys(updateData).length > 0) {
+            await prisma.device.update({
+                where: { id: device.id },
+                data: updateData,
+            });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {
