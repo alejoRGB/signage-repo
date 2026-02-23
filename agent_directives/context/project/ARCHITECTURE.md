@@ -43,7 +43,7 @@
 4. **True Sync Status:** Dashboard reflects *actual* device state (`playingPlaylistId`) and refreshes device state from `/api/devices` every 10s in Devices UI.
    - "Syncing..." is shown only while there is explicit mismatch between active playlist and a reported `playingPlaylistId`, or during optimistic update.
 5. **API Security:** 
-   - Rate limiting (60 req/min) enforced on all Device endpoints.
+   - Scoped rate limiting is enforced on Device endpoints (limits vary by endpoint; see `web/lib/rate-limit.ts`).
    - **Strict Ownership:** Middleware/Logic ensures users only access their own data.
    - **Input Validation:** Zod schemas validate all incoming JSON.
    - **Error Hygiene:** Production API responses must not include stack traces or internal exception details.

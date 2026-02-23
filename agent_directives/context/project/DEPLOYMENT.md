@@ -2,7 +2,7 @@
 
 ## Cloud Deployment (Vercel)
 - **Repo:** GitHub connected.
-- **Canonical Production URL:** `https://senaldigital.xyz`
+- **Canonical Production URL:** `https://signage-repo-dc5s.vercel.app`
 - **Canonical Project Link:** scope `alejos-projects-7a73f1be`, project `signage-repo-dc5s`
 - **Environment:**
   - `DATABASE_URL_UNPOOLED`: Neon Postgres **non-pooler** connection string (required by Prisma; must NOT include `-pooler`).
@@ -17,8 +17,7 @@
   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob access.
   - `E2E_USERNAME` / `E2E_PASSWORD`: Required for credentialed E2E testing (DO NOT hardcode in tests).
   - `E2E_ADMIN_USERNAME` (or `E2E_ADMIN_EMAIL`) / `E2E_ADMIN_PASSWORD`: Required for credentialed admin E2E testing on `/admin`.
-  - `E2E_BASE_URL`: Optional override for Playwright; defaults to canonical production URL.
-  - `E2E_SYNC_MODE`: Optional QA selector for Sync gate tests (`on` / `off`). This does NOT toggle product feature flags.
+  - `E2E_BASE_URL`: Optional override for Playwright; defaults to `https://signage-repo-dc5s.vercel.app` in `qa_automation` Playwright configs.
 
 ## Security & Maintenance
 - **Credentials:** 
@@ -46,12 +45,11 @@ npx prisma generate
 4. Validate Sync test gate locally before production promotion:
 ```bash
 python execution/run_tests.py sync
-python execution/run_tests.py qa:smoke --project=chromium
-python execution/run_tests.py qa:regression --project=chromium
-# If Sync flag is enabled in the target environment:
-python execution/run_tests.py qa:sync:on --project=chromium
-# If Sync flag is disabled in the target environment:
-python execution/run_tests.py qa:sync:off --project=chromium
+python execution/run_tests.py qa
+python execution/run_tests.py e2e
+# Optional visual evidence capture against production:
+cd qa_automation
+npm run test:visual
 ```
 5. Execute staging runbook before scaling rollout:
    - `docs/sync_qa_runbook.md`
@@ -92,27 +90,27 @@ npx playwright test tests/production/4_sync_failover.spec.ts
 
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
 - Production QA runs use:
-  - `E2E_BASE_URL=https://senaldigital.xyz`
+  - `E2E_BASE_URL=https://signage-repo-dc5s.vercel.app` (or omit it and use the default)
   - Credentialed dashboard auth (`E2E_USERNAME`, `E2E_PASSWORD`)
   - Credentialed admin auth (`E2E_ADMIN_USERNAME` or `E2E_ADMIN_EMAIL`, plus `E2E_ADMIN_PASSWORD`)
 - Playwright credentialed specs must normalize env values (`trim`) before login usage to avoid false failures from trailing whitespace in external env providers.
 - Sync gate behavior is controlled only by deployment env var `SYNC_VIDEOWALL_ENABLED`.
-- `E2E_SYNC_MODE` only decides which test subset runs:
-  - `qa:sync:on` -> runs `@sync-on`
-  - `qa:sync:off` -> runs `@sync-off`
+- Current QA entry points:
+  - `python execution/run_tests.py qa` -> runs the Playwright production-oriented QA suite in `qa_automation/tests/production`
+  - `python execution/run_tests.py e2e` -> runs the local smoke E2E entrypoint (via `web` -> `qa_automation test:local`)
+  - `cd qa_automation && npm run test:visual` -> captures production screenshots (optional evidence)
 - Recommended policy to avoid excessive production redeploys:
-  - Validate `qa:sync:on` in production when production flag is ON.
-  - Validate `qa:sync:off` in staging/preview with flag OFF.
-  - Toggle production flag only when explicitly validating rollback behavior.
+  - Use `sync` + `qa` for functional validation.
+  - Use `e2e` for local smoke after web changes.
+  - Use `test:visual` only when visual evidence is needed.
 - Confirmed on Feb 19, 2026:
-  - `qa:smoke` passed against production.
-  - `qa:sync:off` passed when `SYNC_VIDEOWALL_ENABLED=false` and deployment was redeployed.
-  - `qa:sync:on` passed after restoring `SYNC_VIDEOWALL_ENABLED=true` and redeploying.
+  - Production Playwright QA passed against the production deployment.
+  - Sync validation required redeploys when toggling `SYNC_VIDEOWALL_ENABLED`.
 
 ## Canonical Production Baseline (Feb 19, 2026)
 - Branch: `master`
 - Commit source of truth: latest successful `origin/master` deployment
-- Active aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.
+- Primary verification URL is `https://signage-repo-dc5s.vercel.app` (custom domains such as `https://senaldigital.xyz` may alias the same deployment).
 - Repository history was sanitized after secret exposure; all local clones must sync with `fetch + hard reset` (or fresh clone) before continuing.
 
 ## Canonical Deployment Rules (Updated Feb 20, 2026)

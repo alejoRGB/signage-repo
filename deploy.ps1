@@ -83,6 +83,7 @@ if ($LASTEXITCODE -ne 0) {
 $FilesToCopy = @(
     ".\player\player.py",
     ".\player\sync.py",
+    ".\player\lan_sync.py",
     ".\player\videowall_controller.py",
     ".\player\state_machine.py",
     ".\player\videowall_drift.py",
@@ -128,6 +129,13 @@ if ($LASTEXITCODE -eq 0) {
     ssh "$User@$PlayerIp" "mkdir -p $TargetDir/lua"
     if (Test-Path ".\player\lua\videowall_sync.lua") {
         scp ".\player\lua\videowall_sync.lua" "$User@$PlayerIp`:$TargetDir/lua/"
+    }
+
+    # Normalize line endings on remote scripts copied from Windows checkouts (CRLF -> LF)
+    Write-Host "Normalizing remote script line endings (LF)..." -ForegroundColor Cyan
+    ssh "$User@$PlayerIp" "find '$TargetDir' -type f \( -name '*.sh' -o -name '*.lua' \) -exec sed -i 's/\r`$//' {} \;"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Warning: failed to normalize some remote script line endings. Shell scripts may fail if they contain CRLF." -ForegroundColor Yellow
     }
     
     # Make scripts executable

@@ -27,6 +27,9 @@ python execution/run_tests.py e2e
 
 # Run QA Automation suite
 python execution/run_tests.py qa
+
+# Run Sync-focused validation set
+python execution/run_tests.py sync
 ```
 
 ### Step 2: Analyze Results
@@ -49,7 +52,9 @@ python execution/run_tests.py qa
 ## 4. Tools
 -   `execution/run_tests.py`: Main entry point.
 -   `execution/web_ops.py`: Underlying web commands.
--   `qa_automation/tests/`: E2E test files.
+-   `qa_automation/tests/production`: Production-oriented QA Playwright suite.
+-   `qa_automation/tests/local`: Local smoke E2E checks.
+-   `qa_automation/tests/visual`: Visual capture specs (manual evidence).
 
 ## 5. Reporting
 -   Summarize which tests failed and how they were fixed.

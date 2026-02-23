@@ -100,12 +100,12 @@
   - Keep rollback ready: set `SYNC_VIDEOWALL_ENABLED=false` and redeploy if health KPIs degrade.
 
 ## Canonical Notes (2026-02-19)
-- **QA Production Target:** canonical QA target for production checks is `https://senaldigital.xyz`.
-- **Sync Gate Rule Clarification:** `E2E_SYNC_MODE` selects tests only; runtime gate is `SYNC_VIDEOWALL_ENABLED` at deployment level.
+- **QA Production Target:** canonical QA target for production checks is `https://signage-repo-dc5s.vercel.app`.
+- **Sync Gate Rule Clarification:** test selection is driven by the command/config used (`execution/run_tests.py` scopes and `qa_automation` Playwright configs); runtime gate remains `SYNC_VIDEOWALL_ENABLED` at deployment level.
 - **Admin QA Coverage (Playwright):** canonical QA suite now includes `/admin` auth/authorization checks (redirect to admin login, invalid admin login, valid admin login, admin logout, and non-admin access boundary to `/admin`).
 - **Production Baseline (current):**
   - Canonical baseline is always the latest successful `master` deployment.
-  - Canonical URL aliases include `https://senaldigital.xyz` and `https://signage-repo-dc5s.vercel.app`.
+  - Primary verification URL is `https://signage-repo-dc5s.vercel.app` (custom domains may alias the same deployment).
 - **Repository Security Cleanup:** git history was sanitized after credential exposure. Any historical local clone must run fetch+hard reset (or a fresh clone) before resuming work.
 
 ## Canonical Notes (2026-02-20)

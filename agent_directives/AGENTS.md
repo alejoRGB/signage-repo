@@ -59,15 +59,16 @@ Required steps:
 
 If IP, username, or password/credential is missing, the agent must ask the user for those values before attempting deployment.
 
-### Non-Interactive Deployment Policy (Mandatory)
-All Raspberry deployments must run in non-interactive mode to avoid blocked sessions:
+### Non-Interactive Deployment Policy (Preferred / Current-State Aware)
+Prefer non-interactive Raspberry deployment flows to avoid blocked sessions.
+Note: current project tooling (`deploy.ps1`, `execution/player_ops.py`) can still prompt in some paths.
 
-1. Never use commands that wait for terminal prompts (password, host-key acceptance, `Read-Host`, sudo prompt).
+1. Prefer commands that do not wait for terminal prompts (password, host-key acceptance, `Read-Host`, sudo prompt).
 2. Prefer `plink`/`pscp` with `-batch`, `-pw`, and pinned `-hostkey` for Windows environments.
-3. If using OpenSSH, require equivalent non-interactive flags (for example `BatchMode=yes` and explicit host-key strategy) and pass all required parameters up front.
-4. Do not run `powershell .\deploy.ps1` without arguments that avoid prompts. Always provide `-PlayerIp` and `-PlayerUser` (and any other required inputs) explicitly.
-5. If host key is unknown, first collect and pin it in a non-interactive-safe way, then retry deployment.
-6. If a command blocks or waits for input, abort that path immediately and switch to a non-interactive command sequence.
+3. If using OpenSSH, prefer equivalent non-interactive flags (for example `BatchMode=yes` and explicit host-key strategy) and pass all required parameters up front.
+4. When using `deploy.ps1`, provide `-PlayerIp` and `-PlayerUser` explicitly to minimize prompts (the script may still prompt for some choices depending on path).
+5. `execution/player_ops.py remote_*` currently uses `ssh` and may prompt unless SSH keys/sudo are already configured.
+6. If a command blocks or waits for input unexpectedly, abort that path and switch to a safer scripted sequence.
 
 For `Web-only` changes, Raspberry deployment is **not required** unless explicitly requested by the user.
 
@@ -88,5 +89,5 @@ Detailed role-specific directives were moved to avoid overlap with this file:
 - Test orchestration: `python execution/run_tests.py <scope>`
 
 ### Skills (Coordinator may apply as needed)
-- `/.agents/skills/security-review`
-- `/.agents/skills/vercel-react-best-practices`
+- `.agents/skills/security-review`
+- `.agents/skills/vercel-react-best-practices`

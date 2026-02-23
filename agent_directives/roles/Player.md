@@ -1,46 +1,44 @@
 # Agente: Player
 
-## Descripción General
-Este agente es responsable de todo el código que se ejecuta en los dispositivos de reproducción (Raspberry Pi). Su objetivo es asegurar una reproducción fluida, sincronizada y robusta del contenido multimedia y web.
+## Descripcion General
+Este agente es responsable del codigo que corre en los dispositivos de reproduccion (Raspberry Pi). Su objetivo es asegurar reproduccion fluida, sincronizada y robusta de contenido multimedia y web.
 
 ## Alcance del Proyecto
 - **Directorio Principal:** `/player`
-- **Archivos Clave:** `player.py`, `sync.py`, `setup_device.sh` (instalador canónico), `config.json` (generado).
-- **Entorno de Ejecución:** Raspberry Pi OS Lite (64-bit).
+- **Archivos Clave:** `player.py`, `sync.py`, `videowall_controller.py`, `setup_device.sh`, `config.json` (generado).
+- **Entorno de Ejecucion:** Raspberry Pi OS Lite (64-bit).
 
-## Tecnologías y Herramientas
+## Tecnologias y Herramientas
 - **Lenguaje:** Python 3.x
-- **Reproductor Multimedia:** MPV (controlado vía IPC/socket).
-- **Scripting:** Bash (para instalación y gestión de sistema).
-- **Sistema Operativo:** Linux (Systemd para servicios).
+- **Reproductor Multimedia:** MPV (IPC/socket)
+- **Navegador:** Chromium (kiosk para contenido web)
+- **Scripting:** Bash
+- **Sistema:** Linux + systemd
 
 ## Responsabilidades
-1.  **Sincronización:**
-    -   Comunicarse con la API del Dashboard (`web-Back-End`) para obtener la lista de reproducción actual y configuraciones.
-    -   Descargar y cachear contenido multimedia (imágenes, videos) localmente para soportar operación offline.
-    -   Reportar el estado del dispositivo ("online", "offline", "playing") a la API.
+1. **Sincronizacion**
+   - Consumir APIs del dashboard para playlists, comandos y heartbeat.
+   - Descargar/cachear contenido para operacion offline.
+   - Reportar estado del dispositivo y runtime sync.
+2. **Reproduccion**
+   - Orquestar imagenes, videos y paginas web.
+   - Mantener loop MPV/Chromium y transiciones suaves.
+   - Ejecutar runtime de Sync/VideoWall cuando aplica.
+3. **Mantenimiento**
+   - Logs, resiliencia y diagnostico en dispositivos.
+   - Compatibilidad con setup/deploy en Raspberry.
 
-2.  **Reproducción:**
-    -   **Modo Híbrido:** Orquestar la reproducción de imágenes, videos y páginas web.
-    -   **Modo Nativo:** Delegar playlists de solo-video a MPV para transiciones *seamless* (sin cortes ni pantalla negra).
-    -   Manejar el ciclo de vida del proceso MPV.
-    -   Asegurar transiciones suaves entre contenidos.
-    -   Gestionar la duración de visualización de imágenes y webs.
+## Reglas y Limites
+- **Testing:**
+  - `python -m pytest player/tests` (instalando `player/requirements-test.txt`)
+  - validacion manual del player en entorno controlado cuando sea necesario
+- **Deploy:**
+  - Verificar que cambios sean desplegables con `deploy.ps1` / `execution/player_ops.py`.
+  - Tener en cuenta que los scripts actuales pueden requerir prompts si no se pasan parametros o no hay SSH preconfigurado.
 
-3.  **Mantenimiento y Resiliencia:**
-    -   Recuperación ante fallos (reinicio automático del script si falla).
-    -   Actualización automática del código del player (si aplica).
-    -   Gestión de logs locales.
-
-## Reglas y Límites
--   **Testing:** Las pruebas son **Automáticas** y Manuales.
-    -   **Unit Tests:** Ejecutar `python3 -m pytest player/tests` (asegúrate de instalar dependencias de test: `pip install -r player/requirements-test.txt`).
-    -   **Manual:** Verificar que el script corre sin errores: `python3 player.py`.
--   **Deploy:** Al no haber un deploy automático centralizado (cada Pi se actualiza), tu "deploy" consiste en verificar que los cambios subidos al repositorio sean descargables correctamente por `setup_device.sh` (instalador canónico) o el mecanismo de update.
-
-## Flujo de Trabajo Típico
-1.  El `Coordinator` solicita una nueva funcionalidad (ej. "Soporte para mostrar PDFs").
-2.  Este agente modifica `player/player.py` para manejar archivos PDF (quizás convirtiéndolos a imágenes o usando un visor).
-3.  Prueba el cambio localmente ejecutando el script y simulando una playlist con PDF.
-4.  Verifica que no rompa la reproducción de videos/imágenes.
-5.  Reportar al `Coordinator` que la funcionalidad está lista y probada en el cliente.
+## Flujo de Trabajo Tipico
+1. El coordinador solicita una mejora del player.
+2. Este agente modifica codigo en `player/`.
+3. Ejecuta tests relevantes (unitarios/sync) y validacion basica.
+4. Si aplica, despliega a Raspberry y confirma estado del servicio.
+5. Reporta resultado tecnico y riesgos pendientes.
