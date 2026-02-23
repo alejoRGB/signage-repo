@@ -171,6 +171,42 @@ class Player:
         else:
             logging.warning("[PLAYER] unclutter not found. Mouse will be visible.")
 
+    def prepare_chromium_profile(self, user_data_dir: str):
+        """Set Chromium profile prefs to avoid UI prompts (e.g., translate bar) in kiosk mode."""
+        try:
+            default_dir = os.path.join(user_data_dir, "Default")
+            os.makedirs(default_dir, exist_ok=True)
+
+            prefs_path = os.path.join(default_dir, "Preferences")
+            prefs = {}
+
+            if os.path.exists(prefs_path):
+                try:
+                    with open(prefs_path, "r", encoding="utf-8") as f:
+                        prefs = json.load(f)
+                except Exception as e:
+                    logging.warning(f"[MIXED_PLAYER] Failed reading Chromium preferences (will recreate): {e}")
+                    prefs = {}
+
+            translate_prefs = prefs.get("translate")
+            if not isinstance(translate_prefs, dict):
+                translate_prefs = {}
+
+            # Disable browser translation offers/prompts in signage kiosk mode.
+            translate_prefs["enabled"] = False
+            translate_prefs["offer_translate_enabled"] = False
+            prefs["translate"] = translate_prefs
+
+            if not isinstance(prefs.get("translate_site_blacklist"), list):
+                prefs["translate_site_blacklist"] = []
+            if "*" not in prefs["translate_site_blacklist"]:
+                prefs["translate_site_blacklist"].append("*")
+
+            with open(prefs_path, "w", encoding="utf-8") as f:
+                json.dump(prefs, f, separators=(",", ":"))
+        except Exception as e:
+            logging.warning(f"[MIXED_PLAYER] Failed to prepare Chromium profile preferences: {e}")
+
     def generate_m3u(self, playlist: Dict) -> bool:
         """Generate M3U playlist file for MPV"""
         try:
@@ -647,18 +683,27 @@ class Player:
                                 no_sandbox_override = os.getenv("ALLOW_CHROMIUM_NO_SANDBOX", "").lower() in {"1", "true", "yes"}
                                 use_no_sandbox = is_root or no_sandbox_override
 
+                                user_data_dir = os.path.join(os.path.expanduser('~'), '.config/chromium-signage-temp')
+                                self.prepare_chromium_profile(user_data_dir)
+
                                 cmd = [
                                     browser_exec,
                                     "--kiosk",
                                     f"--app={url}",
                                     "--noerrdialogs",
                                     "--disable-infobars",
+                                    "--disable-translate",
+                                    "--disable-features=Translate,TranslateUI",
+                                    "--disable-component-extensions-with-background-pages",
+                                    "--lang=en-US",
+                                    "--no-first-run",
+                                    "--no-default-browser-check",
                                     "--check-for-update-interval=31536000",
                                     "--disable-gpu",
                                     "--disable-software-rasterizer",
                                     "--disable-dev-shm-usage",
                                     "--password-store=basic",
-                                    f"--user-data-dir={os.path.join(os.path.expanduser('~'), '.config/chromium-signage-temp')}"
+                                    f"--user-data-dir={user_data_dir}"
                                 ]
 
                                 if use_no_sandbox:

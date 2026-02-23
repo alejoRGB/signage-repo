@@ -145,6 +145,15 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Installing/Verifying Dependencies (this may take a minute)..." -ForegroundColor Cyan
     ssh "$User@$PlayerIp" "bash $TargetDir/install_dependencies.sh"
 
+    # Install Chromium managed policy to disable translation prompts globally
+    Write-Host "Installing Chromium policy (disable translate prompts)..." -ForegroundColor Cyan
+    ssh "$User@$PlayerIp" 'sudo mkdir -p /etc/chromium/policies/managed /etc/chromium-browser/policies/managed'
+    ssh "$User@$PlayerIp" 'echo "{\"TranslateEnabled\": false}" | sudo tee /etc/chromium/policies/managed/signage-policy.json >/dev/null'
+    ssh "$User@$PlayerIp" 'echo "{\"TranslateEnabled\": false}" | sudo tee /etc/chromium-browser/policies/managed/signage-policy.json >/dev/null'
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Warning: failed to apply Chromium managed policy. Translate prompt may still appear." -ForegroundColor Yellow
+    }
+
     # Setup Wallpaper
     Write-Host "Setting Black Wallpaper..." -ForegroundColor Cyan
     ssh "$User@$PlayerIp" "python3 $TargetDir/setup_wallpaper.py"

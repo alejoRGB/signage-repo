@@ -12,6 +12,7 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
 - **Lenguaje:** Python 3.x
 - **Reproductor Multimedia:** MPV (IPC/socket)
 - **Navegador:** Chromium (kiosk para contenido web)
+- **Politicas de navegador:** Managed policy (`TranslateEnabled=false`) para bloquear UI de traduccion en modo kiosco
 - **Scripting:** Bash
 - **Sistema:** Linux + systemd
 
@@ -36,6 +37,7 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
   - Verificar que cambios sean desplegables con `deploy.ps1` / `execution/player_ops.py`.
   - Tener en cuenta que los scripts actuales pueden requerir prompts si no se pasan parametros o no hay SSH preconfigurado.
   - Si `signage-player` queda `inactive/failed`, revisar `journalctl -u signage-player` antes de asumir un problema de display o red.
+  - Para cambios de Chromium/kiosk web, preservar el hardening anti-traduccion en `player.py` (flags + prefs) y en scripts de deploy/install (managed policy).
 
 ## Flujo de Trabajo Tipico
 1. El coordinador solicita una mejora del player.

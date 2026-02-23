@@ -110,6 +110,13 @@ else
     echo "[INSTALLER] WARNING: chronyc tracking failed. Sync mode will not enter READY while clock is critical."
 fi
 
+# Disable Chromium translation UI globally (managed policy, independent of page language).
+echo "[INSTALLER] Installing Chromium managed policy (disable translate prompts)..."
+for POLICY_DIR in /etc/chromium/policies/managed /etc/chromium-browser/policies/managed; do
+    sudo mkdir -p "$POLICY_DIR"
+    echo '{"TranslateEnabled": false}' | sudo tee "$POLICY_DIR/signage-policy.json" >/dev/null
+done
+
 # 7. Setup Service
 echo "[INSTALLER] Configuring Systemd..."
 cat <<EOF | sudo tee /etc/systemd/system/signage-player.service

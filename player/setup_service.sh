@@ -12,6 +12,21 @@ DIR="$HOME_DIR/signage-player"
 echo "Configuring Digital Signage Player Service for user: $CURRENT_USER"
 echo "Player directory: $DIR"
 
+# Install managed Chromium policy to disable translation UI/prompts in kiosk mode.
+install_chromium_policy() {
+    local policy_json='{"TranslateEnabled": false}'
+    local policy_dirs=(
+        "/etc/chromium/policies/managed"
+        "/etc/chromium-browser/policies/managed"
+    )
+
+    echo "Installing Chromium managed policy (disable translate prompts)..."
+    for dir in "${policy_dirs[@]}"; do
+        sudo mkdir -p "$dir"
+        echo "$policy_json" | sudo tee "$dir/signage-policy.json" >/dev/null
+    done
+}
+
 # Create systemd service file
 sudo bash -c "cat > $SERVICE_FILE" <<EOL
 [Unit]
@@ -44,6 +59,9 @@ if ! command -v chronyc >/dev/null 2>&1; then
 fi
 sudo systemctl enable chrony
 sudo systemctl restart chrony || true
+
+# Disable Chromium translation UI globally (applies regardless of page language).
+install_chromium_policy
 
 # Reload daemon and enable service
 echo "Reloading systemd..."
