@@ -83,8 +83,8 @@ For `Web-only` changes, Raspberry deployment is **not required** unless explicit
 - **Maintain** high-level roadmap (`task.md`).
 
 ### Available Skills
-- **Security Review** (`.agent/skills/security-review`): Guidelines for secure coding (Auth, Zod, Secrets).
-- **Performance Review** (`.agent/skills/vercel-react-best-practices`): Guidelines for React/Next.js optimization (Server Components, Bundle Size).
+- **Security Review** (`.agents/skills/security-review`): Guidelines for secure coding (Auth, Zod, Secrets).
+- **Performance Review** (`.agents/skills/vercel-react-best-practices`): Guidelines for React/Next.js optimization (Server Components, Bundle Size).
 
 ---
 

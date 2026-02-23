@@ -8,7 +8,6 @@ import os
 import json
 import subprocess
 import time
-import signal
 import threading
 from typing import Dict, List, Optional
 from sync import SyncManager
@@ -29,7 +28,7 @@ logging.basicConfig(
 )
 
 # --- MPV SKILL CONFIGURATION ---
-# See .agent/skills/mpv-playback/SKILL.md
+# See .agents/skills/mpv-playback/SKILL.md
 ENABLE_AUDIO = False 
 # -------------------------------
 
