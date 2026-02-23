@@ -103,6 +103,12 @@ npx playwright test tests/production/4_sync_failover.spec.ts
     - `/etc/chromium-browser/policies/managed/`
   - Policy includes `TranslateEnabled=false` plus blocking defaults for notifications, geolocation, media capture (camera/mic), and popups.
   - This suppresses translation bars and common browser permission prompts reliably across page languages and Chromium variants on Raspberry Pi.
+- **Player hardware decode auto-selection (implemented + validated on Raspberry Pi 3/4):**
+  - Player runtime now selects MPV `hwdec` backend by capability detection (`player/hwaccel.py`) instead of hardcoding by Raspberry model.
+  - Validated selection on current fleet: `v4l2m2m-copy` on RPi 3 and RPi 4 with KMS/DRM + V4L2 mem2mem stack.
+  - `mpv-videowall.conf` no longer owns `hwdec`; runtime Python flags own `--gpu-context=auto` + `--hwdec=<selected>`.
+  - `deploy.ps1` and `player/setup_device.sh` must include `player/hwaccel.py`.
+  - `player/install_dependencies.sh` and `player/setup_device.sh` now include `v4l-utils` for diagnostics (`v4l2-ctl`).
 
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
 - Production QA runs use:
@@ -211,6 +217,10 @@ chronyc tracking
 ## Validation
 - **Status Check:** `systemctl status signage-player`.
 - **Logs:** `journalctl -u signage-player -f`.
+- **Hardware Decode Verification (player changes touching MPV/hwdec):**
+  - Confirm `[HWACCEL] selected=...` in `journalctl -u signage-player`.
+  - Confirm live `mpv` process command line includes `--gpu-context=auto --hwdec=<backend>`.
+  - Confirm MPV IPC property `hwdec-current` via `~/signage-player/mpv.sock` during active video playback.
 
 ## Troubleshooting
 ### Time Sync

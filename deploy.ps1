@@ -82,6 +82,7 @@ if ($LASTEXITCODE -ne 0) {
 # Copy files (preserve remote config.json by default to avoid resetting pairing)
 $FilesToCopy = @(
     ".\player\player.py",
+    ".\player\hwaccel.py",
     ".\player\sync.py",
     ".\player\lan_sync.py",
     ".\player\videowall_controller.py",

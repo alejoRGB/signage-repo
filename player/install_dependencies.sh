@@ -10,7 +10,7 @@ echo "[INSTALLER] Checking and Installing Dependencies..."
 echo "[INSTALLER] Updating apt..."
 sudo apt-get update -y
 
-COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7 python3-pil python3-requests chrony"
+COMMON_DEPS="git mpv python3-pip pcmanfm unclutter feh libopenjp2-7 python3-pil python3-requests chrony v4l-utils"
 echo "[INSTALLER] Installing: $COMMON_DEPS"
 sudo apt-get install -y $COMMON_DEPS
 

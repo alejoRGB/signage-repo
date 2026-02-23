@@ -10,6 +10,7 @@ import subprocess
 import time
 import threading
 from typing import Dict, List, Optional
+from hwaccel import probe_and_select_mpv_hwaccel
 from sync import SyncManager
 from state_machine import SyncSessionContext, SyncStateMachine
 from videowall_controller import VideowallController
@@ -55,6 +56,7 @@ class Player:
         self.current_playlist_id_for_preview = None
         self.current_content_name_for_preview = None
         self.preview_thread = None
+        self.hwaccel_profile = probe_and_select_mpv_hwaccel()
         
         # Ensure DISPLAY is set
         if "DISPLAY" not in os.environ:
@@ -345,6 +347,19 @@ class Player:
         target_seconds = max(0.0, float(phase_ms) / 1000.0)
         return self.send_ipc_command(["seek", target_seconds, "absolute", "exact"])
 
+    def _mpv_hw_flags(self) -> List[str]:
+        profile = getattr(self, "hwaccel_profile", None)
+        if profile is None:
+            return ["--gpu-context=auto", "--hwdec=auto-safe"]
+        return profile.mpv_flags()
+
+    def _append_audio_flags(self, cmd: List[str], gapless: bool = False) -> None:
+        if ENABLE_AUDIO:
+            if gapless:
+                cmd.append("--gapless-audio=yes")
+            return
+        cmd.append("--audio=no")
+
     def start_sync_mpv(self, context: SyncSessionContext) -> bool:
         """Start MPV for videowall sync prepare flow with pause=yes."""
         local_path = context.local_path
@@ -370,7 +385,7 @@ class Player:
             "--no-input-default-bindings",
             "--input-vo-keyboard=no",
             "--cursor-autohide=always",
-            "--hwdec=auto-safe",
+            *self._mpv_hw_flags(),
             "--loop-file=inf",
             "--pause=yes",
             "--force-window=immediate",
@@ -380,8 +395,7 @@ class Player:
             f"--input-ipc-server={self.socket_path}",
         ]
 
-        if not ENABLE_AUDIO:
-            cmd.append("--audio=no")
+        self._append_audio_flags(cmd)
 
         videowall_conf = os.path.join(os.path.dirname(__file__), "mpv-videowall.conf")
         if os.path.exists(videowall_conf):
@@ -430,7 +444,7 @@ class Player:
                 "--no-input-default-bindings",
                 "--input-vo-keyboard=no",
                 "--cursor-autohide=always",
-                "--hwdec=auto-safe",
+                *self._mpv_hw_flags(),
                 "--image-display-duration=10",
                 "--loop-playlist=inf",
                 "--prefetch-playlist=yes",
@@ -443,8 +457,7 @@ class Player:
                 "--really-quiet",
             ]
 
-            if not ENABLE_AUDIO:
-                cmd.append("--audio=no")
+            self._append_audio_flags(cmd)
 
             cmd.append(f"--input-ipc-server={self.socket_path}")
             
@@ -520,19 +533,24 @@ class Player:
                 "--demuxer-max-bytes=150M",
                 "--demuxer-max-back-bytes=50M",
                 "--hr-seek=yes",
-                "--gpu-context=auto",
+                *self._mpv_hw_flags(),
             ]
             
-            if ENABLE_AUDIO:
-                cmd.append("--gapless-audio=yes")
-            else:
-                cmd.append("--audio=no")
+            self._append_audio_flags(cmd, gapless=True)
 
-            
-            cmd.append("--input-ipc-server=/tmp/mpv-socket")
+            if os.path.exists(self.socket_path):
+                try:
+                    os.remove(self.socket_path)
+                except Exception as e:
+                    logging.warning(f"[NATIVE_MPV] Could not remove old socket {self.socket_path}: {e}")
+
+            cmd.append(f"--input-ipc-server={self.socket_path}")
 
             self.mpv_process = subprocess.Popen(cmd)
-            logging.info("[NATIVE_MPV] MPV started with native playlist loop.")
+            if self.wait_for_socket():
+                logging.info("[NATIVE_MPV] MPV started with native playlist loop and IPC socket ready.")
+            else:
+                logging.warning("[NATIVE_MPV] MPV started but IPC socket was not ready in time.")
         except Exception as e:
             logging.error(f"[NATIVE_MPV] Failed to start MPV: {e}")
             return
@@ -829,7 +847,7 @@ class Player:
                                     "--no-terminal",
                                     f"--loop-file=inf" if m_type == 'image' else "",
                                     f"--input-ipc-server={self.socket_path}",
-                                    "--hwdec=auto-safe",
+                                    *self._mpv_hw_flags(),
                                     "--video-sync=display-resample",
                                     "--cache=yes",
                                     "--cache-secs=10",
@@ -837,10 +855,7 @@ class Player:
                                     local_path
                                 ]
                                 
-                                if ENABLE_AUDIO:
-                                    cmd.append("--gapless-audio=yes")
-                                else:
-                                    cmd.append("--audio=no")
+                                self._append_audio_flags(cmd, gapless=True)
 
                                 cmd = [c for c in cmd if c]
                                 logging.info(f"[MIXED_PLAYER] Starting MPV with command: {' '.join(cmd)}")

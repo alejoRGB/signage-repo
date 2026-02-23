@@ -6,6 +6,7 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
 ## Alcance del Proyecto
 - **Directorio Principal:** `/player`
 - **Archivos Clave:** `player.py`, `sync.py`, `lan_sync.py`, `videowall_controller.py`, `setup_device.sh`, `config.json` (generado).
+  - Incluye `hwaccel.py` para deteccion/seleccion runtime de `mpv --hwdec`.
 - **Entorno de Ejecucion:** Raspberry Pi OS Lite (64-bit).
 
 ## Tecnologias y Herramientas
@@ -25,6 +26,7 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
    - Orquestar imagenes, videos y paginas web.
    - Mantener loop MPV/Chromium y transiciones suaves.
    - Ejecutar runtime de Sync/VideoWall cuando aplica.
+   - Preservar seleccion dinamica de aceleracion por hardware (agnostica al modelo Raspberry) en todas las rutas de MPV.
 3. **Mantenimiento**
    - Logs, resiliencia y diagnostico en dispositivos.
    - Compatibilidad con setup/deploy en Raspberry.
@@ -38,6 +40,10 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
   - Tener en cuenta que los scripts actuales pueden requerir prompts si no se pasan parametros o no hay SSH preconfigurado.
   - Si `signage-player` queda `inactive/failed`, revisar `journalctl -u signage-player` antes de asumir un problema de display o red.
   - Para cambios de Chromium/kiosk web, preservar el hardening anti-prompts en `player.py` (flags + prefs) y en scripts de deploy/install (managed policy).
+  - Para cambios de MPV/hwdec, verificar en Raspberry:
+    - log `[HWACCEL] selected=...`
+    - cmdline de `mpv` con `--gpu-context=auto --hwdec=...`
+    - IPC `hwdec-current` en `~/signage-player/mpv.sock`
 
 ## Flujo de Trabajo Tipico
 1. El coordinador solicita una mejora del player.

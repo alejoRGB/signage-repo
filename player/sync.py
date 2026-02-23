@@ -349,6 +349,7 @@ class SyncManager:
                     "healthy": False,
                     "critical": True,
                     "offset_ms": None,
+                    "cpu_temp": None,
                     "raw": result.stdout + result.stderr,
                     "throttled": False,
                     "health_score": 0.0,
@@ -394,6 +395,22 @@ class SyncManager:
             except Exception:
                 throttled = False
 
+            cpu_temp = None
+            try:
+                temp_result = subprocess.run(
+                    ["vcgencmd", "measure_temp"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                    check=False,
+                )
+                if temp_result.returncode == 0:
+                    temp_match = re.search(r"temp=([-+]?\d+(?:\.\d+)?)", temp_result.stdout)
+                    if temp_match:
+                        cpu_temp = float(temp_match.group(1))
+            except Exception:
+                cpu_temp = None
+
             healthy_leap = (leap_status or "").strip().lower() == "normal"
             healthy_offset = offset_ms is not None and abs(offset_ms) <= max_offset_ms
             healthy = healthy_leap and healthy_offset and not throttled
@@ -413,6 +430,7 @@ class SyncManager:
                 "healthy": healthy,
                 "critical": not healthy,
                 "offset_ms": offset_ms,
+                "cpu_temp": cpu_temp,
                 "leap_status": leap_status,
                 "raw": tracking_output,
                 "throttled": throttled,
@@ -424,6 +442,7 @@ class SyncManager:
                 "healthy": False,
                 "critical": True,
                 "offset_ms": None,
+                "cpu_temp": None,
                 "error": str(error),
                 "throttled": False,
                 "health_score": 0.0,

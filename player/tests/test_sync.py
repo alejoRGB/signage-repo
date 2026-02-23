@@ -60,12 +60,14 @@ def test_clock_sync_health_parses_leap_status_and_marks_healthy(tmp_path, mocker
 
     mock_chronyc = Mock(returncode=0, stdout=chronyc_output, stderr="")
     mock_throttled = Mock(returncode=0, stdout="throttled=0x0\n", stderr="")
-    mocker.patch("subprocess.run", side_effect=[mock_chronyc, mock_throttled])
+    mock_temp = Mock(returncode=0, stdout="temp=61.4'C\n", stderr="")
+    mocker.patch("subprocess.run", side_effect=[mock_chronyc, mock_throttled, mock_temp])
 
     health = manager.get_clock_sync_health(max_offset_ms=50.0)
 
     assert health["leap_status"] == "Normal"
     assert health["offset_ms"] == pytest.approx(0.33443, rel=1e-6)
+    assert health["cpu_temp"] == pytest.approx(61.4, rel=1e-6)
     assert health["healthy"] is True
     assert health["critical"] is False
 

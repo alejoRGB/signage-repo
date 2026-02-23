@@ -850,6 +850,7 @@ class VideowallController:
             "drift_ms": self._last_drift_ms if self._last_drift_ms is not None else 0.0,
             "resync_count": self._resync_count,
             "clock_offset_ms": clock_health.get("offset_ms"),
+            "cpu_temp": clock_health.get("cpu_temp"),
             "throttled": bool(clock_health.get("throttled", False)),
             "health_score": clock_health.get("health_score"),
             "avg_drift_ms": avg_drift_ms,
