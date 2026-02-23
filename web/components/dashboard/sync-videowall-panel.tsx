@@ -46,6 +46,7 @@ type ActiveSessionDevice = {
     avgDriftMs?: number | null;
     maxDriftMs?: number | null;
     resyncRate?: number | null;
+    cpuTemp?: number | null;
     device: {
         id: string;
         name: string;
@@ -135,6 +136,14 @@ function heartbeatAgeLabel(lastSeenAt?: string | null) {
 
     const elapsedMinutes = Math.floor(elapsedSeconds / 60);
     return `${elapsedMinutes}m ago`;
+}
+
+function cpuTempLabel(cpuTemp?: number | null) {
+    if (typeof cpuTemp !== "number" || Number.isNaN(cpuTemp)) {
+        return "Temperatura: n/a";
+    }
+
+    return `Temperatura: ${cpuTemp.toFixed(1)}°C`;
 }
 
 function getMediaDurationMs(media?: SyncMediaItem | null) {
@@ -1470,7 +1479,10 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         className="rounded-lg border border-slate-200 bg-white px-3 py-1.5"
                                     >
                                         <div className="mb-0.5 flex items-center justify-between gap-2">
-                                            <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
+                                                <p className="text-xs text-slate-500">{cpuTempLabel(device.cpuTemp)}</p>
+                                            </div>
                                             <div className="flex items-center gap-1.5">
                                                 <span
                                                     data-testid={`sync-device-correction-${device.deviceId}`}

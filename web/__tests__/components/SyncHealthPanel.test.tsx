@@ -54,6 +54,7 @@ describe("Sync health panel", () => {
                                         avgDriftMs: 12.3,
                                         maxDriftMs: 35.8,
                                         clockOffsetMs: 4.2,
+                                        cpuTemp: 67.4,
                                         healthScore: 0.95,
                                         resyncCount: 2,
                                         resyncRate: 0.1,
@@ -90,12 +91,14 @@ describe("Sync health panel", () => {
         expect(await screen.findByTestId("sync-health-panel")).toBeInTheDocument();
         expect(screen.queryByText("1. Devices")).not.toBeInTheDocument();
         expect(screen.queryByTestId("sync-step-next-btn")).not.toBeInTheDocument();
-        expect(await screen.findByText("drift avg: 12.3ms")).toBeInTheDocument();
+        expect(await screen.findByText("Drift Average")).toBeInTheDocument();
+        expect(await screen.findByText("12.3ms")).toBeInTheDocument();
         expect(screen.queryByText(/drift max:/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/clock offset:/i)).not.toBeInTheDocument();
-        expect(screen.getByText("health: 0.95")).toBeInTheDocument();
+        expect(screen.queryByText(/health:/i)).not.toBeInTheDocument();
         expect(screen.getByText("Soft correction active")).toBeInTheDocument();
-        expect(screen.getByText("correction drift: 38.2ms")).toBeInTheDocument();
+        expect(screen.queryByText(/correction drift:/i)).not.toBeInTheDocument();
+        expect(screen.getByText("Temperatura: 67.4°C")).toBeInTheDocument();
         expect(screen.getByText(/last heartbeat:/i)).toBeInTheDocument();
     });
 
@@ -176,9 +179,9 @@ describe("Sync health panel", () => {
 
         const { unmount } = render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
 
-        expect(await screen.findByText("drift avg: 12.3ms")).toBeInTheDocument();
+        expect(await screen.findByText("12.3ms")).toBeInTheDocument();
         await new Promise((resolve) => setTimeout(resolve, 1800));
-        expect(await screen.findByText("drift avg: 28.4ms")).toBeInTheDocument();
+        expect(await screen.findByText("28.4ms")).toBeInTheDocument();
         unmount();
     });
 });
