@@ -1,10 +1,10 @@
-# Agent Instructions
+# Agent Instructions (Shared Bootstrap)
 
 This repository uses a 3-layer workflow to keep execution reliable.
 
 ## Layer 1: Directives (What to do)
-- SOPs live in `directives/`.
-- Start with `directives/AGENTS.md`, then apply directive-specific docs like `directives/auto_qa.md` and `directives/workflow_git.md`.
+- SOPs live in `agent_directives/`.
+- Start with `agent_directives/AGENTS.md`, then apply directive-specific docs like `agent_directives/auto_qa.md` and `agent_directives/workflow_git.md`.
 
 ## Layer 2: Orchestration (Decision making)
 - Classify each request by domain: `web/`, `player/`, or QA.
@@ -21,11 +21,11 @@ This repository uses a 3-layer workflow to keep execution reliable.
 ## Operating Principles
 1. Check existing tools first before creating new scripts.
 2. Keep docs aligned with canonical project context:
-   - `skills/project/ARCHITECTURE.md`
-   - `skills/project/DEPLOYMENT.md`
-   - `skills/project/PROJECT.md`
+   - `agent_directives/context/project/ARCHITECTURE.md`
+   - `agent_directives/context/project/DEPLOYMENT.md`
+   - `agent_directives/context/project/PROJECT.md`
 3. Never commit secrets or local environment files.
-4. Use `master` as the main branch and follow `directives/workflow_git.md` for deploy flow.
+4. Use `master` as the main branch and follow `agent_directives/workflow_git.md` for deploy flow.
 
 ## Scope Note
 This file is intentionally project-specific. Do not include generic webhook/cloud-automation instructions unless explicitly added to this repository.

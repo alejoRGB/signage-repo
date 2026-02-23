@@ -137,7 +137,7 @@
     - request origin (`new URL(request.url).origin`).
   - This avoids localhost URL leakage when public app URL env is unset.
 - **Sync QA Coverage (expanded):**
-  - Added opt-in chaos test `qa_automation/tests/4_sync_failover.spec.ts` for LAN failover validation (`SYNC-E2E-05`).
+  - Added opt-in chaos test `qa_automation/tests/production/4_sync_failover.spec.ts` for LAN failover validation (`SYNC-E2E-05`).
   - Test requires explicit enablement (`E2E_SYNC_FAILOVER_RUN=true`) plus per-master stop/start commands via env vars.
 - **Session Health UI (updated):**
   - Device cards keep a stable deterministic order.

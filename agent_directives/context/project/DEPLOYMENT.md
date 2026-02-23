@@ -80,14 +80,14 @@ npx prisma generate
   - `/api/device/sync` now falls back to request origin when `NEXT_PUBLIC_APP_URL` is unset.
   - Validation anchor: `web/__tests__/api/device-heartbeat-sync.test.ts`.
 - **QA failover chaos test (opt-in):**
-  - Added `qa_automation/tests/4_sync_failover.spec.ts`.
+  - Added `qa_automation/tests/production/4_sync_failover.spec.ts`.
   - Run manually only when explicitly enabled:
 ```powershell
 cd qa_automation
 $env:E2E_SYNC_FAILOVER_RUN="true"
 $env:E2E_SYNC_STOP_CMD_<MASTER_KEY>="<stop command>"
 $env:E2E_SYNC_START_CMD_<MASTER_KEY>="<start command>"
-npx playwright test tests/4_sync_failover.spec.ts
+npx playwright test tests/production/4_sync_failover.spec.ts
 ```
 
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
