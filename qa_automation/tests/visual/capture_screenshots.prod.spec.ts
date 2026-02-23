@@ -1,13 +1,17 @@
 import { test } from '@playwright/test';
 import path from 'path';
+import { mkdirSync } from 'node:fs';
 
-const SCREENSHOT_DIR = path.join(__dirname, '../../docs/screenshots');
+test.setTimeout(180_000);
+
+const SCREENSHOT_DIR = path.resolve(__dirname, '../../../docs/screenshots');
 const BASE_URL = process.env.E2E_BASE_URL || 'https://signage-repo-dc5s.vercel.app';
 const E2E_USERNAME = process.env.E2E_USERNAME;
 const E2E_PASSWORD = process.env.E2E_PASSWORD;
 
 test('capture production ui screenshots', async ({ page }) => {
     test.skip(!E2E_USERNAME || !E2E_PASSWORD, 'Skipping screenshots: set E2E_USERNAME and E2E_PASSWORD');
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
     // Use a larger viewport to ensure good screenshots
     await page.setViewportSize({ width: 1280, height: 800 });

@@ -1,19 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
-import path from 'path';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env
-dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
-    testDir: './e2e',
+    testDir: './tests/local',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
     reporter: 'html',
     use: {
-        baseURL: 'http://localhost:3000', // Assuming dev server runs on 3000
+        baseURL: 'http://localhost:3000',
         trace: 'on-first-retry',
     },
     projects: [
@@ -22,9 +17,8 @@ export default defineConfig({
             use: { ...devices['Desktop Chrome'] },
         },
     ],
-    /* Run your local dev server before starting the tests */
     webServer: {
-        command: 'npm run dev',
+        command: 'npm --prefix ../web run dev',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000,

@@ -3,12 +3,14 @@
 Este directorio contiene la suite de QA automatizada (Playwright) y referencias para validaciones manuales del modulo Sync.
 
 ## Estructura
-- `tests/1_auth.spec.ts`: pruebas actuales de autenticacion.
-- `tests/2_admin.spec.ts`: pruebas de autenticacion/autorizacion para `/admin`.
-- `tests/3_sync.spec.ts`: pruebas funcionales del wizard/panel Sync.
-- `tests/4_sync_failover.spec.ts`: prueba de caos para failover LAN (opt-in).
+- `tests/production/`: suite QA E2E contra entorno real (`/login`, `/admin`, Sync, failover).
+- `tests/local/`: smoke tests E2E para validar la app local (`web`) con `npm run dev`.
+- `tests/visual/`: capturas UI contra produccion (manual/soporte visual).
+- `plans/testsprite/`: planes/artefactos de QA generados (no ejecutables).
 - `package.json`: dependencias y scripts de Playwright.
-- `playwright.config.ts`: configuracion global de Playwright.
+- `playwright.config.ts`: config QA contra produccion (default).
+- `playwright.local.config.ts`: config QA local con `webServer`.
+- `playwright.visual.config.ts`: config visual/screenshot con timeout extendido.
 - `../docs/sync_qa_runbook.md`: runbook manual de carga y caos para Sync (2/5/10/20 devices).
 
 ## Instalacion
@@ -26,7 +28,17 @@ npx playwright install --with-deps
 
 ### QA E2E (Playwright)
 ```powershell
-npx playwright test
+npm test
+```
+
+### QA E2E local (arranca `web` automaticamente)
+```powershell
+npm run test:local
+```
+
+### Capturas visuales de produccion
+```powershell
+npm run test:visual
 ```
 
 ### Solo failover LAN (opt-in)
@@ -36,7 +48,7 @@ La prueba `SYNC-E2E-05` no corre por defecto. Debes habilitarla y definir comand
 $env:E2E_SYNC_FAILOVER_RUN="true"
 $env:E2E_SYNC_STOP_CMD_RP4="plink -ssh -batch -hostkey ""ssh-ed25519 255 SHA256:..."" -pw 22 pi4@192.168.100.6 ""echo 22 | sudo -S systemctl stop signage-player"""
 $env:E2E_SYNC_START_CMD_RP4="plink -ssh -batch -hostkey ""ssh-ed25519 255 SHA256:..."" -pw 22 pi4@192.168.100.6 ""echo 22 | sudo -S systemctl start signage-player"""
-npx playwright test tests/4_sync_failover.spec.ts
+npx playwright test -c playwright.config.ts tests/production/4_sync_failover.spec.ts
 ```
 
 Variables:
