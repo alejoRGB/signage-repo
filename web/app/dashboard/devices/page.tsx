@@ -35,6 +35,21 @@ export default async function DevicesPage() {
                     name: true,
                 },
             },
+            syncSessionDevices: {
+                where: {
+                    cpuTemp: {
+                        not: null,
+                    },
+                },
+                select: {
+                    cpuTemp: true,
+                    updatedAt: true,
+                },
+                orderBy: {
+                    updatedAt: "desc",
+                },
+                take: 1,
+            },
         },
         orderBy: {
             createdAt: "desc",
@@ -43,6 +58,7 @@ export default async function DevicesPage() {
 
     // Transform devices to ensure name is string, dates are strings, and calculate status
     const formattedDevices = devices.map(d => {
+        const { syncSessionDevices, ...deviceBase } = d;
         // Calculate dynamic status based on lastSeenAt
         let status = "offline";
 
@@ -57,14 +73,17 @@ export default async function DevicesPage() {
             }
         }
 
+        const latestRuntime = syncSessionDevices[0] ?? null;
         return {
-            ...d,
+            ...deviceBase,
             name: d.name || "Unknown Device",
             status: d.status,
             connectivityStatus: status,
             lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
             createdAt: d.createdAt.toISOString(),
             updatedAt: d.updatedAt.toISOString(),
+            cpuTemp: latestRuntime?.cpuTemp ?? null,
+            cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
             activePlaylist: d.activePlaylist ? {
                 ...d.activePlaylist,
                 name: d.activePlaylist.name || "Unnamed Playlist"

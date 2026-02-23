@@ -41,6 +41,21 @@ export default async function DashboardPage() {
                         name: true,
                     },
                 },
+                syncSessionDevices: {
+                    where: {
+                        cpuTemp: {
+                            not: null,
+                        },
+                    },
+                    select: {
+                        cpuTemp: true,
+                        updatedAt: true,
+                    },
+                    orderBy: {
+                        updatedAt: "desc",
+                    },
+                    take: 1,
+                },
             },
             orderBy: {
                 createdAt: "asc",
@@ -106,15 +121,23 @@ export default async function DashboardPage() {
                 ))}
             </div>
 
-            <DevicePreviewGrid initialDevices={previewDevices.map((device) => ({
-                ...device,
-                createdAt: device.createdAt.toISOString(),
-                lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
-                connectivityStatus: device.lastSeenAt && (Date.now() - device.lastSeenAt.getTime()) < ONLINE_STALE_MS ? "online" : "offline",
-                contentPreview: device.currentContentName
-                    ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
-                    : null,
-            }))} />
+            <DevicePreviewGrid
+                initialDevices={previewDevices.map((device) => {
+                    const { syncSessionDevices, ...deviceBase } = device;
+                    const latestRuntime = syncSessionDevices[0] ?? null;
+                    return {
+                        ...deviceBase,
+                        createdAt: device.createdAt.toISOString(),
+                        lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
+                        connectivityStatus: device.lastSeenAt && (Date.now() - device.lastSeenAt.getTime()) < ONLINE_STALE_MS ? "online" : "offline",
+                        cpuTemp: latestRuntime?.cpuTemp ?? null,
+                        cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
+                        contentPreview: device.currentContentName
+                            ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
+                            : null,
+                    };
+                })}
+            />
         </div>
     );
 }

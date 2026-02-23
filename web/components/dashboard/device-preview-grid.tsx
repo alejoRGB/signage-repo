@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, FileVideo, Globe } from "lucide-react";
+import { ChevronDown, ChevronUp, FileVideo, Globe, Thermometer } from "lucide-react";
 
 type DashboardDevice = {
     id: string;
@@ -9,6 +9,8 @@ type DashboardDevice = {
     createdAt: string;
     lastSeenAt: string | null;
     connectivityStatus?: string;
+    cpuTemp?: number | null;
+    cpuTempUpdatedAt?: string | null;
     currentContentName?: string | null;
     contentPreview?: {
         type: string;
@@ -39,6 +41,34 @@ function isDeviceOnline(device: DashboardDevice) {
 
     if (!device.lastSeenAt) return false;
     return Date.now() - new Date(device.lastSeenAt).getTime() <= ONLINE_STALE_MS;
+}
+
+function cpuTempBadge(device: DashboardDevice) {
+    if (typeof device.cpuTemp !== "number" || Number.isNaN(device.cpuTemp)) {
+        return {
+            label: "Temp sin dato",
+            className: "border-gray-200 bg-gray-100 text-gray-500",
+        };
+    }
+
+    if (device.cpuTemp >= 75) {
+        return {
+            label: `${device.cpuTemp.toFixed(1)}°C`,
+            className: "border-rose-200 bg-rose-50 text-rose-700",
+        };
+    }
+
+    if (device.cpuTemp >= 65) {
+        return {
+            label: `${device.cpuTemp.toFixed(1)}°C`,
+            className: "border-amber-200 bg-amber-50 text-amber-700",
+        };
+    }
+
+    return {
+        label: `${device.cpuTemp.toFixed(1)}°C`,
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
 }
 
 export default function DevicePreviewGrid({
@@ -95,6 +125,7 @@ export default function DevicePreviewGrid({
                     const isExpanded = !!expandedById[device.id];
                     const online = isDeviceOnline(device);
                     const preview = device.contentPreview;
+                    const temp = cpuTempBadge(device);
 
                     return (
                         <div
@@ -110,9 +141,18 @@ export default function DevicePreviewGrid({
                                     <p className="truncate text-sm font-semibold text-gray-900">
                                         {device.name || "Unnamed Device"}
                                     </p>
-                                    <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${online ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"}`}>
-                                        {online ? "online" : "offline"}
-                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                        <p className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${online ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"}`}>
+                                            {online ? "online" : "offline"}
+                                        </p>
+                                        <p
+                                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${temp.className}`}
+                                            title={device.cpuTempUpdatedAt ? `Ultima lectura: ${new Date(device.cpuTempUpdatedAt).toLocaleString()}` : "Sin telemetria de temperatura"}
+                                        >
+                                            <Thermometer className="h-3 w-3" aria-hidden="true" />
+                                            {temp.label}
+                                        </p>
+                                    </div>
                                 </div>
                                 <span className="text-gray-500">
                                     {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

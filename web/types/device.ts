@@ -14,6 +14,8 @@ export type Device = {
     previewImageUrl?: string | null;
     previewCapturedAt?: string | Date | null;
     connectivityStatus?: string;
+    cpuTemp?: number | null;
+    cpuTempUpdatedAt?: string | null;
     schedule?: { id: string; name: string } | null;
     createdAt: string;
 };

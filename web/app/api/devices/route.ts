@@ -37,6 +37,21 @@ export async function GET(request: Request) {
                     name: true,
                 },
             },
+            syncSessionDevices: {
+                where: {
+                    cpuTemp: {
+                        not: null,
+                    },
+                },
+                select: {
+                    cpuTemp: true,
+                    updatedAt: true,
+                },
+                orderBy: {
+                    updatedAt: "desc",
+                },
+                take: 1,
+            },
         },
         orderBy: {
             createdAt: isAscendingOrder ? "asc" : "desc",
@@ -72,6 +87,7 @@ export async function GET(request: Request) {
 
     // Calculate dynamic status based on lastSeenAt
     const devicesWithStatus = devices.map(device => {
+        const { syncSessionDevices, ...deviceBase } = device;
         let status = "offline";
 
         if (device.lastSeenAt) {
@@ -85,9 +101,12 @@ export async function GET(request: Request) {
             }
         }
 
+        const latestRuntime = syncSessionDevices[0] ?? null;
         return {
-            ...device,
+            ...deviceBase,
             connectivityStatus: status,
+            cpuTemp: latestRuntime?.cpuTemp ?? null,
+            cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
             contentPreview: device.currentContentName
                 ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
                 : null,
