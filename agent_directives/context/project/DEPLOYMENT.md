@@ -88,6 +88,16 @@ $env:E2E_SYNC_START_CMD_<MASTER_KEY>="<start command>"
 npx playwright test tests/production/4_sync_failover.spec.ts
 ```
 
+## Canonical Notes (2026-02-23)
+- **Raspberry deploy packaging fix (critical):**
+  - `deploy.ps1` and `player/setup_device.sh` must include `player/lan_sync.py` in transferred/downloaded files.
+  - Missing `lan_sync.py` causes `signage-player` to fail on startup with `ModuleNotFoundError: No module named 'lan_sync'` before pairing code generation.
+- **Windows line-ending hardening for player deploys:**
+  - `.gitattributes` enforces `LF` for `*.sh` and `*.lua`.
+  - `deploy.ps1` normalizes remote `*.sh`/`*.lua` files to LF before execution to prevent `$'\\r'` shell errors on Raspberry Pi.
+- **Player deploy troubleshooting rule (validated):**
+  - If `setup_service.sh` reports installed but the service is inactive, inspect `journalctl -u signage-player` immediately to confirm import/runtime failures.
+
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
 - Production QA runs use:
   - `E2E_BASE_URL=https://signage-repo-dc5s.vercel.app` (or omit it and use the default)
@@ -187,7 +197,8 @@ chronyc tracking
   - **Ejemplo verificado:** `powershell .\deploy.ps1 -PlayerIp 192.168.100.6 -PlayerUser pi4`
   - **Ruta destino:** Siempre usa el home del usuario remoto (`~/signage-player`). Nunca hardcodear `/home/pi` o `/root`.
   - **Flujo de config:** Si `player/config.json` no existe en tu PC, `deploy.ps1` llama primero a `setup_env.ps1` para generarlo. En deploy normal, el script preserva `~/signage-player/config.json` remoto si ya existe (evita resetear pairing). Para sobrescribirlo explícitamente usar `-ForceConfigSync`.
-  - **Transfers:** `player.py`, `sync.py`, `setup_wallpaper.py`, `setup_device.sh`, `rotation_utils.py`, `config.json`, y dependencias.
+  - **Transfers:** player runtime files (including `lan_sync.py` for Sync/LAN mode), setup scripts, config (when applicable), and dependencies.
+  - **Line endings hardening:** deploy normalizes remote `*.sh` and `*.lua` files to LF before executing scripts on Raspberry Pi.
 - **Template de config:** `player/config.example.json` (Template) -> Se usa como base para generar `player/config.json` local vía `setup_env.ps1`. En la Raspberry, `~/signage-player/config.json` puede editarse directamente para ajustar `server_url` y `device_token` (por ejemplo, poner `device_token: null` para un nuevo pairing).
 
 ## Validation

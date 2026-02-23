@@ -5,7 +5,7 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
 
 ## Alcance del Proyecto
 - **Directorio Principal:** `/player`
-- **Archivos Clave:** `player.py`, `sync.py`, `videowall_controller.py`, `setup_device.sh`, `config.json` (generado).
+- **Archivos Clave:** `player.py`, `sync.py`, `lan_sync.py`, `videowall_controller.py`, `setup_device.sh`, `config.json` (generado).
 - **Entorno de Ejecucion:** Raspberry Pi OS Lite (64-bit).
 
 ## Tecnologias y Herramientas
@@ -35,6 +35,7 @@ Este agente es responsable del codigo que corre en los dispositivos de reproducc
 - **Deploy:**
   - Verificar que cambios sean desplegables con `deploy.ps1` / `execution/player_ops.py`.
   - Tener en cuenta que los scripts actuales pueden requerir prompts si no se pasan parametros o no hay SSH preconfigurado.
+  - Si `signage-player` queda `inactive/failed`, revisar `journalctl -u signage-player` antes de asumir un problema de display o red.
 
 ## Flujo de Trabajo Tipico
 1. El coordinador solicita una mejora del player.

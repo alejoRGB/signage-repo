@@ -55,7 +55,8 @@ Trigger this workflow when changes include any of:
 Required steps:
 1. Deploy updated player code to target Raspberry device(s).
 2. Verify service status after deploy (`running`, no crash loop).
-3. Report deployment result per device (IP/hostname + status).
+3. If service is not active, inspect `journalctl -u signage-player` and identify the root cause before closing the task.
+4. Report deployment result per device (IP/hostname + status).
 
 If IP, username, or password/credential is missing, the agent must ask the user for those values before attempting deployment.
 

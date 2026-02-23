@@ -150,6 +150,15 @@
   - After `Stop session`, the panel must return directly to the entry menu without transient reappearance of `Session Running`.
   - Client now ignores stale `/api/sync/session/active` echoes for the just-stopped `sessionId` during a short suppression window.
 
+## Canonical Notes (2026-02-23)
+- **Raspberry new-device deploy validation (confirmed):**
+  - A fresh Raspberry deployment can fail before showing pairing code if a required player module is omitted from deploy packaging.
+  - The validated failure signature is `ModuleNotFoundError: No module named 'lan_sync'` in `journalctl -u signage-player`.
+- **Operational rule (player deploys):**
+  - When `signage-player` is installed but inactive, the first diagnostic source is `journalctl -u signage-player`, not only the deploy script output.
+- **Deploy script hardening (implemented):**
+  - `deploy.ps1` now includes `lan_sync.py` and normalizes shell/Lua scripts to LF on the Raspberry before execution.
+
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
 2. **Schedule Sync:** Device polls `/api/device/sync` -> Downloads media -> Reports `playingPlaylistId` -> Plays.
