@@ -43,18 +43,32 @@ function isDeviceOnline(device: DashboardDevice) {
     return Date.now() - new Date(device.lastSeenAt).getTime() <= ONLINE_STALE_MS;
 }
 
-function cpuTempBadge(device: DashboardDevice) {
+function cpuTempBadge(device: DashboardDevice, online: boolean) {
+    if (!online) {
+        return {
+            label: "Temp offline",
+            className: "border-gray-200 bg-gray-100 text-gray-500",
+            title: "Dispositivo offline",
+        };
+    }
+
     if (typeof device.cpuTemp !== "number" || Number.isNaN(device.cpuTemp)) {
         return {
             label: "Temp sin dato",
             className: "border-gray-200 bg-gray-100 text-gray-500",
+            title: "Sin telemetria de temperatura",
         };
     }
+
+    const title = device.cpuTempUpdatedAt
+        ? `Ultima lectura: ${new Date(device.cpuTempUpdatedAt).toLocaleString()}`
+        : "Sin telemetria de temperatura";
 
     if (device.cpuTemp >= 75) {
         return {
             label: `${device.cpuTemp.toFixed(1)}°C`,
             className: "border-rose-200 bg-rose-50 text-rose-700",
+            title,
         };
     }
 
@@ -62,12 +76,14 @@ function cpuTempBadge(device: DashboardDevice) {
         return {
             label: `${device.cpuTemp.toFixed(1)}°C`,
             className: "border-amber-200 bg-amber-50 text-amber-700",
+            title,
         };
     }
 
     return {
         label: `${device.cpuTemp.toFixed(1)}°C`,
         className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        title,
     };
 }
 
@@ -125,7 +141,7 @@ export default function DevicePreviewGrid({
                     const isExpanded = !!expandedById[device.id];
                     const online = isDeviceOnline(device);
                     const preview = device.contentPreview;
-                    const temp = cpuTempBadge(device);
+                    const temp = cpuTempBadge(device, online);
 
                     return (
                         <div
@@ -147,7 +163,7 @@ export default function DevicePreviewGrid({
                                         </p>
                                         <p
                                             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${temp.className}`}
-                                            title={device.cpuTempUpdatedAt ? `Ultima lectura: ${new Date(device.cpuTempUpdatedAt).toLocaleString()}` : "Sin telemetria de temperatura"}
+                                            title={temp.title}
                                         >
                                             <Thermometer className="h-3 w-3" aria-hidden="true" />
                                             {temp.label}

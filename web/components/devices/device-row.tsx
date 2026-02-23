@@ -29,12 +29,9 @@ export default function DeviceRow({
     const [showReady, setShowReady] = useState(false);
     const playlistSelectRef = useRef<HTMLSelectElement | null>(null);
 
-    // Logic for True Sync
     const isOptimisticUpdating = updatingDeviceId === device.id;
     const hasActivePlaylist = !!device.activePlaylist?.id;
     const hasReportedPlayback = typeof device.playingPlaylistId === "string" && device.playingPlaylistId.length > 0;
-    // It's synced if the reported playing ID matches the selected active playlist.
-    // If playback isn't reported yet, avoid showing a stuck syncing state.
     const isSynced = hasActivePlaylist && hasReportedPlayback
         ? device.activePlaylist?.id === device.playingPlaylistId
         : false;
@@ -42,7 +39,6 @@ export default function DeviceRow({
     const prevSynced = useRef(isSynced);
 
     useEffect(() => {
-        // Transition from !Synced -> Synced triggers "Ready"
         if (!prevSynced.current && isSynced && hasActivePlaylist) {
             setShowReady(true);
             const timer = setTimeout(() => setShowReady(false), 3000);
@@ -58,13 +54,17 @@ export default function DeviceRow({
         }
     }, [isPlaylistSelectionLocked]);
 
-    // Don't show "Ready" if we are currently updating (optimistic)
     const shouldShowReady = showReady && !isOptimisticUpdating;
     const shouldShowSyncing = isOptimisticUpdating || (hasActivePlaylist && hasReportedPlayback && !isSynced);
+    const isOnline = device.connectivityStatus === "online";
     const hasCpuTemp = typeof device.cpuTemp === "number" && Number.isFinite(device.cpuTemp);
 
     let tempBadgeClassName = "bg-gray-100 text-gray-500 border-gray-200";
-    if (hasCpuTemp) {
+    let tempLabel = "Sin dato";
+
+    if (!isOnline) {
+        tempLabel = "Temp offline";
+    } else if (hasCpuTemp) {
         if ((device.cpuTemp ?? 0) >= 75) {
             tempBadgeClassName = "bg-rose-50 text-rose-700 border-rose-200";
         } else if ((device.cpuTemp ?? 0) >= 65) {
@@ -72,6 +72,7 @@ export default function DeviceRow({
         } else {
             tempBadgeClassName = "bg-emerald-50 text-emerald-700 border-emerald-200";
         }
+        tempLabel = `${device.cpuTemp!.toFixed(1)}°C`;
     }
 
     return (
@@ -93,7 +94,7 @@ export default function DeviceRow({
             <td className="px-6 py-4 whitespace-nowrap">
                 <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${tempBadgeClassName}`}>
                     <Thermometer className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>{hasCpuTemp ? `${device.cpuTemp!.toFixed(1)}°C` : "Sin dato"}</span>
+                    <span>{tempLabel}</span>
                 </div>
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
