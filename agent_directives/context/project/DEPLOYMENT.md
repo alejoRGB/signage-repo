@@ -97,11 +97,12 @@ npx playwright test tests/production/4_sync_failover.spec.ts
   - `deploy.ps1` normalizes remote `*.sh`/`*.lua` files to LF before execution to prevent `$'\\r'` shell errors on Raspberry Pi.
 - **Player deploy troubleshooting rule (validated):**
   - If `setup_service.sh` reports installed but the service is inactive, inspect `journalctl -u signage-player` immediately to confirm import/runtime failures.
-- **Chromium web-mode translation prompt hardening (validated):**
-  - Deploy/install flows now write managed Chromium policy files with `{"TranslateEnabled": false}` under both:
+- **Chromium web-mode browser prompt hardening (validated):**
+  - Deploy/install flows now write managed Chromium policy files (translate + permissions/popup blocking) under both:
     - `/etc/chromium/policies/managed/`
     - `/etc/chromium-browser/policies/managed/`
-  - This suppresses translation bars/prompts reliably across page languages and Chromium variants on Raspberry Pi.
+  - Policy includes `TranslateEnabled=false` plus blocking defaults for notifications, geolocation, media capture (camera/mic), and popups.
+  - This suppresses translation bars and common browser permission prompts reliably across page languages and Chromium variants on Raspberry Pi.
 
 ## Canonical QA Runtime Notes (Updated Feb 19, 2026)
 - Production QA runs use:
@@ -204,7 +205,7 @@ chronyc tracking
   - **Flujo de config:** Si `player/config.json` no existe en tu PC, `deploy.ps1` llama primero a `setup_env.ps1` para generarlo. En deploy normal, el script preserva `~/signage-player/config.json` remoto si ya existe (evita resetear pairing). Para sobrescribirlo explícitamente usar `-ForceConfigSync`.
   - **Transfers:** player runtime files (including `lan_sync.py` for Sync/LAN mode), setup scripts, config (when applicable), and dependencies.
   - **Line endings hardening:** deploy normalizes remote `*.sh` and `*.lua` files to LF before executing scripts on Raspberry Pi.
-  - **Chromium policy hardening:** deploy writes managed Chromium policy files (`TranslateEnabled=false`) to suppress translation prompts in kiosk web playback.
+  - **Chromium policy hardening:** deploy writes managed Chromium policy files to suppress translation and permission prompts in kiosk web playback.
 - **Template de config:** `player/config.example.json` (Template) -> Se usa como base para generar `player/config.json` local vía `setup_env.ps1`. En la Raspberry, `~/signage-player/config.json` puede editarse directamente para ajustar `server_url` y `device_token` (por ejemplo, poner `device_token: null` para un nuevo pairing).
 
 ## Validation

@@ -110,11 +110,12 @@ else
     echo "[INSTALLER] WARNING: chronyc tracking failed. Sync mode will not enter READY while clock is critical."
 fi
 
-# Disable Chromium translation UI globally (managed policy, independent of page language).
-echo "[INSTALLER] Installing Chromium managed policy (disable translate prompts)..."
+# Disable Chromium browser prompts globally (managed policy, independent of page language/site prompts).
+echo "[INSTALLER] Installing Chromium managed policy (disable browser prompts)..."
+CHROMIUM_POLICY_JSON='{"TranslateEnabled": false, "DefaultNotificationsSetting": 2, "DefaultGeolocationSetting": 2, "DefaultPopupsSetting": 2, "DefaultMediaStreamSetting": 2, "AudioCaptureAllowed": false, "VideoCaptureAllowed": false}'
 for POLICY_DIR in /etc/chromium/policies/managed /etc/chromium-browser/policies/managed; do
     sudo mkdir -p "$POLICY_DIR"
-    echo '{"TranslateEnabled": false}' | sudo tee "$POLICY_DIR/signage-policy.json" >/dev/null
+    echo "$CHROMIUM_POLICY_JSON" | sudo tee "$POLICY_DIR/signage-policy.json" >/dev/null
 done
 
 # 7. Setup Service

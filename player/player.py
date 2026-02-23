@@ -172,7 +172,7 @@ class Player:
             logging.warning("[PLAYER] unclutter not found. Mouse will be visible.")
 
     def prepare_chromium_profile(self, user_data_dir: str):
-        """Set Chromium profile prefs to avoid UI prompts (e.g., translate bar) in kiosk mode."""
+        """Set Chromium profile prefs to avoid browser UI prompts in kiosk mode."""
         try:
             default_dir = os.path.join(user_data_dir, "Default")
             os.makedirs(default_dir, exist_ok=True)
@@ -201,6 +201,32 @@ class Player:
                 prefs["translate_site_blacklist"] = []
             if "*" not in prefs["translate_site_blacklist"]:
                 prefs["translate_site_blacklist"].append("*")
+
+            profile_prefs = prefs.get("profile")
+            if not isinstance(profile_prefs, dict):
+                profile_prefs = {}
+
+            default_content_settings = profile_prefs.get("default_content_setting_values")
+            if not isinstance(default_content_settings, dict):
+                default_content_settings = {}
+
+            # 2 = block, 1 = allow, 0 = default/ask (Chromium content settings semantics).
+            for setting_key in ("notifications", "geolocation", "media_stream_camera", "media_stream_mic", "popups"):
+                default_content_settings[setting_key] = 2
+
+            profile_prefs["default_content_setting_values"] = default_content_settings
+
+            managed_content_settings = profile_prefs.get("managed_default_content_settings")
+            if not isinstance(managed_content_settings, dict):
+                managed_content_settings = {}
+            for setting_key in ("notifications", "geolocation", "media_stream_camera", "media_stream_mic", "popups"):
+                managed_content_settings[setting_key] = 2
+            profile_prefs["managed_default_content_settings"] = managed_content_settings
+
+            # Avoid browser save-password/account prompts in kiosk mode.
+            profile_prefs["password_manager_enabled"] = False
+            prefs["credentials_enable_service"] = False
+            prefs["profile"] = profile_prefs
 
             with open(prefs_path, "w", encoding="utf-8") as f:
                 json.dump(prefs, f, separators=(",", ":"))
@@ -694,6 +720,8 @@ class Player:
                                     "--disable-infobars",
                                     "--disable-translate",
                                     "--disable-features=Translate,TranslateUI",
+                                    "--deny-permission-prompts",
+                                    "--disable-notifications",
                                     "--disable-component-extensions-with-background-pages",
                                     "--lang=en-US",
                                     "--no-first-run",

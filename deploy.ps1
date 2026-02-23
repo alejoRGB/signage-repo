@@ -145,13 +145,14 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Installing/Verifying Dependencies (this may take a minute)..." -ForegroundColor Cyan
     ssh "$User@$PlayerIp" "bash $TargetDir/install_dependencies.sh"
 
-    # Install Chromium managed policy to disable translation prompts globally
-    Write-Host "Installing Chromium policy (disable translate prompts)..." -ForegroundColor Cyan
+    # Install Chromium managed policy to disable browser prompts globally in kiosk mode
+    Write-Host "Installing Chromium policy (disable browser prompts)..." -ForegroundColor Cyan
+    $ChromiumPolicyJson = '{\"TranslateEnabled\": false, \"DefaultNotificationsSetting\": 2, \"DefaultGeolocationSetting\": 2, \"DefaultPopupsSetting\": 2, \"DefaultMediaStreamSetting\": 2, \"AudioCaptureAllowed\": false, \"VideoCaptureAllowed\": false}'
     ssh "$User@$PlayerIp" 'sudo mkdir -p /etc/chromium/policies/managed /etc/chromium-browser/policies/managed'
-    ssh "$User@$PlayerIp" 'echo "{\"TranslateEnabled\": false}" | sudo tee /etc/chromium/policies/managed/signage-policy.json >/dev/null'
-    ssh "$User@$PlayerIp" 'echo "{\"TranslateEnabled\": false}" | sudo tee /etc/chromium-browser/policies/managed/signage-policy.json >/dev/null'
+    ssh "$User@$PlayerIp" "echo $ChromiumPolicyJson | sudo tee /etc/chromium/policies/managed/signage-policy.json >/dev/null"
+    ssh "$User@$PlayerIp" "echo $ChromiumPolicyJson | sudo tee /etc/chromium-browser/policies/managed/signage-policy.json >/dev/null"
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Warning: failed to apply Chromium managed policy. Translate prompt may still appear." -ForegroundColor Yellow
+        Write-Host "Warning: failed to apply Chromium managed policy. Browser prompts may still appear in kiosk web playback." -ForegroundColor Yellow
     }
 
     # Setup Wallpaper

@@ -158,12 +158,13 @@
   - When `signage-player` is installed but inactive, the first diagnostic source is `journalctl -u signage-player`, not only the deploy script output.
 - **Deploy script hardening (implemented):**
   - `deploy.ps1` now includes `lan_sync.py` and normalizes shell/Lua scripts to LF on the Raspberry before execution.
-- **Chromium translation prompt hardening (implemented):**
-  - Web playback in kiosk mode now disables translation UI using multiple layers:
+- **Chromium browser prompt hardening (implemented + validated on Raspberry):**
+  - Web playback in kiosk mode now suppresses translation and common permission/browser prompts using multiple layers:
     - Chromium launch flags (`--disable-translate`, `--disable-features=Translate,TranslateUI`, etc.)
-    - temporary profile preferences prepared by `player.py`
-    - managed Chromium policy `TranslateEnabled=false` installed on Raspberry Pi (`/etc/chromium*/policies/managed/signage-policy.json`)
-  - Goal: prevent translation bars/prompts regardless of the page language.
+    - Chromium launch flags for permissions/notifications (`--deny-permission-prompts`, `--disable-notifications`)
+    - temporary profile preferences prepared by `player.py` (translate + camera/mic/geolocation/notifications/popups blocked)
+    - managed Chromium policy installed on Raspberry Pi (`/etc/chromium*/policies/managed/signage-policy.json`) blocking translate + capture/permission prompts
+  - Goal: prevent browser translation bars and permission prompts (camera/mic/geolocation/notifications/popups) regardless of page language.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
