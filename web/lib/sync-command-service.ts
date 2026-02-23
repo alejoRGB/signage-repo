@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { type SyncDeviceCommandType } from "@/types/sync";
 
 type PrepareMedia = {
     mediaId: string;
@@ -117,32 +116,6 @@ export function buildStopPayload(sessionId: string, reason: string) {
             reason: reason.toLowerCase(),
         })
     ) as Prisma.InputJsonValue;
-}
-
-export async function enqueueSyncCommands(
-    commands: Array<{
-        deviceId: string;
-        sessionId: string;
-        type: SyncDeviceCommandType;
-        payload: Prisma.InputJsonValue;
-        dedupeKey: string;
-    }>
-) {
-    if (commands.length === 0) {
-        return { count: 0 };
-    }
-
-    return prisma.syncDeviceCommand.createMany({
-        data: commands.map((command) => ({
-            deviceId: command.deviceId,
-            sessionId: command.sessionId,
-            type: command.type,
-            payload: command.payload,
-            dedupeKey: command.dedupeKey,
-            status: "PENDING",
-        })),
-        skipDuplicates: true,
-    });
 }
 
 export async function getDeviceByTokenForCommandFlow(deviceToken: string) {

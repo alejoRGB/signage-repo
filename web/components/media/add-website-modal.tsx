@@ -13,9 +13,7 @@ interface AddWebsiteModalProps {
 export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteModalProps) {
     const [name, setName] = useState("");
     const [url, setUrl] = useState("");
-    const [duration, setDuration] = useState(15);
     const [cacheForOffline, setCacheForOffline] = useState(false);
-    const [orientation, setOrientation] = useState("landscape");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -42,9 +40,7 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
             // Reset form
             setName("");
             setUrl("");
-            setDuration(15);
             setCacheForOffline(false);
-            // setOrientation("landscape"); removed
         } catch (err) {
             setError("Failed to add website");
         } finally {

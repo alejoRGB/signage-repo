@@ -1,6 +1,4 @@
 
-import React from "react";
-
 type DeviceStatusBadgeProps = {
     status: string; // The administrative status from DB
     connectivity?: string; // The calculated connectivity status (online/offline)

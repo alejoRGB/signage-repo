@@ -55,7 +55,7 @@ export default withAuth(
             // Return true here to let the middleware function handle the logic.
             // If false, it redirects to signIn page automatically, which matches generic /login.
             // We want custom redirects, so we always authorized here and handle redirects above.
-            authorized: ({ token }) => true,
+            authorized: ({ token: _token }) => true,
         },
     }
 );

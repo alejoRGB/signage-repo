@@ -1,5 +1,4 @@
 
-import React from "react";
 import { Device, Playlist } from "@/types/device";
 import DeviceRow from "./device-row";
 

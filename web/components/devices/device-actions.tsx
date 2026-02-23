@@ -1,5 +1,4 @@
 
-import React from "react";
 import { Device } from "@/types/device"; // We'll need to define this type or import it
 
 type DeviceActionsProps = {

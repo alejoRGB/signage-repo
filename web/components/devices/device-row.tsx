@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Device, Playlist } from "@/types/device";
 import DeviceStatusBadge from "./device-status-badge";
 import DeviceActions from "./device-actions";

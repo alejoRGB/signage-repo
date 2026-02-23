@@ -2,8 +2,6 @@ import { z } from "zod";
 import xss from "xss";
 import {
     SYNC_DEVICE_COMMAND_STATUS,
-    SYNC_DEVICE_COMMAND_TYPE,
-    SYNC_DRIFT_QUALITY,
     SYNC_PRESET_MODE,
     SYNC_SESSION_DEVICE_STATUS,
     SYNC_STOP_REASON,
@@ -11,19 +9,6 @@ import {
 
 // Helper to sanitize strings
 const sanitize = (value: string) => xss(value);
-
-// Auth Schemas
-export const RegisterSchema = z.object({
-    name: z.string().min(2, "Name must be at least 2 characters").transform(sanitize),
-    username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and hyphens").transform(sanitize),
-    email: z.string().email("Invalid email address").transform(sanitize),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-export const LoginSchema = z.object({
-    username: z.string().min(1, "Username is required").transform(sanitize),
-    password: z.string().min(1, "Password is required"),
-});
 
 // Playlist Schemas
 export const PlaylistItemSchema = z.object({
@@ -38,8 +23,6 @@ export const CreatePlaylistSchema = z.object({
     orientation: z.enum(["landscape", "portrait", "portrait-270"]).optional().default("landscape"),
     items: z.array(PlaylistItemSchema).optional(),
 });
-
-export const UpdatePlaylistSchema = CreatePlaylistSchema.partial();
 
 // Schedule Schemas
 export const CreateScheduleSchema = z.object({
@@ -134,17 +117,6 @@ const SyncStopReasonValues = [
     SYNC_STOP_REASON.TIMEOUT,
     SYNC_STOP_REASON.ERROR,
 ] as const;
-const SyncDriftQualityValues = [
-    SYNC_DRIFT_QUALITY.EXCELLENT,
-    SYNC_DRIFT_QUALITY.GOOD,
-    SYNC_DRIFT_QUALITY.FAIR,
-    SYNC_DRIFT_QUALITY.POOR,
-    SYNC_DRIFT_QUALITY.CRITICAL,
-] as const;
-const SyncDeviceCommandTypeValues = [
-    SYNC_DEVICE_COMMAND_TYPE.SYNC_PREPARE,
-    SYNC_DEVICE_COMMAND_TYPE.SYNC_STOP,
-] as const;
 const SyncDeviceCommandStatusValues = [
     SYNC_DEVICE_COMMAND_STATUS.PENDING,
     SYNC_DEVICE_COMMAND_STATUS.ACKED,
@@ -219,62 +191,6 @@ export const StopSyncSessionSchema = z.object({
     reason: z.enum(SyncStopReasonValues).optional().default(SYNC_STOP_REASON.USER_STOP),
 });
 
-export const SyncPrepareCommandSchema = z.object({
-    type: z.literal("sync.prepare"),
-    sessionId: z.string().min(1).transform(sanitize),
-    presetId: z.string().min(1).transform(sanitize),
-    startAtMs: z.number().int().nonnegative(),
-    durationMs: z.number().int().positive(),
-    media: z.object({
-        mode: z.enum(["common", "per_device"]),
-        mediaId: z.string().min(1).transform(sanitize),
-        localPath: z.string().min(1),
-        resolution: z.string().optional(),
-        fps: z.number().positive().optional(),
-        codec: z.string().optional(),
-    }),
-    syncConfig: z.object({
-        hardResyncThresholdMs: z.number().int().positive(),
-        softCorrectionRangeMs: z.tuple([z.number().int().nonnegative(), z.number().int().positive()]),
-        deadbandMs: z.number().int().nonnegative(),
-        warmupLoops: z.number().int().min(1).max(10),
-    }),
-});
-
-export const SyncStopCommandSchema = z.object({
-    type: z.literal("sync.stop"),
-    sessionId: z.string().min(1).transform(sanitize),
-    reason: z.enum(SyncStopReasonValues),
-});
-
-export const SyncStatusSchema = z.object({
-    type: z.literal("sync.status"),
-    sessionId: z.string().min(1).transform(sanitize),
-    deviceId: z.string().min(1).transform(sanitize),
-    status: z.enum(SyncSessionDeviceStatusValues),
-    nowMs: z.number().int().nonnegative(),
-    driftMs: z.number(),
-    driftQuality: z.enum(SyncDriftQualityValues).optional(),
-    resyncCount: z.number().int().nonnegative().optional(),
-    warmupProgress: z.number().int().nonnegative().optional(),
-    health: z.object({
-        avgDriftMs: z.number().optional(),
-        maxDriftMs: z.number().optional(),
-        resyncRate: z.number().optional(),
-        clockOffsetMs: z.number().optional(),
-        cpuTempC: z.number().optional(),
-        throttled: z.boolean().optional(),
-        healthScore: z.number().min(0).max(1).optional(),
-    }).optional(),
-    mpv: z.object({
-        timePosMs: z.number().nonnegative().optional(),
-        paused: z.boolean().optional(),
-        playbackSpeed: z.number().positive().optional(),
-        droppedFrames: z.number().int().nonnegative().optional(),
-        decoderFrameDrops: z.number().int().nonnegative().optional(),
-    }).optional(),
-});
-
 export const DeviceCommandsPollSchema = z.object({
     device_token: z.string().min(1, "device_token is required").transform(sanitize),
     limit: z.union([z.number(), z.string().transform((val) => parseInt(val, 10))]).optional().default(10),
@@ -303,11 +219,3 @@ export const DeviceCommandAckSchema = z.object({
         .optional(),
 });
 
-export const SyncDeviceCommandEnvelopeSchema = z.object({
-    id: z.string(),
-    sessionId: z.string(),
-    type: z.enum(SyncDeviceCommandTypeValues),
-    payload: z.record(z.string(), z.unknown()),
-    status: z.enum(SyncDeviceCommandStatusValues),
-    createdAt: z.date().or(z.string()),
-});

@@ -1,6 +1,4 @@
 
-import { Box, Play, Upload } from "lucide-react"
-
 export function Product() {
     return (
         <section id="how-it-works" className="w-full py-24 md:py-32 border-y border-white/5 bg-white/[0.02]">

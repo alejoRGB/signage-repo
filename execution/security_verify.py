@@ -23,21 +23,6 @@ def test_rate_limit():
     print("❌ Rate limit NOT triggered (expected 429 after 5 requests)")
     return False
 
-def test_validation():
-    print("\n--- Testing Validation (device/pair) ---")
-    url = f"{BASE_URL}/device/pair"
-    
-    # We need a dummy session hook or we test the validation response specifically
-    # Since we can't easily fake next-auth session from outside without a cookie,
-    # we might get 401 Unauthorized first.
-    # However, for this test, we assume we might need to verify manual or look at code.
-    # But wait, if we get 401, we know the endpoint is protected.
-    # If we want to test validation, we need to be authorized.
-    
-    print("Skipping active validation test due to auth requirement (NextAuth).")
-    print("Please verify validation manually or via unit tests if possible.")
-    return True
-
 if __name__ == "__main__":
     print(f"Target: {BASE_URL}")
     success_rl = test_rate_limit()

@@ -13,6 +13,8 @@ playwright-report/
 test-results/
 qa_automation/playwright-report/
 qa_automation/test-results/
+qa_automation/node_modules/
 __pycache__/
 *.pyc
 .tmp/
+web/testsprite_tests/tmp/

@@ -4,15 +4,12 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Key, Copy, Check, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
-import { useRouter } from "next/navigation";
 
 export default function ResetPasswordModal({ userId, userName }: { userId: string, userName: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [newPassword, setNewPassword] = useState<string | null>(null);
     const { showToast } = useToast();
-    const router = useRouter();
-
     const handleReset = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);

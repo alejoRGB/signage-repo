@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, PlaySquare, Trash2, Edit, Video, Globe } from "lucide-react";
+import { Plus, PlaySquare, Trash2, Video, Globe } from "lucide-react";
 import Link from "next/link";
 import ConfirmModal from "@/components/confirm-modal";
 import CreatePlaylistDialog from "@/components/playlists/create-playlist-dialog";

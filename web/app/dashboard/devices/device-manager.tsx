@@ -2,11 +2,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Device, Playlist } from "@/types/device";
 import DeviceListTable from "@/components/devices/device-list-table";
 import PairDeviceModal from "@/components/devices/pair-device-modal";
-import ManualAddDeviceForm from "@/components/devices/manual-add-device-form";
 import DeviceLogsModal from "@/components/devices/device-logs-modal";
 import ConfirmModal from "@/components/confirm-modal";
 import EditDeviceModal from "@/components/devices/edit-device-modal";
@@ -28,7 +26,6 @@ export default function DeviceManager({
 
     // Modals State
     const [showPairModal, setShowPairModal] = useState(false);
-    const [showAddForm, setShowAddForm] = useState(false);
     const [selectedDeviceForLogs, setSelectedDeviceForLogs] = useState<Device | null>(null);
     const [deviceToEdit, setDeviceToEdit] = useState<Device | null>(null); // New state
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);

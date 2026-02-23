@@ -14,8 +14,6 @@ export const SYNC_SESSION_STATUS = {
     ABORTED: "ABORTED",
 } as const;
 
-export type SyncSessionStatus = (typeof SYNC_SESSION_STATUS)[keyof typeof SYNC_SESSION_STATUS];
-
 export const SYNC_SESSION_DEVICE_STATUS = {
     ASSIGNED: "ASSIGNED",
     PRELOADING: "PRELOADING",
@@ -25,9 +23,6 @@ export const SYNC_SESSION_DEVICE_STATUS = {
     ERRORED: "ERRORED",
     DISCONNECTED: "DISCONNECTED",
 } as const;
-
-export type SyncSessionDeviceStatus =
-    (typeof SYNC_SESSION_DEVICE_STATUS)[keyof typeof SYNC_SESSION_DEVICE_STATUS];
 
 export const SYNC_STOP_REASON = {
     USER_STOP: "USER_STOP",
@@ -45,8 +40,6 @@ export const SYNC_DRIFT_QUALITY = {
     CRITICAL: "CRITICAL",
 } as const;
 
-export type SyncDriftQuality = (typeof SYNC_DRIFT_QUALITY)[keyof typeof SYNC_DRIFT_QUALITY];
-
 export const SYNC_DEVICE_COMMAND_TYPE = {
     SYNC_PREPARE: "SYNC_PREPARE",
     SYNC_STOP: "SYNC_STOP",
@@ -60,9 +53,6 @@ export const SYNC_DEVICE_COMMAND_STATUS = {
     ACKED: "ACKED",
     FAILED: "FAILED",
 } as const;
-
-export type SyncDeviceCommandStatus =
-    (typeof SYNC_DEVICE_COMMAND_STATUS)[keyof typeof SYNC_DEVICE_COMMAND_STATUS];
 
 export const SYNC_LOG_EVENT = {
     READY: "READY",

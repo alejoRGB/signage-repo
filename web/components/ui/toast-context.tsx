@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 type ToastType = 'success' | 'error' | 'info';

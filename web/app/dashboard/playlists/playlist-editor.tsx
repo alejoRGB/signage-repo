@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, ArrowUp, ArrowDown, Plus, Clock, Globe } from "lucide-react";
+import { Save, Trash2, ArrowUp, ArrowDown, Plus, Globe } from "lucide-react";
 import { useToast } from "@/components/ui/toast-context";
 import DurationInput, { formatTime } from "@/components/ui/duration-input";
 

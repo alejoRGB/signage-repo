@@ -1,4 +1,4 @@
-import { SyncSessionStatus, type SyncSessionDeviceStatus } from "@prisma/client";
+import { SyncSessionStatus } from "@prisma/client";
 import { SYNC_STOP_REASON, type SyncStopReason } from "@/types/sync";
 
 export const ACTIVE_SYNC_SESSION_STATUSES: SyncSessionStatus[] = [
@@ -85,10 +85,3 @@ export function toJsonSafe<T>(payload: T): T {
     ) as T;
 }
 
-export function getPostStopDeviceStatus(status: SyncSessionDeviceStatus): SyncSessionDeviceStatus {
-    if (status === "ERRORED") {
-        return status;
-    }
-
-    return "DISCONNECTED";
-}

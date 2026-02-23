@@ -1,8 +1,6 @@
-import { NextPage } from "next";
 import { useEffect, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Loader2, Plus, Save, X, Clock, Copy } from "lucide-react";
-import { useRouter } from "next/navigation";
 import CopyScheduleModal from "./copy-schedule-modal";
 import { useToast } from "@/components/ui/toast-context";
 

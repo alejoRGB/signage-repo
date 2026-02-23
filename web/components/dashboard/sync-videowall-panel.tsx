@@ -506,11 +506,6 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
         [syncDevices]
     );
 
-    const perDeviceAssignedCount = useMemo(
-        () => syncDeviceIds.reduce((count, deviceId) => (assignedMediaByDevice[deviceId] ? count + 1 : count), 0),
-        [assignedMediaByDevice, syncDeviceIds]
-    );
-
     const reviewRows = useMemo(
         () =>
             syncDevices.map((device) => {
