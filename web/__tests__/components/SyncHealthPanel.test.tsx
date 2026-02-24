@@ -98,7 +98,9 @@ describe("Sync health panel", () => {
         expect(screen.queryByText(/health:/i)).not.toBeInTheDocument();
         expect(screen.getByText("Soft correction active")).toBeInTheDocument();
         expect(screen.queryByText(/correction drift:/i)).not.toBeInTheDocument();
-        expect(screen.getByText("Temperatura: 67.4°C")).toBeInTheDocument();
+        expect(screen.getByText(/^online$/i)).toBeInTheDocument();
+        expect(screen.getByText(/67\.4.*C/)).toBeInTheDocument();
+        expect(screen.queryByText(/Temperatura:/i)).not.toBeInTheDocument();
         expect(screen.getByText(/last heartbeat:/i)).toBeInTheDocument();
     });
 

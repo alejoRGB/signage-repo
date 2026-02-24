@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, GripVertical, Monitor, Play, Plus, Save, Square, Trash2 } from "lucide-react";
+import { DeviceConnectivityBadge, DeviceCpuTempBadge } from "@/components/dashboard/device-status-telemetry-badges";
 import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
-import { getDeviceStatusPollIntervalMs } from "@/lib/device-connectivity";
+import { getDeviceStatusPollIntervalMs, isDeviceConsideredOnline } from "@/lib/device-connectivity";
 import { SYNC_PRESET_MODE, type SyncPresetMode } from "@/types/sync";
 
 type SyncDevice = {
@@ -140,12 +141,16 @@ function heartbeatAgeLabel(lastSeenAt?: string | null) {
     return `${elapsedMinutes}m ago`;
 }
 
-function cpuTempLabel(cpuTemp?: number | null) {
-    if (typeof cpuTemp !== "number" || Number.isNaN(cpuTemp)) {
-        return "Temperatura: n/a";
+function isSessionDeviceOnline(device: ActiveSessionDevice) {
+    const status = device.device.status?.toLowerCase();
+    if (status === "online") {
+        return true;
+    }
+    if (status === "offline") {
+        return false;
     }
 
-    return `Temperatura: ${cpuTemp.toFixed(1)}°C`;
+    return isDeviceConsideredOnline(device.lastSeenAt);
 }
 
 function getMediaDurationMs(media?: SyncMediaItem | null) {
@@ -1497,6 +1502,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         : "Soft correction"
                                     : "No correction";
                                 const driftVisual = driftHealthVisual(device.avgDriftMs);
+                                const isOnline = isSessionDeviceOnline(device);
 
                                 return (
                                     <div
@@ -1507,7 +1513,10 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                         <div className="mb-0.5 flex items-center justify-between gap-2">
                                             <div>
                                                 <p className="text-sm font-semibold text-slate-900">{device.device.name}</p>
-                                                <p className="text-xs text-slate-500">{cpuTempLabel(device.cpuTemp)}</p>
+                                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                    <DeviceConnectivityBadge online={isOnline} />
+                                                    <DeviceCpuTempBadge online={isOnline} cpuTemp={device.cpuTemp} />
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <span
