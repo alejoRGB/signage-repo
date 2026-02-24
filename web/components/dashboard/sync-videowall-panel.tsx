@@ -73,6 +73,7 @@ type ActiveSession = {
     masterDeviceId?: string | null;
     devices: ActiveSessionDevice[];
     correctionTelemetryByDeviceId?: Record<string, ActiveSessionCorrection>;
+    prepareCommandPendingByDeviceId?: Record<string, boolean>;
 };
 
 type DragOrigin = "available" | "sync";
@@ -376,6 +377,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             const active = await fetchJson<{
                 session: ActiveSession | null;
                 correctionTelemetryByDeviceId?: Record<string, ActiveSessionCorrection>;
+                prepareCommandPendingByDeviceId?: Record<string, boolean>;
             }>("/api/sync/session/active", { cache: "no-store" });
             const suppression = stoppedSessionSuppressionRef.current;
 
@@ -400,6 +402,7 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             setActiveSession({
                 ...active.session,
                 correctionTelemetryByDeviceId: active.correctionTelemetryByDeviceId ?? {},
+                prepareCommandPendingByDeviceId: active.prepareCommandPendingByDeviceId ?? {},
             });
         } catch {
             setActiveSession(null);
@@ -1495,6 +1498,9 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                         <div className="space-y-2">
                             {orderedSessionDevices.map((device) => {
                                 const correction = activeSession.correctionTelemetryByDeviceId?.[device.deviceId] ?? null;
+                                const isDownloadingMedia =
+                                    !!activeSession.prepareCommandPendingByDeviceId?.[device.deviceId] &&
+                                    (device.status === "ASSIGNED" || device.status === "PRELOADING");
                                 const correctionLabel = correction?.lastEvent
                                     ? correction.lastEvent === "HARD_RESYNC"
                                         ? "Hard resync"
@@ -1518,6 +1524,11 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1.5">
+                                                {isDownloadingMedia ? (
+                                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                                                        downloading media
+                                                    </span>
+                                                ) : null}
                                                 <span
                                                     data-testid={`sync-device-correction-${device.deviceId}`}
                                                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${correctionBadgeClass(

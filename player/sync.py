@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import time
 import requests
 from typing import Dict, List, Optional, Any
 
@@ -19,12 +20,26 @@ class SyncManager:
         self.server_url = self.config.get("server_url")
         self.device_token = self.config.get("device_token")
         self.device_id = self.config.get("device_id")
+        self.sync_media_download_connect_timeout_s = self._read_env_int("SYNC_MEDIA_DOWNLOAD_CONNECT_TIMEOUT_S", 10, 1)
+        self.sync_media_download_retries = self._read_env_int("SYNC_MEDIA_DOWNLOAD_RETRIES", 3, 1)
+        self.sync_media_download_retry_backoff_s = self._read_env_int("SYNC_MEDIA_DOWNLOAD_RETRY_BACKOFF_S", 5, 0)
         
         self.media_dir = os.path.join(os.path.dirname(self.config_path), "media")
         self.playlist_cache = os.path.join(os.path.dirname(self.config_path), "playlist.json")
         
         if not os.path.exists(self.media_dir):
             os.makedirs(self.media_dir)
+
+    @staticmethod
+    def _read_env_int(name: str, default: int, minimum: int) -> int:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        try:
+            parsed = int(raw)
+        except (TypeError, ValueError):
+            return default
+        return max(minimum, parsed)
     
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from JSON file"""
@@ -524,35 +539,74 @@ class SyncManager:
 
         download_url = f"{self.server_url}/api/media/download/{media_id}?token={self.device_token}"
         temp_path = f"{target_path}.part"
+        total_attempts = max(1, self.sync_media_download_retries)
 
-        try:
-            logging.info("[SYNC] Sync media missing. Downloading %s (media_id=%s)", basename, media_id)
-            response = requests.get(download_url, stream=True, timeout=90)
-            if response.status_code != 200:
-                logging.error(
-                    "[SYNC] Failed sync media download %s (status=%s)",
+        for attempt in range(1, total_attempts + 1):
+            started_at = time.time()
+            try:
+                logging.info(
+                    "[SYNC] Sync media missing. Downloading %s (media_id=%s) attempt=%s/%s connect_timeout=%ss read_timeout=none",
                     basename,
-                    response.status_code,
+                    media_id,
+                    attempt,
+                    total_attempts,
+                    self.sync_media_download_connect_timeout_s,
                 )
-                return None
+                response = requests.get(
+                    download_url,
+                    stream=True,
+                    timeout=(self.sync_media_download_connect_timeout_s, None),
+                )
+                if response.status_code != 200:
+                    logging.error(
+                        "[SYNC] Failed sync media download %s (status=%s attempt=%s/%s)",
+                        basename,
+                        response.status_code,
+                        attempt,
+                        total_attempts,
+                    )
+                    if response.status_code in (401, 403, 404):
+                        return None
+                    raise RuntimeError(f"download status {response.status_code}")
 
-            with open(temp_path, "wb") as file_handle:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        file_handle.write(chunk)
+                bytes_written = 0
+                with open(temp_path, "wb") as file_handle:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            file_handle.write(chunk)
+                            bytes_written += len(chunk)
 
-            os.replace(temp_path, target_path)
-            logging.info("[SYNC] Sync media ready locally: %s", target_path)
-            return target_path
-        except Exception as error:
-            logging.error("[SYNC] Error downloading sync media %s: %s", basename, error)
-            return None
-        finally:
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except OSError:
-                    pass
+                os.replace(temp_path, target_path)
+                elapsed_s = max(0.0, time.time() - started_at)
+                logging.info(
+                    "[SYNC] Sync media ready locally: %s (%.1fs, %.2f MB)",
+                    target_path,
+                    elapsed_s,
+                    bytes_written / (1024 * 1024),
+                )
+                return target_path
+            except Exception as error:
+                elapsed_s = max(0.0, time.time() - started_at)
+                logging.error(
+                    "[SYNC] Error downloading sync media %s attempt=%s/%s after %.1fs: %s",
+                    basename,
+                    attempt,
+                    total_attempts,
+                    elapsed_s,
+                    error,
+                )
+                if attempt >= total_attempts:
+                    return None
+                if self.sync_media_download_retry_backoff_s > 0:
+                    time.sleep(self.sync_media_download_retry_backoff_s)
+            finally:
+                if os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except OSError:
+                        pass
+
+        return None
 
     def sync(self, playing_playlist_id: Optional[str] = None) -> bool:
         """Sync schedule and download new media"""

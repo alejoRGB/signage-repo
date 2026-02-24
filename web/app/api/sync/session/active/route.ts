@@ -63,6 +63,7 @@ export async function GET() {
             lastSeekToMs: number | null;
         }
     > = {};
+    let prepareCommandPendingByDeviceId: Record<string, boolean> = {};
 
     if (session && sessionDevices.length > 0) {
         const deviceIds = sessionDevices
@@ -74,6 +75,7 @@ export async function GET() {
                     session,
                     metrics,
                     correctionTelemetryByDeviceId,
+                    prepareCommandPendingByDeviceId,
                 }),
                 {
                     headers: {
@@ -85,6 +87,28 @@ export async function GET() {
                 }
             );
         }
+
+        const pendingPrepareCommands = await prisma.syncDeviceCommand.findMany({
+            where: {
+                sessionId: session.id,
+                deviceId: { in: deviceIds },
+                type: "SYNC_PREPARE",
+                status: "PENDING",
+            },
+            select: {
+                deviceId: true,
+            },
+        });
+        const pendingPrepareDeviceIds = new Set(
+            pendingPrepareCommands
+                .map((command) => command.deviceId)
+                .filter((deviceId): deviceId is string => typeof deviceId === "string" && deviceId.length > 0)
+        );
+        prepareCommandPendingByDeviceId = deviceIds.reduce<Record<string, boolean>>((acc, deviceId) => {
+            acc[deviceId] = pendingPrepareDeviceIds.has(deviceId);
+            return acc;
+        }, {});
+
         const correctionEvents = [SYNC_LOG_EVENT.SOFT_CORRECTION, SYNC_LOG_EVENT.HARD_RESYNC] as const;
         const ACTIVE_CORRECTION_WINDOW_MS = 12_000;
         const CORRECTION_LOOKBACK_MS = 120_000;
@@ -153,6 +177,7 @@ export async function GET() {
             session,
             metrics,
             correctionTelemetryByDeviceId,
+            prepareCommandPendingByDeviceId,
         }),
         {
             headers: {
