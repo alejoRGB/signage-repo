@@ -840,6 +840,13 @@ Cambios necesarios:
 - Asegurar `prisma generate` en CI/build step (además de `postinstall`).
 - Evitar caches de `node_modules`/Prisma client inconsistentes sin invalidación por cambios en `schema.prisma`.
 
+Estado actual (2026-02-24): RESUELTO parcialmente
+
+- `web/package.json` ahora ejecuta `prisma generate` de forma explicita en `prebuild` (ademas de `postinstall`), por lo que `npm run build` no depende de haber corrido install/generate previamente en el mismo entorno.
+- `npm --prefix web run build` verificado OK despues del cambio.
+- Riesgo residual: caches de CI/Vercel pueden seguir dejando artefactos inconsistentes si se persiste `.next`/`node_modules` sin estrategia de invalidacion por `schema.prisma` (operativo, no de logica).
+- `vercel build --yes` local sigue fallando por el bug conocido del Vercel CLI en Windows (`Unable to find lambda for route ...`), no por Prisma/build de Next.
+
 ## Dependencias y seguridad de supply chain
 
 ### `next` con vulnerabilidad reportada por `npm audit`
