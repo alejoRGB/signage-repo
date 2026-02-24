@@ -187,6 +187,15 @@ Cambios necesarios:
 - Restringir `connect-src`, `img-src`, `frame-src` a dominios concretos.
 - Agregar `object-src 'none'`, `base-uri 'self'`, `frame-ancestors` (si aplica).
 
+Estado (24/02): RESUELTO parcialmente (hardening aplicado, queda migración a nonce)
+
+- `web/next.config.ts` ahora genera CSP por entorno:
+  - `dev/preview`: mantiene `unsafe-eval` y `vercel.live` para tooling.
+  - `prod`: elimina `unsafe-eval`.
+- `script-src` y `connect-src` se restringieron a dominios concretos (GTM/GA + `vercel.live` solo cuando aplica), eliminando `connect-src https:` amplio.
+- Se agregaron directivas de hardening faltantes: `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `script-src-attr 'none'`, `worker-src`, `frame-ancestors`, `upgrade-insecure-requests` (prod).
+- Riesgo residual documentado: `script-src 'unsafe-inline'` y `style-src 'unsafe-inline'` se mantienen por compatibilidad con Next.js App Router + scripts inline de JSON-LD/GA. Para cerrar completamente el hallazgo, migrar a CSP con nonce/hash.
+
 ### 7) Endpoints debug expuestos en runtime
 
 Evidencia:
