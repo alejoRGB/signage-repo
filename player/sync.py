@@ -22,6 +22,7 @@ class SyncManager:
         self.device_token = self.config.get("device_token")
         self.device_id = self.config.get("device_id")
         self.sync_media_download_connect_timeout_s = self._read_env_int("SYNC_MEDIA_DOWNLOAD_CONNECT_TIMEOUT_S", 10, 1)
+        self.sync_media_download_read_timeout_s = self._read_env_int("SYNC_MEDIA_DOWNLOAD_READ_TIMEOUT_S", 300, 1)
         self.sync_media_download_retries = self._read_env_int("SYNC_MEDIA_DOWNLOAD_RETRIES", 3, 1)
         self.sync_media_download_retry_backoff_s = self._read_env_int("SYNC_MEDIA_DOWNLOAD_RETRY_BACKOFF_S", 5, 0)
         
@@ -630,18 +631,22 @@ class SyncManager:
             started_at = time.time()
             try:
                 logging.info(
-                    "[SYNC] Sync media missing. Downloading %s (media_id=%s) attempt=%s/%s connect_timeout=%ss read_timeout=none",
+                    "[SYNC] Sync media missing. Downloading %s (media_id=%s) attempt=%s/%s connect_timeout=%ss read_timeout=%ss",
                     basename,
                     media_id,
                     attempt,
                     total_attempts,
                     self.sync_media_download_connect_timeout_s,
+                    self.sync_media_download_read_timeout_s,
                 )
                 response = requests.get(
                     download_url,
                     stream=True,
                     headers=self._device_auth_headers(),
-                    timeout=(self.sync_media_download_connect_timeout_s, None),
+                    timeout=(
+                        self.sync_media_download_connect_timeout_s,
+                        self.sync_media_download_read_timeout_s,
+                    ),
                 )
                 if response.status_code != 200:
                     logging.error(

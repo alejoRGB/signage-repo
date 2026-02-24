@@ -104,7 +104,7 @@ def test_get_current_device_id_from_cached_playlist(tmp_path):
     assert manager.get_current_device_id() == "device-cache-1"
 
 
-def test_ensure_sync_media_available_waits_without_read_timeout(tmp_path, mocker):
+def test_ensure_sync_media_available_uses_finite_read_timeout(tmp_path, mocker):
     config_file = tmp_path / "config.json"
     config_file.write_text(json.dumps({
         "server_url": "http://test.com",
@@ -129,7 +129,10 @@ def test_ensure_sync_media_available_waits_without_read_timeout(tmp_path, mocker
         "http://test.com/api/media/download/media-1",
         stream=True,
         headers={"X-Device-Token": "token-1"},
-        timeout=(manager.sync_media_download_connect_timeout_s, None),
+        timeout=(
+            manager.sync_media_download_connect_timeout_s,
+            manager.sync_media_download_read_timeout_s,
+        ),
     )
 
 

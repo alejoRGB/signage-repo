@@ -649,6 +649,13 @@ Cambios necesarios:
 
 - Configurar `read timeout` finito y retries controlados.
 
+Estado (24/02): RESUELTO
+
+- `player/sync.py` (`ensure_sync_media_available`) ya no usa `read timeout` infinito; ahora usa timeout de lectura finito configurable (`SYNC_MEDIA_DOWNLOAD_READ_TIMEOUT_S`, default 300s).
+- Se mantienen retries y backoff ya existentes para tolerar fallos transitorios sin quedar colgado indefinidamente.
+- Logging de descarga sync ahora reporta `connect_timeout` y `read_timeout` efectivos.
+- Test actualizado en `player/tests/test_sync.py` valida que `requests.get(...)` use timeout `(connect, read)` finito.
+
 ### 23) Wrappers de ejecución usan `shell=True` con comandos armados dinámicamente
 
 Evidencia:
