@@ -1,4 +1,9 @@
-import { getClientIpForRateLimit, rateLimitKeyForDeviceToken, rateLimitKeyForIp } from "@/lib/rate-limit-key";
+import {
+    getClientIpForRateLimit,
+    rateLimitKeyForContactLead,
+    rateLimitKeyForDeviceToken,
+    rateLimitKeyForIp,
+} from "@/lib/rate-limit-key";
 
 function makeRequest(headers: Record<string, string>) {
     return { headers: new Headers(headers) } as unknown as Request;
@@ -33,5 +38,22 @@ describe("rate-limit-key helpers", () => {
         expect(key).toMatch(/^device-token:[a-f0-9]{32}$/);
         expect(key).not.toContain(token);
         expect(rateLimitKeyForDeviceToken(token)).toBe(key);
+    });
+
+    it("hashes contact lead fingerprint so rate limiting is not only IP-based", () => {
+        const key = rateLimitKeyForContactLead({
+            email: "Juan@Example.com ",
+            phone: "11 5555 1234",
+        });
+
+        expect(key).toMatch(/^contact-lead:[a-f0-9]{32}$/);
+        expect(key).not.toContain("juan@example.com");
+        expect(key).not.toContain("5555");
+        expect(
+            rateLimitKeyForContactLead({
+                email: "juan@example.com",
+                phone: "1155551234",
+            })
+        ).toBe(key);
     });
 });

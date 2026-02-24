@@ -99,6 +99,18 @@ describe("POST /api/contact", () => {
         expect(response.status).toBe(400);
     });
 
+    it("returns 429 when lead fingerprint rate limit is exceeded", async () => {
+        mockedCheckRateLimit.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+        const response = await POST(createRequest(validPayload));
+        const data = await response.json();
+
+        expect(response.status).toBe(429);
+        expect(data.error).toMatch(/Demasiadas solicitudes/);
+        expect(mockedCheckRateLimit).toHaveBeenCalledTimes(2);
+        expect(mockedCheckRateLimit.mock.calls[1]?.[0]).toMatch(/^contact-lead:/);
+    });
+
     it("returns 202 when no delivery channel is configured", async () => {
         mockedCheckRateLimit.mockResolvedValue(true);
         const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -139,6 +151,35 @@ describe("POST /api/contact", () => {
         expect(response.status).toBe(200);
         expect(data).toEqual({ ok: true, emailed: false, forwarded: true });
         expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(fetchSpy.mock.calls[0]?.[1]).toEqual(
+            expect.objectContaining({
+                signal: expect.any(AbortSignal),
+            })
+        );
+    });
+
+    it("handles webhook timeout and returns 502 when no other channel succeeds", async () => {
+        mockedCheckRateLimit.mockResolvedValue(true);
+        process.env.CONTACT_WEBHOOK_URL = "https://example.com/webhook";
+        process.env.CONTACT_WEBHOOK_TIMEOUT_MS = "500";
+        const errorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+        const abortError = new Error("aborted");
+        abortError.name = "AbortError";
+        const fetchSpy = jest.spyOn(global, "fetch").mockRejectedValue(abortError);
+
+        const response = await POST(createRequest(validPayload));
+        const data = await response.json();
+
+        expect(response.status).toBe(502);
+        expect(data.error).toMatch(/No se pudo procesar/);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith(
+            "Failed to forward contact lead to webhook",
+            expect.objectContaining({
+                message: expect.stringContaining("timeout"),
+            })
+        );
     });
 
     it("returns 502 when smtp is configured but delivery fails and no webhook exists", async () => {

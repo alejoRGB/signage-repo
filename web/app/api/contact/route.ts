@@ -3,12 +3,15 @@ import nodemailer from "nodemailer";
 import type { z } from "zod";
 import { ContactLeadSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { rateLimitKeyForIp } from "@/lib/rate-limit-key";
+import { rateLimitKeyForContactLead, rateLimitKeyForIp } from "@/lib/rate-limit-key";
 
 export const runtime = "nodejs";
 
 type ContactLead = z.infer<typeof ContactLeadSchema>;
 const DEFAULT_CONTACT_EMAIL = "info.senaldigital@gmail.com";
+const DEFAULT_CONTACT_WEBHOOK_TIMEOUT_MS = 5000;
+const MIN_CONTACT_WEBHOOK_TIMEOUT_MS = 500;
+const MAX_CONTACT_WEBHOOK_TIMEOUT_MS = 30000;
 
 function getSmtpConfig() {
     const host = (process.env.CONTACT_SMTP_HOST ?? "smtp.gmail.com").trim();
@@ -82,6 +85,20 @@ function buildLeadEmailContent(lead: ContactLead) {
     return { text, html };
 }
 
+function getContactWebhookTimeoutMs() {
+    const raw = process.env.CONTACT_WEBHOOK_TIMEOUT_MS?.trim();
+    if (!raw) {
+        return DEFAULT_CONTACT_WEBHOOK_TIMEOUT_MS;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+        return DEFAULT_CONTACT_WEBHOOK_TIMEOUT_MS;
+    }
+
+    return Math.min(MAX_CONTACT_WEBHOOK_TIMEOUT_MS, Math.max(MIN_CONTACT_WEBHOOK_TIMEOUT_MS, Math.round(parsed)));
+}
+
 async function sendLeadByEmail(lead: ContactLead, smtp: NonNullable<ReturnType<typeof getSmtpConfig>>) {
     const transporter = nodemailer.createTransport({
         host: smtp.host,
@@ -107,18 +124,33 @@ async function sendLeadByEmail(lead: ContactLead, smtp: NonNullable<ReturnType<t
 }
 
 async function forwardLeadToWebhook(lead: ContactLead, webhookUrl: string) {
-    const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-            ...lead,
-            source: "senaldigital.xyz",
-            submittedAt: new Date().toISOString(),
-        }),
-    });
+    const controller = new AbortController();
+    const timeoutMs = getContactWebhookTimeoutMs();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+
+    try {
+        response = await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cache: "no-store",
+            signal: controller.signal,
+            body: JSON.stringify({
+                ...lead,
+                source: "senaldigital.xyz",
+                submittedAt: new Date().toISOString(),
+            }),
+        });
+    } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+            throw new Error(`Webhook timeout after ${timeoutMs}ms`);
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
 
     if (!response.ok) {
         throw new Error(`Webhook returned status ${response.status}`);
@@ -151,6 +183,13 @@ export async function POST(request: NextRequest) {
     }
 
     const lead = validation.data;
+    const isLeadAllowed = await checkRateLimit(rateLimitKeyForContactLead(lead), "contact");
+    if (!isLeadAllowed) {
+        return NextResponse.json(
+            { error: "Demasiadas solicitudes. Intenta nuevamente en un minuto." },
+            { status: 429 }
+        );
+    }
     let emailed = false;
     let forwarded = false;
     let attemptedEmail = false;
@@ -170,7 +209,7 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    const webhookUrl = process.env.CONTACT_WEBHOOK_URL;
+    const webhookUrl = process.env.CONTACT_WEBHOOK_URL?.trim();
     attemptedWebhook = Boolean(webhookUrl);
     if (webhookUrl) {
         try {

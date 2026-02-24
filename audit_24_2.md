@@ -499,6 +499,18 @@ Cambios necesarios:
 - Agregar timeout y retries acotados al webhook.
 - Considerar cola asíncrona para entrega (SMTP/webhook).
 
+Estado (24/02): RESUELTO parcialmente
+
+- `web/app/api/contact/route.ts` ahora usa timeout real para webhook (`AbortController` + `signal`) con `CONTACT_WEBHOOK_TIMEOUT_MS` (default 5000ms, clamp 500-30000).
+- Si el webhook excede el timeout, se aborta y se registra error controlado (sin colgar indefinidamente el request).
+- Se agrego rate-limit adicional por fingerprint del lead (`email` + `phone` hasheados) via `rateLimitKeyForContactLead(...)`, para no depender solo de IP/header spoofeable.
+- `web/lib/rate-limit-key.ts` agrega helper de key hasheada para contacto.
+- `.env.example` documenta `CONTACT_WEBHOOK_TIMEOUT_MS`.
+- Tests agregados/actualizados:
+  - `web/__tests__/api/contact.test.ts` (segundo rate-limit, `signal` en webhook, manejo de timeout)
+  - `web/__tests__/lib/rate-limit-key.test.ts` (hash de contact lead)
+- Pendiente para cierre total del hallazgo: retries acotados/cola asincrona y una politica explicita de trusted proxy headers por entorno.
+
 ### 17) Failover de master sync usa `dedupeKey` no versionado por evento
 
 Evidencia:

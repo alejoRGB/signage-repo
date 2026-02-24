@@ -80,3 +80,9 @@ export function rateLimitKeyForDeviceToken(deviceToken: string) {
 export function rateLimitKeyForUserId(userId: string) {
     return `user:${clamp(userId)}`;
 }
+
+export function rateLimitKeyForContactLead(input: { email: string; phone: string }) {
+    const email = clamp(input.email.trim().toLowerCase());
+    const phone = clamp(input.phone.replace(/\s+/g, ""));
+    return `contact-lead:${hashIdentifier(`${email}|${phone}`)}`;
+}
