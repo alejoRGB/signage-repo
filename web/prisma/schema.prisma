@@ -198,6 +198,7 @@ model SyncSession {
   userId              String
   status              SyncSessionStatus   @default(CREATED)
   startAtMs           BigInt?
+  startTimeoutAtMs    BigInt?
   startedAtMs         BigInt?
   durationMs          Int
   preparationBufferMs Int                 @default(10000)

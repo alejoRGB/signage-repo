@@ -347,6 +347,25 @@ Cambios necesarios:
 - Implementar timeout real (cron/job/heartbeat-driven) que marque `ABORTED` y emita `SYNC_STOP`.
 - Persistir `startTimeoutMs/timeoutAtMs` en DB si se va a usar operativamente.
 
+Estado (24/02): RESUELTO
+
+- Se agregÃ³ persistencia de timeout en `SyncSession` (`startTimeoutAtMs`) y migraciÃ³n SQL:
+  - `web/prisma/schema.prisma`
+  - `web/prisma/migrations/20260224153000_add_sync_session_start_timeout/migration.sql`
+- Nuevo servicio `web/lib/sync-start-timeout-service.ts`:
+  - detecta sesiones en `CREATED/STARTING` vencidas por `startTimeoutAtMs`
+  - marca `ABORTED` + `stoppedAt`
+  - marca `SyncSessionDevice` como `DISCONNECTED` (excepto `ERRORED`)
+  - encola `SYNC_STOP` con reason `TIMEOUT`
+- Enforcement conectado en rutas/flujos reales:
+  - `web/app/api/sync/session/start/route.ts` (limpia sesiones vencidas antes de crear nuevas y persiste timeout)
+  - `web/app/api/sync/session/active/route.ts` (no devuelve sesiones zombies)
+  - `web/lib/sync-runtime-service.ts` (aborta y corta procesamiento runtime si la sesiÃ³n ya expirÃ³)
+- Tests agregados/actualizados:
+  - `web/__tests__/lib/sync-start-timeout-service.test.ts`
+  - `web/__tests__/api/sync-runtime-service.test.ts`
+  - `web/__tests__/api/sync-session-start-stop.test.ts`
+
 ## Hallazgos medios
 
 ### 12) `devices` API sobreexpone datos (incluyendo token) y escala mal con muchos media items

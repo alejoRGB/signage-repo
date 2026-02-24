@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ACTIVE_SYNC_SESSION_STATUSES, syncSessionInclude, toJsonSafe } from "@/lib/sync-session-service";
 import { computeSyncSessionMetrics } from "@/lib/sync-metrics";
 import { SYNC_LOG_EVENT } from "@/types/sync";
+import { abortExpiredSyncStartSessionsForUser } from "@/lib/sync-start-timeout-service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,6 +29,8 @@ export async function GET() {
     if (auth.error) {
         return auth.error;
     }
+
+    await abortExpiredSyncStartSessionsForUser(auth.userId);
 
     const session = await prisma.syncSession.findFirst({
         where: {

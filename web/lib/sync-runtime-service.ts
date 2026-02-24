@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma, SyncSessionDeviceStatus, SyncSessionStatus } from "@prisma/client";
 import { buildPreparePayload } from "@/lib/sync-command-service";
 import { SYNC_DEVICE_COMMAND_TYPE } from "@/types/sync";
+import { abortExpiredSyncStartSessionById } from "@/lib/sync-start-timeout-service";
 
 type SyncRuntimeInput = {
     sessionId?: string | null;
@@ -208,6 +209,10 @@ function nextDriftHistory(
 
 export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRuntimeInput | null) {
     if (!runtime?.sessionId) {
+        return;
+    }
+
+    if (await abortExpiredSyncStartSessionById(runtime.sessionId)) {
         return;
     }
 

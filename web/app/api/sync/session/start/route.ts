@@ -13,6 +13,7 @@ import { buildPreparePayload } from "@/lib/sync-command-service";
 import { selectInitialMasterDeviceId } from "@/lib/sync-master-election";
 import { SYNC_DEVICE_COMMAND_TYPE } from "@/types/sync";
 import { isDeviceConsideredOnline } from "@/lib/device-connectivity";
+import { abortExpiredSyncStartSessionsForUser } from "@/lib/sync-start-timeout-service";
 
 const INITIAL_START_HOLD_MS = 12 * 60 * 60 * 1000;
 
@@ -78,6 +79,8 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        await abortExpiredSyncStartSessionsForUser(auth.userId);
 
         const activeUserSession = await prisma.syncSession.findFirst({
             where: {
@@ -232,6 +235,7 @@ export async function POST(request: Request) {
                     durationMs: sessionDurationMs,
                     preparationBufferMs,
                     startAtMs: BigInt(startAtMs),
+                    startTimeoutAtMs: BigInt(timeoutAtMs),
                     masterDeviceId: initialMasterDeviceId,
                 },
             });

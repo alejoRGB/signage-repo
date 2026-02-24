@@ -3,6 +3,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { extractSyncRuntimeFromFormData, extractSyncRuntimeFromJson, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
+import { abortExpiredSyncStartSessionById } from "@/lib/sync-start-timeout-service";
 
 jest.mock("@/lib/prisma", () => ({
     prisma: {
@@ -23,9 +24,14 @@ jest.mock("@/lib/prisma", () => ({
     },
 }));
 
+jest.mock("@/lib/sync-start-timeout-service", () => ({
+    abortExpiredSyncStartSessionById: jest.fn().mockResolvedValue(false),
+}));
+
 describe("sync-runtime-service LAN runtime fields", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        (abortExpiredSyncStartSessionById as jest.Mock).mockResolvedValue(false);
     });
 
     it("extracts and normalizes lan fields from JSON payload", () => {
@@ -88,6 +94,19 @@ describe("sync-runtime-service LAN runtime fields", () => {
                 }),
             })
         );
+    });
+
+    it("aborts processing runtime when start timeout has expired", async () => {
+        (abortExpiredSyncStartSessionById as jest.Mock).mockResolvedValue(true);
+
+        await persistDeviceSyncRuntime("device-1", {
+            sessionId: "session-timeout",
+            status: "READY",
+        });
+
+        expect(abortExpiredSyncStartSessionById).toHaveBeenCalledWith("session-timeout");
+        expect(prisma.syncSessionDevice.findFirst).not.toHaveBeenCalled();
+        expect(prisma.syncSessionDevice.update).not.toHaveBeenCalled();
     });
 
     it("waits for all devices READY before scheduling coordinated start", async () => {

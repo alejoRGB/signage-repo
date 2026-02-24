@@ -36,6 +36,10 @@ jest.mock("@/lib/auth", () => ({
     authOptions: {},
 }));
 
+jest.mock("@/lib/sync-start-timeout-service", () => ({
+    abortExpiredSyncStartSessionsForUser: jest.fn().mockResolvedValue({ abortedSessionIds: [] }),
+}));
+
 describe("Sync session API", () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -187,6 +191,8 @@ describe("Sync session API", () => {
                 }),
             })
         );
+        const createCall = createMock.mock.calls[0]?.[0];
+        expect(typeof createCall?.data?.startTimeoutAtMs).toBe("bigint");
         expect(createCommandManyMock).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.arrayContaining([
