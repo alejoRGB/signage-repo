@@ -319,6 +319,15 @@ Cambios necesarios:
 - Implementar retry en colisión (N intentos).
 - No retornar `details` de excepciones en respuestas públicas.
 
+Estado (24/02): RESUELTO
+
+- `web/app/api/device/register/route.ts` ahora:
+  - usa generación de pairing code encapsulada y reintenta colisiones `P2002` (hasta 5 intentos)
+  - devuelve `503` genérico si se agotan retries de colisión (en vez de 500 por colisión transitoria)
+  - no expone `error.message`/`details` en respuestas `500`
+- El parseo de IP/rate-limit key robusta quedó cubierto por el fix de `#5` (`web/lib/rate-limit-key.ts` + `rateLimitKeyForIp()`).
+- Test agregado: `web/__tests__/api/device-register-route.test.ts` (éxito, rate-limit, retry por colisión, retries agotados y sanitización de errores).
+
 ### 11) Inicio de sesión sync devuelve `startTimeoutMs` pero no hay enforcement server-side
 
 Evidencia:
