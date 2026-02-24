@@ -1,6 +1,7 @@
 
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { isAdminSessionExpiredToken } from "@/lib/admin-session";
 
 export default withAuth(
     // `withAuth` augments your `Request` with the user's token.
@@ -10,15 +11,16 @@ export default withAuth(
         const isDashboardPath = req.nextUrl.pathname.startsWith("/dashboard");
         const isLoginPage = req.nextUrl.pathname === "/login";
         const isAdminLoginPage = req.nextUrl.pathname === "/admin/login";
+        const isExpiredAdminSession = isAdminSessionExpiredToken(token);
 
         // 1. Unauthenticated Handling
-        if (!token) {
+        if (!token || isExpiredAdminSession) {
             // Allow access to login pages (Prevent Loop)
             if (isLoginPage || isAdminLoginPage) {
                 return NextResponse.next();
             }
 
-            if (isAdminPath) {
+            if (isAdminPath || (isDashboardPath && token?.role === "ADMIN")) {
                 return NextResponse.redirect(new URL("/admin/login", req.url));
             }
             if (isDashboardPath) {

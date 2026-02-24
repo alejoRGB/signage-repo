@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { isAdminSessionExpiredToken } from "@/lib/admin-session";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -104,7 +105,7 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async session({ session, token }) {
             // Check for explicit expiry error from JWT callback
-            if (token.error === "AdminSessionExpired") {
+            if (isAdminSessionExpiredToken(token)) {
                 // Return an empty/invalid session to force sign-out
                 return {} as any;
             }
@@ -125,14 +126,8 @@ export const authOptions: NextAuthOptions = {
             }
 
             // Enforce 1-hour session for Admins
-            if (token.role === 'ADMIN') {
-                const maxAge = 60 * 60 * 1000; // 1 hour in ms
-                const now = Date.now();
-                const loginTime = (token.loginTimestamp as number) || 0;
-
-                if (now - loginTime > maxAge) {
-                    return { ...token, error: "AdminSessionExpired" };
-                }
+            if (token.role === 'ADMIN' && isAdminSessionExpiredToken(token)) {
+                return { ...token, error: "AdminSessionExpired" };
             }
 
             return token;
