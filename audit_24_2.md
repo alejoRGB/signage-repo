@@ -279,7 +279,7 @@ Cambios necesarios:
 - Mover autenticación del device a header (`Authorization: Bearer ...` o `X-Device-Token`).
 - Evitar URLs presignadas con token reutilizable; usar URLs cortas firmadas por request si hace falta.
 
-Estado (24/02): RESUELTO parcialmente (migración a header aplicada + fallback legacy)
+Estado (24/02): RESUELTO (fallback query eliminado)
 
 - `web/lib/device-token-request.ts` centraliza extracción de token de device desde:
   - `X-Device-Token`
@@ -297,7 +297,7 @@ Estado (24/02): RESUELTO parcialmente (migración a header aplicada + fallback l
   - `web/__tests__/api/media-download-route.test.ts`
   - `web/__tests__/api/device-heartbeat-sync.test.ts`
   - `player/tests/test_sync.py`
-- Pendiente para cierre total del hallazgo: eliminar fallback de `?token=` en backend después de migrar todos los players desplegados (y comunicar ventana de deprecación).
+- Cierre aplicado: se eliminó el fallback `?token=` en backend después de desplegar players actualizados que usan `X-Device-Token` (verificación operativa en `pi4`, `pi3`, `pi3b`).
 
 ### 10) `device/register` filtra detalles internos y maneja mal colisiones de pairing code
 

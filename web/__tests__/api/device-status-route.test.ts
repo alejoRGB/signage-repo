@@ -40,18 +40,12 @@ describe("GET /api/device/status", () => {
         expect(body).toEqual({ status: "paired", device_name: "Screen 1" });
     });
 
-    it("accepts legacy query token fallback", async () => {
-        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
-            id: "device-1",
-            userId: null,
-            pairingCode: "123456",
-        });
-
+    it("rejects legacy query token fallback", async () => {
         const response = await GET(new Request("http://localhost/api/device/status?token=legacy-1"));
         const body = await response.json();
 
-        expect(response.status).toBe(200);
-        expect(prisma.device.findUnique).toHaveBeenCalledWith({ where: { token: "legacy-1" } });
-        expect(body.status).toBe("unpaired");
+        expect(response.status).toBe(400);
+        expect(prisma.device.findUnique).not.toHaveBeenCalled();
+        expect(body.error).toBe("Device token required");
     });
 });

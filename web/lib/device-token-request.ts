@@ -30,7 +30,7 @@ export function getDeviceTokenFromRequest(
     request: Request,
     options?: { allowQueryFallback?: boolean }
 ): DeviceTokenExtractionResult {
-    const allowQueryFallback = options?.allowQueryFallback ?? true;
+    const allowQueryFallback = options?.allowQueryFallback ?? false;
 
     const headerToken = normalizeToken(request.headers.get("x-device-token"));
     if (headerToken) {

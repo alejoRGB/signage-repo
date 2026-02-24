@@ -89,7 +89,7 @@ describe("GET /api/media/download/[id]", () => {
         expect(response.headers.get("location")).toBe("https://cdn.example.com/video.mp4");
     });
 
-    it("accepts legacy token query param as temporary fallback", async () => {
+    it("rejects legacy token query param fallback", async () => {
         (prisma.mediaItem.findFirst as jest.Mock).mockResolvedValue({
             id: "media-1",
             userId: "user-1",
@@ -102,10 +102,9 @@ describe("GET /api/media/download/[id]", () => {
             { params: Promise.resolve({ id: "media-1" }) }
         );
 
-        expect(prisma.device.findUnique).toHaveBeenCalledWith({
-            where: { token: "legacy-token" },
-        });
-        expect(response.status).toBeGreaterThanOrEqual(300);
-        expect(response.status).toBeLessThan(400);
+        const body = await response.json();
+        expect(prisma.device.findUnique).not.toHaveBeenCalled();
+        expect(response.status).toBe(401);
+        expect(body.error).toBe("Device token required");
     });
 });
