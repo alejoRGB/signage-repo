@@ -156,6 +156,14 @@ Cambios necesarios:
 - Migrar a rate limit distribuido (Redis/Upstash/Vercel KV o DB-backed).
 - Estandarizar keys por actor real (IP parseada correctamente, deviceId, userId).
 
+Estado (24/02): RESUELTO parcialmente (implementado fix de backend distribuido opcional)
+
+- `web/lib/rate-limit.ts` ahora usa Upstash (`@upstash/ratelimit` + `@upstash/redis`) cuando existen `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`.
+- Mantiene fallback a memoria para desarrollo/local y override `RATE_LIMIT_BACKEND=memory`.
+- `web/.env.example` documenta configuraciÃ³n de rate limiting distribuido.
+- Test agregado: `web/__tests__/lib/rate-limit.test.ts`.
+- Pendiente operativo/documental: configurar Upstash en Vercel/producciÃ³n y estandarizar keys por actor real (este patch no cambia call-sites ni parseo de IP).
+
 ### 6) CSP demasiado permisivo (XSS hardening insuficiente)
 
 Evidencia:
