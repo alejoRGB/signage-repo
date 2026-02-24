@@ -385,9 +385,12 @@ Each schedule item defines:
 - Installs systemd service for auto-start on boot
 - Sets timezone
 
-**One-Line Install:**
+**Instalación manual segura (evitar `curl | bash`):**
 ```bash
-curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/setup_device.sh | bash
+curl -sLf -o /tmp/signage-setup_device.sh \
+  https://raw.githubusercontent.com/alejoRGB/signage-repo/<TAG_OR_COMMIT>/player/setup_device.sh
+less /tmp/signage-setup_device.sh
+SIGNAGE_REPO_REF=<TAG_OR_COMMIT> bash /tmp/signage-setup_device.sh
 ```
 
 ### 7.3 Playback Engine

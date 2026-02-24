@@ -40,7 +40,12 @@ sudo apt upgrade -y
 .\deploy.ps1 -PlayerIp <PI_IP> -PlayerUser <USER>
 ```
 
-Alternative (one-line install on the Pi):
+Alternative (manual install on the Pi, safer than `curl | bash`):
 ```bash
-curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/setup_device.sh | bash
+curl -sLf -o /tmp/signage-setup_device.sh \
+  https://raw.githubusercontent.com/alejoRGB/signage-repo/<TAG_OR_COMMIT>/player/setup_device.sh
+less /tmp/signage-setup_device.sh
+SIGNAGE_REPO_REF=<TAG_OR_COMMIT> \
+SIGNAGE_SERVER_URL="https://signage-repo-dc5s.vercel.app" \
+bash /tmp/signage-setup_device.sh
 ```

@@ -729,6 +729,19 @@ Cambios necesarios:
 - Verificar checksum.
 - Centralizar URL de backend en config/bootstrap, no hardcodear en scripts/docs.
 
+Estado actual (2026-02-24): RESUELTO parcialmente
+
+- README.md, player/INSTALL_INSTRUCTIONS.md y PRD.md ya no recomiendan curl | bash; ahora documentan descarga a archivo + revision previa + ejecucion explicita.
+- web/public/install.sh (legacy) ya no pipea a bash: descarga a archivo temporal y ejecuta localmente. Soporta SIGNAGE_REPO_OWNER, SIGNAGE_REPO_NAME, SIGNAGE_REPO_REF y checksum opcional via SIGNAGE_SETUP_SHA256.
+- player/setup_device.sh elimina hardcodes de repo/ref/backend en el flujo de descarga (repo/ref por env y server_url bootstrap via SIGNAGE_SERVER_URL).
+- Default de backend corregido a la URL canonica (https://signage-repo-dc5s.vercel.app) en vez de una preview URL legacy.
+- Validacion: sintaxis shell verificada con Git Bash (bash -n) para player/setup_device.sh y web/public/install.sh.
+
+Pendiente para cierre total:
+
+- Publicar releases/tags y actualizar docs/instalador para usar un ref pinneado real por defecto (no branch mutable).
+- Hacer obligatoria la verificacion de checksum (actualmente es opcional para compatibilidad).
+
 ### 26) Código duplicado y expuesto en `web/public/sync.py`
 
 Evidencia:

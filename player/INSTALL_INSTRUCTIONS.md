@@ -49,11 +49,18 @@ Este documento detalla los pasos para configurar una nueva Raspberry Pi desde ce
 
 ### 2.2 Método alternativo (one‑line install)
 
-Una vez que la Pi haya arrancado y esté conectada a internet (puedes verificarlo con `ping google.com`), abre una terminal (o conéctate por SSH) y ejecuta el siguiente **comando mágico**:
+Una vez que la Pi haya arrancado y esté conectada a internet (puedes verificarlo con `ping google.com`), abre una terminal (o conéctate por SSH) y descarga el instalador. Evita `curl | bash` directo:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player/setup_device.sh | bash
+curl -sLf -o /tmp/signage-setup_device.sh \
+  https://raw.githubusercontent.com/alejoRGB/signage-repo/<TAG_OR_COMMIT>/player/setup_device.sh
+less /tmp/signage-setup_device.sh
+SIGNAGE_REPO_REF=<TAG_OR_COMMIT> \
+SIGNAGE_SERVER_URL="https://signage-repo-dc5s.vercel.app" \
+bash /tmp/signage-setup_device.sh
 ```
+
+> Reemplaza `<TAG_OR_COMMIT>` por un tag o commit pinneado (recomendado). Opcionalmente puedes exportar `SIGNAGE_REPO_OWNER`, `SIGNAGE_REPO_NAME` y `SIGNAGE_SETUP_SHA256` si usas un fork o quieres verificar checksum.
 
 **¿Qué hace este script?**
 1.  Actualiza el sistema (`apt-get update`).

@@ -7,8 +7,18 @@ set -e
 
 USER_HOME="/home/$(whoami)"
 APP_DIR="$USER_HOME/signage-player"
-REPO_URL="https://github.com/alejoRGB/signage-repo.git"
 CONFIG_BACKUP="/tmp/signage_config_backup.json"
+
+REPO_OWNER="${SIGNAGE_REPO_OWNER:-alejoRGB}"
+REPO_NAME="${SIGNAGE_REPO_NAME:-signage-repo}"
+REPO_REF="${SIGNAGE_REPO_REF:-master}"
+SERVER_URL="${SIGNAGE_SERVER_URL:-https://signage-repo-dc5s.vercel.app}"
+
+if [[ -z "$REPO_OWNER" || -z "$REPO_NAME" || -z "$REPO_REF" ]]; then
+  echo "[INSTALLER] ERROR: Repository source is not configured correctly."
+  echo "[INSTALLER] Set SIGNAGE_REPO_OWNER, SIGNAGE_REPO_NAME and SIGNAGE_REPO_REF."
+  exit 1
+fi
 
 echo "[INSTALLER] Starting installation v2.5 (Timezone Script Added)..."
 echo "[INSTALLER] 🛑 Stopping existing service to prevent conflicts..."
@@ -49,8 +59,11 @@ fi
 # 3. Download Source (Direct via Curl)
 echo "[INSTALLER] Downloading player files directly..."
 
-BASE_URL="https://raw.githubusercontent.com/alejoRGB/signage-repo/master/player"
+BASE_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REPO_REF}/player"
 FILES="player.py hwaccel.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py lan_sync.py videowall_controller.py state_machine.py videowall_drift.py mpv-videowall.conf lua/videowall_sync.lua fix_rotation_boot.sh setup_timezone.sh"
+
+echo "[INSTALLER] Source repo: ${REPO_OWNER}/${REPO_NAME}@${REPO_REF}"
+echo "[INSTALLER] Default server_url: ${SERVER_URL}"
 
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
@@ -86,10 +99,10 @@ if [ -f "$CONFIG_BACKUP" ]; then
     echo "[INSTALLER] Restoring configuration..."
     mv "$CONFIG_BACKUP" "$APP_DIR/config.json"
 else
-    echo "[INSTALLER] Creating new configuration..."
-    cat <<EOF > "$APP_DIR/config.json"
+  echo "[INSTALLER] Creating new configuration..."
+  cat <<EOF > "$APP_DIR/config.json"
 {
-  "server_url": "https://signage-repo-dc5s-git-master-alejos-projects-7a73f1be.vercel.app",
+  "server_url": "${SERVER_URL}",
   "device_token": "",
   "media_dir": "$APP_DIR/media"
 }
