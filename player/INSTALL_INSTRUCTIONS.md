@@ -55,12 +55,13 @@ Una vez que la Pi haya arrancado y esté conectada a internet (puedes verificarl
 curl -sLf -o /tmp/signage-setup_device.sh \
   https://raw.githubusercontent.com/alejoRGB/signage-repo/<TAG_OR_COMMIT>/player/setup_device.sh
 less /tmp/signage-setup_device.sh
+echo "<SHA256_OF_PLAYER_SETUP_DEVICE_SH>  /tmp/signage-setup_device.sh" | sha256sum -c -
 SIGNAGE_REPO_REF=<TAG_OR_COMMIT> \
 SIGNAGE_SERVER_URL="https://signage-repo-dc5s.vercel.app" \
 bash /tmp/signage-setup_device.sh
 ```
 
-> Reemplaza `<TAG_OR_COMMIT>` por un tag o commit pinneado (recomendado). Opcionalmente puedes exportar `SIGNAGE_REPO_OWNER`, `SIGNAGE_REPO_NAME` y `SIGNAGE_SETUP_SHA256` si usas un fork o quieres verificar checksum.
+> Reemplaza `<TAG_OR_COMMIT>` por un tag o commit pinneado (obligatorio) y verifica el checksum antes de ejecutar. `SIGNAGE_SETUP_SHA256` ahora es obligatorio en el instalador legacy (`web/public/install.sh`) para verificar checksum antes de descargar/ejecutar el instalador canónico. Opcionalmente puedes exportar `SIGNAGE_REPO_OWNER` y `SIGNAGE_REPO_NAME` si usas un fork.
 
 **¿Qué hace este script?**
 1.  Actualiza el sistema (`apt-get update`).

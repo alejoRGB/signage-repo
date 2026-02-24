@@ -45,7 +45,10 @@ Alternative (manual install on the Pi, safer than `curl | bash`):
 curl -sLf -o /tmp/signage-setup_device.sh \
   https://raw.githubusercontent.com/alejoRGB/signage-repo/<TAG_OR_COMMIT>/player/setup_device.sh
 less /tmp/signage-setup_device.sh
+echo "<SHA256_OF_PLAYER_SETUP_DEVICE_SH>  /tmp/signage-setup_device.sh" | sha256sum -c -
 SIGNAGE_REPO_REF=<TAG_OR_COMMIT> \
 SIGNAGE_SERVER_URL="https://signage-repo-dc5s.vercel.app" \
 bash /tmp/signage-setup_device.sh
 ```
+
+Use a pinned tag/commit for `SIGNAGE_REPO_REF` (required) and verify the downloaded script checksum before execution. The legacy installer (`web/public/install.sh`) now also refuses to run without `SIGNAGE_SETUP_SHA256`.

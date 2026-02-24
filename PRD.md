@@ -390,7 +390,9 @@ Each schedule item defines:
 curl -sLf -o /tmp/signage-setup_device.sh \
   https://raw.githubusercontent.com/alejoRGB/signage-repo/<TAG_OR_COMMIT>/player/setup_device.sh
 less /tmp/signage-setup_device.sh
-SIGNAGE_REPO_REF=<TAG_OR_COMMIT> bash /tmp/signage-setup_device.sh
+echo "<SHA256_OF_PLAYER_SETUP_DEVICE_SH>  /tmp/signage-setup_device.sh" | sha256sum -c -
+SIGNAGE_REPO_REF=<TAG_OR_COMMIT> \
+bash /tmp/signage-setup_device.sh
 ```
 
 ### 7.3 Playback Engine

@@ -11,14 +11,21 @@ CONFIG_BACKUP="/tmp/signage_config_backup.json"
 
 REPO_OWNER="${SIGNAGE_REPO_OWNER:-alejoRGB}"
 REPO_NAME="${SIGNAGE_REPO_NAME:-signage-repo}"
-REPO_REF="${SIGNAGE_REPO_REF:-master}"
+REPO_REF="${SIGNAGE_REPO_REF:-}"
 SERVER_URL="${SIGNAGE_SERVER_URL:-https://signage-repo-dc5s.vercel.app}"
 
 if [[ -z "$REPO_OWNER" || -z "$REPO_NAME" || -z "$REPO_REF" ]]; then
   echo "[INSTALLER] ERROR: Repository source is not configured correctly."
-  echo "[INSTALLER] Set SIGNAGE_REPO_OWNER, SIGNAGE_REPO_NAME and SIGNAGE_REPO_REF."
+  echo "[INSTALLER] Set SIGNAGE_REPO_OWNER, SIGNAGE_REPO_NAME and SIGNAGE_REPO_REF (pinned tag or commit)."
   exit 1
 fi
+
+case "$REPO_REF" in
+  master|main|develop|dev)
+    echo "[INSTALLER] ERROR: SIGNAGE_REPO_REF must be a pinned tag or commit, not a mutable branch ('$REPO_REF')."
+    exit 1
+    ;;
+esac
 
 echo "[INSTALLER] Starting installation v2.5 (Timezone Script Added)..."
 echo "[INSTALLER] 🛑 Stopping existing service to prevent conflicts..."

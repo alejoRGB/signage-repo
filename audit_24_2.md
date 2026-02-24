@@ -1793,3 +1793,29 @@ Validation:
 - `npm --prefix web run test:api -- --runTestsByPath __tests__/api/sync-runtime-service.test.ts __tests__/api/device-commands.test.ts` -> PASS
 - `npm --prefix web run prisma:generate` -> PASS
 - `npm --prefix web run build` -> PASS
+
+## Update 2026-02-24 (installer supply-chain hardening closure)
+
+Closed the remaining supply-chain gaps for installer/bootstrap flows with a stricter policy than originally proposed.
+
+### Installer hardening status update (#25)
+
+- #25 (installer supply-chain hardening): RESOLVED
+  - `player/setup_device.sh`
+    - `SIGNAGE_REPO_REF` is now required (no mutable default branch fallback).
+    - Explicitly rejects mutable branch names (`master`, `main`, `develop`, `dev`) and requires a pinned tag/commit.
+  - `web/public/install.sh` (legacy installer)
+    - `SIGNAGE_REPO_REF` is now required and mutable branches are rejected.
+    - `SIGNAGE_SETUP_SHA256` is now mandatory (checksum verification is no longer optional).
+    - Installer refuses execution if checksum is missing or mismatched.
+  - Documentation updated (`README.md`, `player/INSTALL_INSTRUCTIONS.md`, `PRD.md`)
+    - examples now include an explicit checksum verification step (`sha256sum -c`) before running downloaded `player/setup_device.sh`
+    - text clarified that the legacy installer requires `SIGNAGE_SETUP_SHA256`
+
+Notes:
+- This closes the mutable-branch + optional-checksum gaps without waiting for a release-tag default; the policy now requires explicit pinning at invocation time.
+- The canonical script (`player/setup_device.sh`) still supports custom repo owner/name for forks, but only with pinned refs.
+
+Validation:
+- `C:\Program Files\Git\bin\bash.exe -n web/public/install.sh` -> PASS
+- `C:\Program Files\Git\bin\bash.exe -n player/setup_device.sh` -> PASS
