@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/contact-worker",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/media-upload-reconcile",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
