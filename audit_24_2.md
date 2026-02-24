@@ -908,6 +908,14 @@ Nota:
 
 - `git ls-files` mostró `web/test_device_token.txt` como versionado (vacío en esta revisión). No es un secreto hoy, pero conviene documentar mejor su propósito o eliminarlo si no se usa.
 
+
+Estado (24/02): RESUELTO parcialmente
+
+- Se agrego `check_secret_hygiene.ps1` en la raiz del repo para detectar archivos `.env*` locales en ubicaciones conocidas (solo imprime nombres/rutas, no lee ni muestra contenidos).
+- `deploy.ps1` ahora ejecuta ese chequeo de forma no bloqueante al inicio y muestra recomendaciones operativas si encuentra snapshots/exportes locales con secretos.
+- Validacion: el script detecta las exportaciones locales actuales (`.vercel/.env*`, `web/.env*`, `web/.vercel/.env*`) sin exponer valores.
+- Pendiente no automatizable por repo: rotacion y eliminacion manual de credenciales/snapshots locales ya exportados.
+
 ## Plan de remediación recomendado (orden)
 
 ### Fase 0 (inmediata, bloqueo prod)

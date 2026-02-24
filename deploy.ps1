@@ -4,6 +4,16 @@ param(
     [switch]$ForceConfigSync
 )
 
+# Non-blocking local hygiene check (filenames only, no secret contents read).
+if (Test-Path ".\check_secret_hygiene.ps1") {
+    try {
+        & ".\check_secret_hygiene.ps1"
+    }
+    catch {
+        Write-Host "Warning: local secret hygiene check failed: $_" -ForegroundColor Yellow
+    }
+}
+
 
 if ([string]::IsNullOrEmpty($PlayerIp)) {
     $PlayerIp = Read-Host "Enter Player IP Address (e.g. 192.168.1.100)"
