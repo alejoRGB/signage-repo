@@ -57,6 +57,44 @@ describe("POST /api/media", () => {
         expect(prisma.mediaItem.create).not.toHaveBeenCalled();
     });
 
+    it("returns 400 for non-http URL schemes", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+
+        const req = new Request("http://localhost/api/media", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Bad URL",
+                url: "file:///etc/passwd",
+                type: "image",
+                filename: "photo.jpg",
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        expect(prisma.mediaItem.create).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 for unsafe filename", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+
+        const req = new Request("http://localhost/api/media", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Bad filename",
+                url: "https://example.com/video.mp4",
+                type: "video",
+                filename: "../video.mp4",
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        expect(prisma.mediaItem.create).not.toHaveBeenCalled();
+    });
+
     it("persists valid web item", async () => {
         (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
         (prisma.mediaItem.create as jest.Mock).mockResolvedValue({

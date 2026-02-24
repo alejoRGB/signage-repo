@@ -9,6 +9,36 @@ import {
 
 // Helper to sanitize strings
 const sanitize = (value: string) => xss(value);
+const hasControlChars = (value: string) => /[\u0000-\u001F\u007F]/.test(value);
+
+export function isSafeStoredMediaFilename(value: unknown): value is string {
+    if (typeof value !== "string") {
+        return false;
+    }
+
+    if (!value || value === "." || value === "..") {
+        return false;
+    }
+
+    if (value.includes("/") || value.includes("\\") || value.includes(":")) {
+        return false;
+    }
+
+    if (hasControlChars(value)) {
+        return false;
+    }
+
+    return true;
+}
+
+function isHttpUrl(value: string) {
+    try {
+        const parsed = new URL(value);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+        return false;
+    }
+}
 
 // Playlist Schemas
 export const PlaylistItemSchema = z.object({
@@ -82,9 +112,19 @@ export const ContactLeadSchema = z.object({
 
 export const CreateMediaItemSchema = z.object({
     name: z.string().min(1, "Name is required").transform(sanitize),
-    url: z.string().url("Invalid URL").transform(sanitize),
+    url: z
+        .string()
+        .url("Invalid URL")
+        .refine((value) => isHttpUrl(value), "Only http/https URLs are allowed")
+        .transform(sanitize),
     type: z.enum(["image", "video", "web"]),
-    filename: z.string().min(1, "Filename is required").transform(sanitize).optional().nullable(),
+    filename: z
+        .string()
+        .min(1, "Filename is required")
+        .transform(sanitize)
+        .refine((value) => isSafeStoredMediaFilename(value), "Invalid filename")
+        .optional()
+        .nullable(),
     width: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
     height: z.union([z.number(), z.string().transform((val) => parseInt(val))]).nullable().optional(),
     fps: z.union([z.number(), z.string().transform((val) => parseFloat(val))]).nullable().optional(),

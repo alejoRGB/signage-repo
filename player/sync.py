@@ -40,6 +40,36 @@ class SyncManager:
         except (TypeError, ValueError):
             return default
         return max(minimum, parsed)
+
+    @staticmethod
+    def _is_safe_media_filename(filename: Optional[str]) -> bool:
+        if not isinstance(filename, str) or filename == "":
+            return False
+
+        if filename in {".", ".."}:
+            return False
+
+        if any(sep in filename for sep in ("/", "\\", "\x00")):
+            return False
+
+        # Avoid Windows drive-prefix style names and other odd path syntaxes.
+        if ":" in filename:
+            return False
+
+        return True
+
+    def _safe_media_target_path(self, filename: Optional[str]) -> Optional[str]:
+        if not self._is_safe_media_filename(filename):
+            return None
+
+        candidate = os.path.realpath(os.path.join(self.media_dir, str(filename)))
+        media_root = os.path.realpath(self.media_dir)
+        try:
+            if os.path.commonpath([media_root, candidate]) != media_root:
+                return None
+        except ValueError:
+            return None
+        return candidate
     
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from JSON file"""
@@ -481,11 +511,15 @@ class SyncManager:
         """Download a media file if not already present"""
         filename = item['filename']
         url = item['url']
-        filepath = os.path.join(self.media_dir, filename)
-        
+        filepath = self._safe_media_target_path(filename)
+
         # Skip downloading for web content
         if item.get('type') == 'web':
             return True
+
+        if not filepath:
+            logging.error("[DOWNLOAD] Refusing unsafe filename: %s", filename)
+            return False
 
         # Check if file already exists
         if os.path.exists(filepath):
@@ -519,15 +553,24 @@ class SyncManager:
         If missing, download it via authenticated media endpoint.
         """
         basename = os.path.basename(str(local_path))
-        if not basename:
+        target_path = self._safe_media_target_path(basename)
+        if not basename or not target_path:
+            logging.error("[SYNC] Refusing unsafe sync media path: %s", local_path)
             return None
 
-        target_path = os.path.join(self.media_dir, basename)
         if os.path.exists(target_path):
             return target_path
 
         if os.path.isabs(local_path) and os.path.exists(local_path):
-            return local_path
+            resolved_local_path = os.path.realpath(local_path)
+            media_root = os.path.realpath(self.media_dir)
+            try:
+                if os.path.commonpath([media_root, resolved_local_path]) == media_root:
+                    return resolved_local_path
+            except ValueError:
+                pass
+            logging.error("[SYNC] Refusing absolute sync media path outside media_dir: %s", local_path)
+            return None
 
         if not media_id:
             logging.error("[SYNC] Cannot download sync media without media_id (path=%s)", basename)

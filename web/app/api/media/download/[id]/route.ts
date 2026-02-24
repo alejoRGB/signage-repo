@@ -1,7 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isSafeStoredMediaFilename } from "@/lib/validations";
 import fs from "fs";
 import path from "path";
+
+function parseRedirectUrl(rawUrl: string): string | null {
+    try {
+        const parsed = new URL(rawUrl);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+            return null;
+        }
+        return parsed.toString();
+    } catch {
+        return null;
+    }
+}
+
+function resolveSafeUploadFilePath(uploadsDir: string, filename: string): string | null {
+    if (!isSafeStoredMediaFilename(filename)) {
+        return null;
+    }
+
+    const uploadsRoot = path.resolve(uploadsDir);
+    const resolvedFilePath = path.resolve(uploadsRoot, filename);
+    const relative = path.relative(uploadsRoot, resolvedFilePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        return null;
+    }
+
+    return resolvedFilePath;
+}
 
 export async function GET(
     request: Request,
@@ -56,8 +84,9 @@ export async function GET(
         }
 
         // Check if it's an external URL (Vercel Blob)
-        if (mediaItem.url.startsWith("http")) {
-            return NextResponse.redirect(mediaItem.url);
+        const redirectUrl = parseRedirectUrl(mediaItem.url);
+        if (redirectUrl) {
+            return NextResponse.redirect(redirectUrl);
         }
 
         if (!mediaItem.filename) {
@@ -69,7 +98,13 @@ export async function GET(
 
         // Get file path
         const uploadsDir = path.join(process.cwd(), "public", "uploads");
-        const filePath = path.join(uploadsDir, mediaItem.filename);
+        const filePath = resolveSafeUploadFilePath(uploadsDir, mediaItem.filename);
+        if (!filePath) {
+            return NextResponse.json(
+                { error: "Invalid media filename" },
+                { status: 400 }
+            );
+        }
 
         // Check if file exists
         if (!fs.existsSync(filePath)) {

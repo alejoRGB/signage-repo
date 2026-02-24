@@ -111,3 +111,36 @@ def test_ensure_sync_media_available_waits_without_read_timeout(tmp_path, mocker
         stream=True,
         timeout=(manager.sync_media_download_connect_timeout_s, None),
     )
+
+
+def test_download_media_rejects_path_traversal_filename(tmp_path, mocker):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"server_url": "http://test.com"}))
+    manager = SyncManager(config_path=str(config_file))
+
+    mock_get = mocker.patch("requests.get")
+
+    ok = manager.download_media({
+        "filename": "../escape.mp4",
+        "url": "http://test.com/file.mp4",
+        "type": "video",
+    })
+
+    assert ok is False
+    mock_get.assert_not_called()
+    assert not (tmp_path / "escape.mp4").exists()
+
+
+def test_ensure_sync_media_available_rejects_absolute_path_outside_media_dir(tmp_path):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({
+        "server_url": "http://test.com",
+        "device_token": "token-1",
+    }))
+    manager = SyncManager(config_path=str(config_file))
+
+    external_file = tmp_path / "outside.mp4"
+    external_file.write_bytes(b"evil")
+
+    resolved = manager.ensure_sync_media_available("media-1", str(external_file))
+    assert resolved is None
