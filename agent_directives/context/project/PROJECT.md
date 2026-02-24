@@ -177,6 +177,13 @@
 - **Sync startup media download UX (updated):**
   - Sync session startup must wait for missing media downloads to complete on each player before the device becomes ready to start playback.
   - Sync device cards show `downloading media` while `SYNC_PREPARE` remains pending during preloading.
+- **Device logs contract (versioned):**
+  - `/api/device/logs` batch payload supports explicit contract fields:
+    - `schema_version` (device log payload schema version)
+    - `sync_event_contract_version` (Sync event enum contract version)
+  - Current server-accepted versions are `1` / `1`.
+  - Backend must not reject the whole batch for unknown Sync events; unknown events are stored with `event = null` and preserved in `data.raw_event` plus contract metadata for diagnostics/forward compatibility.
+  - Player logger sends contract versions with each batch and may ship unknown Sync events as raw metadata instead of dropping them.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
@@ -190,4 +197,5 @@
    - Session control from Sync tab (`start/stop`, readiness, health panel).
    - Runtime statuses: `assigned -> preloading -> ready -> warming_up -> playing -> disconnected/errored`.
    - Device events/logs include `READY`, `STARTED`, `SOFT_CORRECTION`, `HARD_RESYNC`, `REJOIN`, `MPV_CRASH`, `THERMAL_THROTTLE`.
+   - Device log batches are versioned (`schema_version`, `sync_event_contract_version`) and must remain forward-compatible with unknown event names.
    - Disabled state must keep the full Schedules flow unaffected.

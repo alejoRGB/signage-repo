@@ -65,3 +65,6 @@ export const SYNC_LOG_EVENT = {
 } as const;
 
 export type SyncLogEvent = (typeof SYNC_LOG_EVENT)[keyof typeof SYNC_LOG_EVENT];
+
+export const DEVICE_LOG_SCHEMA_VERSION = 1 as const;
+export const SYNC_LOG_EVENT_CONTRACT_VERSION = 1 as const;

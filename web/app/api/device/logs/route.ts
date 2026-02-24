@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { SYNC_LOG_EVENT, type SyncLogEvent } from "@/types/sync";
+import {
+    DEVICE_LOG_SCHEMA_VERSION,
+    SYNC_LOG_EVENT,
+    SYNC_LOG_EVENT_CONTRACT_VERSION,
+    type SyncLogEvent,
+} from "@/types/sync";
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 const ALLOWED_SYNC_LOG_EVENTS = new Set<string>(Object.values(SYNC_LOG_EVENT));
@@ -20,6 +25,13 @@ type IncomingLog = {
     session_id?: string;
     sessionId?: string;
     data?: unknown;
+};
+
+type IncomingLogsBatch = {
+    device_token?: unknown;
+    logs?: unknown;
+    schema_version?: unknown;
+    sync_event_contract_version?: unknown;
 };
 
 function normalizeLevel(level: unknown) {
@@ -59,6 +71,17 @@ function normalizeClientTimestamp(timestamp: unknown) {
         }
     }
     return null;
+}
+
+function normalizeOptionalSafeInt(value: unknown): number | null {
+    if (typeof value !== "number" && typeof value !== "string") {
+        return null;
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed)) {
+        return null;
+    }
+    return parsed;
 }
 
 function normalizeSessionId(value: unknown) {
@@ -112,9 +135,24 @@ function normalizeData(value: unknown): Prisma.InputJsonValue | undefined {
 
 function attachIngestionMeta(
     data: Prisma.InputJsonValue | undefined,
-    clientTimestamp: Date | null
+    clientTimestamp: Date | null,
+    options?: {
+        rawEvent?: string | null;
+        clientSchemaVersion?: number | null;
+        clientSyncEventContractVersion?: number | null;
+    }
 ): Prisma.InputJsonValue | undefined {
-    if (!clientTimestamp) {
+    const rawEvent = options?.rawEvent?.trim() || null;
+    const clientSchemaVersion = options?.clientSchemaVersion ?? null;
+    const clientSyncEventContractVersion = options?.clientSyncEventContractVersion ?? null;
+
+    const needsMeta =
+        !!clientTimestamp ||
+        !!rawEvent ||
+        clientSchemaVersion !== null ||
+        clientSyncEventContractVersion !== null;
+
+    if (!needsMeta) {
         return data;
     }
 
@@ -125,7 +163,14 @@ function attachIngestionMeta(
 
     return {
         ...base,
-        client_timestamp: clientTimestamp.toISOString(),
+        ...(clientTimestamp ? { client_timestamp: clientTimestamp.toISOString() } : {}),
+        ...(rawEvent ? { raw_event: rawEvent, unknown_event: true } : {}),
+        ...(clientSchemaVersion !== null ? { client_log_schema_version: clientSchemaVersion } : {}),
+        ...(clientSyncEventContractVersion !== null
+            ? { client_sync_event_contract_version: clientSyncEventContractVersion }
+            : {}),
+        server_log_schema_version: DEVICE_LOG_SCHEMA_VERSION,
+        server_sync_event_contract_version: SYNC_LOG_EVENT_CONTRACT_VERSION,
     } as Prisma.InputJsonValue;
 }
 
@@ -140,8 +185,10 @@ function shouldRunCleanup(deviceId: string, nowMs: number) {
 
 export async function POST(request: Request) {
     try {
-        const json = await request.json();
+        const json = (await request.json()) as IncomingLogsBatch;
         const { device_token, logs } = json;
+        const clientSchemaVersion = normalizeOptionalSafeInt(json.schema_version);
+        const clientSyncEventContractVersion = normalizeOptionalSafeInt(json.sync_event_contract_version);
 
         if (!device_token || typeof device_token !== "string") {
             return NextResponse.json(
@@ -203,7 +250,11 @@ export async function POST(request: Request) {
             }
             const sessionId = normalizeSessionId(log.session_id ?? log.sessionId);
             const clientTimestamp = normalizeClientTimestamp(log.timestamp);
-            const data = attachIngestionMeta(normalizeData(log.data), clientTimestamp);
+            const data = attachIngestionMeta(normalizeData(log.data), clientTimestamp, {
+                rawEvent: rawEvent && !event ? rawEvent : null,
+                clientSchemaVersion,
+                clientSyncEventContractVersion,
+            });
 
             return {
                 deviceId: device.id,
@@ -242,6 +293,8 @@ export async function POST(request: Request) {
             success: true,
             count: logsToSave.length,
             ignored_unknown_events: ignoredUnknownEventCount,
+            accepted_log_schema_version: DEVICE_LOG_SCHEMA_VERSION,
+            accepted_sync_event_contract_version: SYNC_LOG_EVENT_CONTRACT_VERSION,
         });
 
     } catch (error) {

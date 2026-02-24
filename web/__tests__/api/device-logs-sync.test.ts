@@ -44,13 +44,15 @@ describe("SYNC-040 device logs API", () => {
         (prisma.deviceLog.deleteMany as jest.Mock).mockResolvedValue({ count: 0 });
     });
 
-    it("POST persists structured sync logs", async () => {
+    it("POST persists structured sync logs and returns contract versions", async () => {
         const response = await POST_DEVICE_LOGS(
             new Request("http://localhost/api/device/logs", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     device_token: "token-1",
+                    schema_version: 1,
+                    sync_event_contract_version: 1,
                     logs: [
                         {
                             level: "info",
@@ -64,8 +66,11 @@ describe("SYNC-040 device logs API", () => {
                 }),
             })
         );
+        const body = await response.json();
 
         expect(response.status).toBe(200);
+        expect(body.accepted_log_schema_version).toBe(1);
+        expect(body.accepted_sync_event_contract_version).toBe(1);
         expect(prisma.deviceLog.createMany).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: [
@@ -73,20 +78,26 @@ describe("SYNC-040 device logs API", () => {
                         deviceId: "device-1",
                         event: "READY",
                         sessionId: "session-1",
-                        data: expect.objectContaining({ warmup: 3 }),
+                        data: expect.objectContaining({
+                            warmup: 3,
+                            client_log_schema_version: 1,
+                            client_sync_event_contract_version: 1,
+                        }),
                     }),
                 ],
             })
         );
     });
 
-    it("POST ignores unknown sync event without rejecting the whole batch", async () => {
+    it("POST preserves unknown sync event as raw_event without rejecting the batch", async () => {
         const response = await POST_DEVICE_LOGS(
             new Request("http://localhost/api/device/logs", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     device_token: "token-1",
+                    schema_version: 99,
+                    sync_event_contract_version: 7,
                     logs: [
                         {
                             level: "info",
@@ -100,11 +111,21 @@ describe("SYNC-040 device logs API", () => {
         const body = await response.json();
         expect(response.status).toBe(200);
         expect(body.ignored_unknown_events).toBe(1);
+        expect(body.accepted_log_schema_version).toBe(1);
+        expect(body.accepted_sync_event_contract_version).toBe(1);
         expect(prisma.deviceLog.createMany).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: [
                     expect.objectContaining({
                         event: null,
+                        data: expect.objectContaining({
+                            raw_event: "NOT_A_REAL_EVENT",
+                            unknown_event: true,
+                            client_log_schema_version: 99,
+                            client_sync_event_contract_version: 7,
+                            server_log_schema_version: 1,
+                            server_sync_event_contract_version: 1,
+                        }),
                     }),
                 ],
             })

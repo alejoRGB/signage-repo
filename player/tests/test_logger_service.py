@@ -1,7 +1,7 @@
 import logging
 
 import logger_service
-from logger_service import LoggerService
+from logger_service import LoggerService, log_sync_event
 
 
 class DummySyncManager:
@@ -67,4 +67,60 @@ def test_logger_bounds_queue_and_redacts_pairing_code():
         assert all("999999" not in msg for msg in messages)
         assert "first" not in messages[0] or "first" not in messages[1]
     finally:
+        svc.stop()
+
+
+def test_logger_sends_contract_versions_in_batch(monkeypatch):
+    svc = LoggerService(DummySyncManager())
+    captured = {}
+
+    class Response:
+        status_code = 200
+
+    def fake_post(_url, json=None, timeout=None):
+        captured["payload"] = json
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(logger_service.requests, "post", fake_post)
+
+    try:
+        svc.emit(make_record("hello"))
+        svc.flush_logs()
+        payload = captured["payload"]
+        assert payload["schema_version"] == logger_service.DEVICE_LOG_SCHEMA_VERSION
+        assert payload["sync_event_contract_version"] == logger_service.SYNC_LOG_EVENT_CONTRACT_VERSION
+        assert isinstance(payload["logs"], list) and payload["logs"]
+    finally:
+        svc.stop()
+
+
+def test_unknown_sync_event_is_sent_as_raw_event(monkeypatch):
+    svc = LoggerService(DummySyncManager())
+    captured = {}
+
+    class Response:
+        status_code = 200
+
+    def fake_post(_url, json=None, timeout=None):
+        captured["payload"] = json
+        return Response()
+
+    monkeypatch.setattr(logger_service.requests, "post", fake_post)
+
+    root_logger = logging.getLogger()
+    root_logger.addHandler(svc)
+    try:
+        log_sync_event("future_event_name", session_id="session-1", data={"x": 1}, level=logging.WARNING)
+        svc.flush_logs()
+        log_item = next(
+            item for item in captured["payload"]["logs"]
+            if isinstance(item.get("data"), dict) and item["data"].get("raw_sync_event") == "FUTURE_EVENT_NAME"
+        )
+        assert "event" not in log_item
+        assert log_item["data"]["raw_sync_event"] == "FUTURE_EVENT_NAME"
+        assert log_item["data"]["unknown_sync_event"] is True
+        assert log_item["session_id"] == "session-1"
+    finally:
+        root_logger.removeHandler(svc)
         svc.stop()

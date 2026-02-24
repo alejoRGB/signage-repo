@@ -1819,3 +1819,31 @@ Notes:
 Validation:
 - `C:\Program Files\Git\bin\bash.exe -n web/public/install.sh` -> PASS
 - `C:\Program Files\Git\bin\bash.exe -n player/setup_device.sh` -> PASS
+
+## Update 2026-02-24 (device logs contract versioning + forward compatibility)
+
+Added explicit log-contract versioning and forward-compatible unknown-event preservation across player and backend.
+
+### Device logs contract status update (#44 / #49)
+
+- Unknown Sync event handling / version skew (#44): RESOLVED
+  - `web/app/api/device/logs/route.ts` now preserves unknown sync events in `DeviceLog.data.raw_event` (while storing `event = null`) instead of losing event identity.
+  - Backend response now returns accepted contract versions:
+    - `accepted_log_schema_version`
+    - `accepted_sync_event_contract_version`
+  - Backend stores client/server contract metadata in `DeviceLog.data` (`client_*`, `server_*`) for observability and debugging version skew.
+
+- Contract versioning between player and web: RESOLVED (implementation)
+  - `player/logger_service.py` now sends batch-level `schema_version` and `sync_event_contract_version`.
+  - Unknown sync events are no longer dropped by `log_sync_event(...)`; they are emitted as raw metadata (`raw_sync_event`) for forward compatibility.
+  - `web/types/sync.ts` now exports explicit version constants for the server-side contract.
+
+- Documentation alignment (#49): PARTIALLY RESOLVED
+  - Added canonical log-contract note to `agent_directives/context/project/PROJECT.md` (version fields + unknown-event behavior).
+  - Remaining doc cleanup: update legacy PRD log payload examples/retention details if they are still referenced operationally.
+
+Validation:
+- `python -m pytest player/tests/test_logger_service.py -q` -> PASS
+- `npm --prefix web run test:api -- --runTestsByPath __tests__/api/device-logs-sync.test.ts` -> PASS
+- `npm --prefix web run lint` -> PASS
+- `npm --prefix web run build` -> PASS

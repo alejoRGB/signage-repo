@@ -8,6 +8,9 @@ import re
 from datetime import datetime
 from typing import Dict, Optional
 
+DEVICE_LOG_SCHEMA_VERSION = 1
+SYNC_LOG_EVENT_CONTRACT_VERSION = 1
+
 SYNC_LOG_EVENTS = {
     "READY",
     "STARTED",
@@ -27,19 +30,25 @@ def log_sync_event(
     level: int = logging.INFO,
 ):
     normalized_event = (event or "").strip().upper()
-    if normalized_event not in SYNC_LOG_EVENTS:
-        logging.getLogger(__name__).warning("Ignoring unknown sync log event: %s", event)
-        return
+    event_is_known = normalized_event in SYNC_LOG_EVENTS
+    if not event_is_known:
+        logging.getLogger(__name__).warning("Unknown sync log event (sending as raw_event): %s", event)
 
-    message = f"[SYNC_EVENT] {normalized_event}"
+    message = f"[SYNC_EVENT] {normalized_event or 'UNKNOWN'}"
+    extra_payload = {
+        "sync_session_id": session_id,
+        "sync_data": data or {},
+        "sync_event_contract_version": SYNC_LOG_EVENT_CONTRACT_VERSION,
+    }
+    if event_is_known:
+        extra_payload["sync_event"] = normalized_event
+    elif normalized_event:
+        extra_payload["sync_event_raw"] = normalized_event
+
     logging.getLogger().log(
         level,
         message,
-        extra={
-            "sync_event": normalized_event,
-            "sync_session_id": session_id,
-            "sync_data": data or {},
-        },
+        extra=extra_payload,
     )
 
 class LoggerService(logging.Handler):
@@ -88,8 +97,10 @@ class LoggerService(logging.Handler):
                 return
 
             sync_event = getattr(record, "sync_event", None)
+            sync_event_raw = getattr(record, "sync_event_raw", None)
             sync_session_id = getattr(record, "sync_session_id", None)
             sync_data = getattr(record, "sync_data", None)
+            sync_event_contract_version = getattr(record, "sync_event_contract_version", None)
 
             log_entry = {
                 "level": record.levelname.lower(),
@@ -103,8 +114,15 @@ class LoggerService(logging.Handler):
             if isinstance(sync_session_id, str) and sync_session_id.strip():
                 log_entry["session_id"] = sync_session_id.strip()
 
-            if isinstance(sync_data, dict) and sync_data:
-                log_entry["data"] = sync_data
+            data_payload = dict(sync_data) if isinstance(sync_data, dict) else {}
+            if isinstance(sync_event_raw, str) and sync_event_raw.strip():
+                data_payload["raw_sync_event"] = sync_event_raw.strip().upper()[:64]
+                data_payload["unknown_sync_event"] = True
+            if isinstance(sync_event_contract_version, int):
+                data_payload["sync_event_contract_version"] = sync_event_contract_version
+
+            if data_payload:
+                log_entry["data"] = data_payload
 
             self._enqueue_log(log_entry)
             
@@ -149,6 +167,8 @@ class LoggerService(logging.Handler):
             url = f"{self.sync_manager.server_url}/api/device/logs"
             payload = {
                 "device_token": self.sync_manager.device_token,
+                "schema_version": DEVICE_LOG_SCHEMA_VERSION,
+                "sync_event_contract_version": SYNC_LOG_EVENT_CONTRACT_VERSION,
                 "logs": logs_to_send
             }
             
