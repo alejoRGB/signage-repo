@@ -5,6 +5,12 @@ import { SYNC_LOG_EVENT, type SyncLogEvent } from "@/types/sync";
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 const ALLOWED_SYNC_LOG_EVENTS = new Set<string>(Object.values(SYNC_LOG_EVENT));
+const ALLOWED_LOG_LEVELS = new Set(["debug", "info", "warning", "error", "critical"]);
+const MAX_LOGS_PER_BATCH = 50;
+const MAX_MESSAGE_LENGTH = 4000;
+const MAX_DATA_JSON_BYTES = 4096;
+const LOG_CLEANUP_INTERVAL_MS = 15 * 60_000;
+const lastCleanupByDevice = new Map<string, number>();
 
 type IncomingLog = {
     level?: string;
@@ -24,12 +30,18 @@ function normalizeLevel(level: unknown) {
     if (!normalized) {
         return "info";
     }
-    return normalized.slice(0, 20);
+    if (ALLOWED_LOG_LEVELS.has(normalized)) {
+        return normalized;
+    }
+    return "info";
 }
 
 function normalizeMessage(message: unknown, event?: string) {
     if (typeof message === "string" && message.trim().length > 0) {
-        return message.trim().slice(0, 4000);
+        return message
+            .replace(/[\r\n\t\0-\x1f\x7f]+/g, " ")
+            .trim()
+            .slice(0, MAX_MESSAGE_LENGTH);
     }
 
     if (event) {
@@ -39,14 +51,14 @@ function normalizeMessage(message: unknown, event?: string) {
     return "device-log";
 }
 
-function normalizeTimestamp(timestamp: unknown) {
+function normalizeClientTimestamp(timestamp: unknown) {
     if (typeof timestamp === "string" || typeof timestamp === "number") {
         const parsed = new Date(timestamp);
         if (!Number.isNaN(parsed.getTime())) {
             return parsed;
         }
     }
-    return new Date();
+    return null;
 }
 
 function normalizeSessionId(value: unknown) {
@@ -78,8 +90,52 @@ function normalizeData(value: unknown): Prisma.InputJsonValue | undefined {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
         return undefined;
     }
+    try {
+        const serialized = JSON.stringify(value);
+        if (!serialized) {
+            return undefined;
+        }
+        if (Buffer.byteLength(serialized, "utf8") > MAX_DATA_JSON_BYTES) {
+            return {
+                truncated: true,
+                reason: "data_too_large",
+            } as Prisma.InputJsonValue;
+        }
+        return JSON.parse(serialized) as Prisma.InputJsonValue;
+    } catch {
+        return {
+            truncated: true,
+            reason: "data_not_serializable",
+        } as Prisma.InputJsonValue;
+    }
+}
 
-    return value as Prisma.InputJsonValue;
+function attachIngestionMeta(
+    data: Prisma.InputJsonValue | undefined,
+    clientTimestamp: Date | null
+): Prisma.InputJsonValue | undefined {
+    if (!clientTimestamp) {
+        return data;
+    }
+
+    const base =
+        data && typeof data === "object" && !Array.isArray(data)
+            ? (data as Prisma.JsonObject)
+            : {};
+
+    return {
+        ...base,
+        client_timestamp: clientTimestamp.toISOString(),
+    } as Prisma.InputJsonValue;
+}
+
+function shouldRunCleanup(deviceId: string, nowMs: number) {
+    const lastRun = lastCleanupByDevice.get(deviceId);
+    if (typeof lastRun === "number" && nowMs - lastRun < LOG_CLEANUP_INTERVAL_MS) {
+        return false;
+    }
+    lastCleanupByDevice.set(deviceId, nowMs);
+    return true;
 }
 
 export async function POST(request: Request) {
@@ -114,6 +170,11 @@ export async function POST(request: Request) {
         // Find device by token
         const device = await prisma.device.findUnique({
             where: { token: device_token },
+            include: {
+                user: {
+                    select: { isActive: true },
+                },
+            },
         });
 
         if (!device) {
@@ -123,26 +184,26 @@ export async function POST(request: Request) {
             );
         }
 
-        const incomingLogs = logs as IncomingLog[];
-        const hasInvalidSyncEvent = incomingLogs.some((log) => {
-            if (typeof log?.event !== "string") {
-                return false;
-            }
-            return !ALLOWED_SYNC_LOG_EVENTS.has(log.event.trim().toUpperCase());
-        });
-
-        if (hasInvalidSyncEvent) {
+        if (device.user && !device.user.isActive) {
             return NextResponse.json(
-                { error: "Invalid sync log event in logs payload" },
-                { status: 400 }
+                { error: "Account suspended" },
+                { status: 403 }
             );
         }
 
+        const incomingLogs = logs as IncomingLog[];
+        let ignoredUnknownEventCount = 0;
+
         // Limit logs to prevent spam (max 50 logs per batch)
-        const logsToSave = incomingLogs.slice(0, 50).map((log) => {
+        const logsToSave = incomingLogs.slice(0, MAX_LOGS_PER_BATCH).map((log) => {
+            const rawEvent = typeof log.event === "string" ? log.event.trim() : "";
             const event = normalizeSyncEvent(log.event);
+            if (rawEvent && !event) {
+                ignoredUnknownEventCount += 1;
+            }
             const sessionId = normalizeSessionId(log.session_id ?? log.sessionId);
-            const data = normalizeData(log.data);
+            const clientTimestamp = normalizeClientTimestamp(log.timestamp);
+            const data = attachIngestionMeta(normalizeData(log.data), clientTimestamp);
 
             return {
                 deviceId: device.id,
@@ -151,7 +212,7 @@ export async function POST(request: Request) {
                 event,
                 sessionId,
                 data,
-                createdAt: normalizeTimestamp(log.timestamp),
+                createdAt: new Date(),
             };
         });
 
@@ -161,24 +222,27 @@ export async function POST(request: Request) {
             });
         }
 
-        // Cleanup old logs (keep last 1000 per device, simple cleanup)
-        // Note: In production, this might be better as a cron job or scheduled task
-        // but for now, we'll do a quick check occasionally or just let it grow a bit.
-        // To be safe and simple: Delete logs older than 7 days for this device
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        if (shouldRunCleanup(device.id, Date.now())) {
+            // Temporary opportunistic cleanup (7d retention). Prefer a scheduled job in production.
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        // Asynchronous cleanup (fire and forget)
-        prisma.deviceLog.deleteMany({
-            where: {
-                deviceId: device.id,
-                createdAt: {
-                    lt: sevenDaysAgo
+            // Asynchronous cleanup (fire and forget)
+            prisma.deviceLog.deleteMany({
+                where: {
+                    deviceId: device.id,
+                    createdAt: {
+                        lt: sevenDaysAgo
+                    }
                 }
-            }
-        }).catch(err => console.error("Log cleanup error:", err));
+            }).catch(err => console.error("Log cleanup error:", err));
+        }
 
-        return NextResponse.json({ success: true, count: logsToSave.length });
+        return NextResponse.json({
+            success: true,
+            count: logsToSave.length,
+            ignored_unknown_events: ignoredUnknownEventCount,
+        });
 
     } catch (error) {
         console.error("Log API error:", error);

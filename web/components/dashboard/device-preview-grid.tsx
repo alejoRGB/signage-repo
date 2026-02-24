@@ -137,6 +137,7 @@ export default function DevicePreviewGrid({
                                                     <video src={preview.url} className="absolute inset-0 h-full w-full object-cover opacity-50" />
                                                 </div>
                                             ) : preview.type === "image" ? (
+                                                // eslint-disable-next-line @next/next/no-img-element -- live device preview image from blob, keep simple img tag
                                                 <img
                                                     src={preview.url}
                                                     alt={preview.name}
@@ -186,4 +187,3 @@ export default function DevicePreviewGrid({
         </div>
     );
 }
-

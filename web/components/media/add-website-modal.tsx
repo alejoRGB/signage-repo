@@ -41,7 +41,7 @@ export default function AddWebsiteModal({ isOpen, onClose, onAdd }: AddWebsiteMo
             setName("");
             setUrl("");
             setCacheForOffline(false);
-        } catch (err) {
+        } catch {
             setError("Failed to add website");
         } finally {
             setLoading(false);

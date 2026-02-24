@@ -59,7 +59,7 @@ export default function AdminDashboard({ users }: { users: UserStats[] }) {
             } else {
                 router.refresh();
             }
-        } catch (error) {
+        } catch {
             showToast("An error occurred", "error");
         } finally {
             setLoadingId(null);

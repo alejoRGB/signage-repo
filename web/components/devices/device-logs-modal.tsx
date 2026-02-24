@@ -25,12 +25,14 @@ export default function DeviceLogsModal({ device, isOpen, onClose }: DeviceLogsM
     useEffect(() => {
         if (!isOpen || !device) {
             setLogs([]);
+            setLoading(false);
             return;
         }
 
+        let isInitialFetch = true;
         const fetchLogs = async () => {
-            // Only set loading on initial fetch if logs are empty
-            if (logs.length === 0) setLoading(true);
+            // Only show spinner for the first fetch while modal opens.
+            if (isInitialFetch) setLoading(true);
             try {
                 const res = await fetch(`/api/devices/${device.id}/logs`);
                 if (res.ok) {
@@ -41,6 +43,7 @@ export default function DeviceLogsModal({ device, isOpen, onClose }: DeviceLogsM
                 console.error("Logs auto-refresh failed", error);
             } finally {
                 setLoading(false);
+                isInitialFetch = false;
             }
         };
 
@@ -73,7 +76,7 @@ export default function DeviceLogsModal({ device, isOpen, onClose }: DeviceLogsM
                             onClick={onClose}
                             className="text-gray-400 hover:text-gray-600"
                         >
-                            ✕
+                            x
                         </button>
                     </div>
                 </div>

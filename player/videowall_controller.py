@@ -862,7 +862,7 @@ class VideowallController:
         avg_drift_ms = (
             sum(sample[1] for sample in self._drift_window_samples) / len(self._drift_window_samples)
             if self._drift_window_samples
-            else 0.0
+            else None
         )
         elapsed_minutes = max(0.0, (now_ms - context.start_at_ms) / 60000.0)
         resync_rate = self._resync_count / elapsed_minutes if elapsed_minutes > 0 else 0.0
@@ -871,14 +871,15 @@ class VideowallController:
         return {
             "session_id": context.session_id,
             "status": status,
-            "drift_ms": self._last_drift_ms if self._last_drift_ms is not None else 0.0,
+            # Avoid publishing fake zero drift before the first real sample exists.
+            "drift_ms": self._last_drift_ms,
             "resync_count": self._resync_count,
             "clock_offset_ms": clock_health.get("offset_ms"),
             "cpu_temp": clock_health.get("cpu_temp"),
             "throttled": bool(clock_health.get("throttled", False)),
             "health_score": clock_health.get("health_score"),
             "avg_drift_ms": avg_drift_ms,
-            "max_drift_ms": self._drift_max_abs_ms,
+            "max_drift_ms": self._drift_max_abs_ms if self._drift_sample_count > 0 else None,
             "resync_rate": resync_rate,
             "lan_mode": self._lan_mode,
             "lan_beacon_age_ms": self._lan_last_beacon_age_ms,

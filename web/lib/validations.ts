@@ -202,11 +202,6 @@ const SyncStopReasonValues = [
     SYNC_STOP_REASON.TIMEOUT,
     SYNC_STOP_REASON.ERROR,
 ] as const;
-const SyncDeviceCommandStatusValues = [
-    SYNC_DEVICE_COMMAND_STATUS.PENDING,
-    SYNC_DEVICE_COMMAND_STATUS.ACKED,
-    SYNC_DEVICE_COMMAND_STATUS.FAILED,
-] as const;
 const DeviceCommandAckStatusValues = [
     SYNC_DEVICE_COMMAND_STATUS.ACKED,
     SYNC_DEVICE_COMMAND_STATUS.FAILED,

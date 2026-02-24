@@ -18,13 +18,6 @@ type SessionPrepareMedia = {
     fps: number | null;
 };
 
-function toTimestamp(value: Date | null | undefined) {
-    if (!value) {
-        return 0;
-    }
-    return value.getTime();
-}
-
 function isFreshSessionHeartbeat(
     lastSeenAt: Date | null,
     nowMs: number,
@@ -239,4 +232,3 @@ export async function maybeQueueSyncRejoinPrepareOnHeartbeat(
         deviceId,
     };
 }
-

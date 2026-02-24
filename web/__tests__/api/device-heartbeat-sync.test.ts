@@ -46,6 +46,7 @@ describe("Device runtime sync persistence", () => {
             id: "device-1",
             token: "token-1",
             user: { isActive: true },
+            syncSessionDevices: [],
         });
         (prisma.device.update as jest.Mock).mockResolvedValue({ id: "device-1" });
         (maybeQueueSyncRejoinPrepareOnHeartbeat as jest.Mock).mockResolvedValue({
@@ -126,6 +127,12 @@ describe("Device runtime sync persistence", () => {
 
     it("heartbeat without sync runtime attempts sync rejoin reconciliation", async () => {
         (extractSyncRuntimeFromFormData as jest.Mock).mockReturnValue(null);
+        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
+            id: "device-1",
+            token: "token-1",
+            user: { isActive: true },
+            syncSessionDevices: [{ id: "ssd-1" }],
+        });
 
         const formData = new FormData();
         formData.set("device_token", "token-1");
@@ -140,6 +147,29 @@ describe("Device runtime sync persistence", () => {
         expect(response.status).toBe(200);
         expect(maybeQueueSyncRejoinPrepareOnHeartbeat).toHaveBeenCalledWith("device-1");
         expect(maybeReelectMasterForSession).not.toHaveBeenCalled();
+    });
+
+    it("skips rejoin reconciliation when device has no active sync assignment", async () => {
+        (extractSyncRuntimeFromFormData as jest.Mock).mockReturnValue(null);
+        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
+            id: "device-1",
+            token: "token-1",
+            user: { isActive: true },
+            syncSessionDevices: [],
+        });
+
+        const formData = new FormData();
+        formData.set("device_token", "token-1");
+
+        const response = await HEARTBEAT_POST(
+            new Request("http://localhost/api/device/heartbeat", {
+                method: "POST",
+                body: formData,
+            })
+        );
+
+        expect(response.status).toBe(200);
+        expect(maybeQueueSyncRejoinPrepareOnHeartbeat).not.toHaveBeenCalled();
     });
 
     it("device sync route persists extracted runtime payload", async () => {

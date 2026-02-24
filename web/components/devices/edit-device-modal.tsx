@@ -82,7 +82,7 @@ export default function EditDeviceModal({
                 const err = await res.json();
                 showToast(err.error || "Failed to update", "error");
             }
-        } catch (error) {
+        } catch {
             showToast("Failed to update device", "error");
         } finally {
             setLoading(false);

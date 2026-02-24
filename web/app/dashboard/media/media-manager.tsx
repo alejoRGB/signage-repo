@@ -303,6 +303,7 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                                         <video src={item.url} className="absolute inset-0 w-full h-full object-cover opacity-50" />
                                     </div>
                                 ) : item.type === 'image' ? (
+                                    // eslint-disable-next-line @next/next/no-img-element -- internal dashboard thumbnail, no optimization needed
                                     <img src={item.url} alt={item.name} className="object-cover w-full h-full" />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center w-full h-full bg-indigo-50">

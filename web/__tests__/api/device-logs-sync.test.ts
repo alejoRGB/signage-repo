@@ -38,6 +38,7 @@ describe("SYNC-040 device logs API", () => {
         (prisma.device.findUnique as jest.Mock).mockResolvedValue({
             id: "device-1",
             token: "token-1",
+            user: { isActive: true },
         });
         (prisma.deviceLog.createMany as jest.Mock).mockResolvedValue({ count: 1 });
         (prisma.deviceLog.deleteMany as jest.Mock).mockResolvedValue({ count: 0 });
@@ -72,14 +73,14 @@ describe("SYNC-040 device logs API", () => {
                         deviceId: "device-1",
                         event: "READY",
                         sessionId: "session-1",
-                        data: { warmup: 3 },
+                        data: expect.objectContaining({ warmup: 3 }),
                     }),
                 ],
             })
         );
     });
 
-    it("POST rejects unknown sync event", async () => {
+    it("POST ignores unknown sync event without rejecting the whole batch", async () => {
         const response = await POST_DEVICE_LOGS(
             new Request("http://localhost/api/device/logs", {
                 method: "POST",
@@ -96,8 +97,74 @@ describe("SYNC-040 device logs API", () => {
             })
         );
 
-        expect(response.status).toBe(400);
+        const body = await response.json();
+        expect(response.status).toBe(200);
+        expect(body.ignored_unknown_events).toBe(1);
+        expect(prisma.deviceLog.createMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: [
+                    expect.objectContaining({
+                        event: null,
+                    }),
+                ],
+            })
+        );
+    });
+
+    it("POST rejects suspended device account", async () => {
+        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
+            id: "device-1",
+            token: "token-1",
+            user: { isActive: false },
+        });
+
+        const response = await POST_DEVICE_LOGS(
+            new Request("http://localhost/api/device/logs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    device_token: "token-1",
+                    logs: [{ level: "info", message: "x" }],
+                }),
+            })
+        );
+
+        expect(response.status).toBe(403);
         expect(prisma.deviceLog.createMany).not.toHaveBeenCalled();
+    });
+
+    it("POST stores server createdAt and preserves client timestamp in data", async () => {
+        const before = Date.now();
+        const response = await POST_DEVICE_LOGS(
+            new Request("http://localhost/api/device/logs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    device_token: "token-1",
+                    logs: [
+                        {
+                            level: "info",
+                            message: "line1\\nline2",
+                            timestamp: "2020-01-01T00:00:00.000Z",
+                            data: { foo: "bar" },
+                        },
+                    ],
+                }),
+            })
+        );
+        const after = Date.now();
+        expect(response.status).toBe(200);
+        const createArgs = (prisma.deviceLog.createMany as jest.Mock).mock.calls[0][0];
+        const saved = createArgs.data[0];
+        expect(saved.message).toBe("line1\\nline2");
+        expect(saved.createdAt.getTime()).toBeGreaterThanOrEqual(before);
+        expect(saved.createdAt.getTime()).toBeLessThanOrEqual(after + 1000);
+        expect(saved.data).toEqual(
+            expect.objectContaining({
+                foo: "bar",
+                client_timestamp: "2020-01-01T00:00:00.000Z",
+            })
+        );
     });
 
     it("GET filters logs by sessionId and event", async () => {

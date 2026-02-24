@@ -5,6 +5,7 @@ import { extractSyncRuntimeFromFormData, persistDeviceSyncRuntime } from "@/lib/
 import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
 import { maybeQueueSyncRejoinPrepareOnHeartbeat } from "@/lib/sync-device-rejoin";
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
+import { ACTIVE_SYNC_SESSION_STATUSES } from "@/lib/sync-session-service";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,18 @@ export async function POST(request: Request) {
             include: {
                 user: {
                     select: { isActive: true }
-                }
+                },
+                syncSessionDevices: {
+                    where: {
+                        session: {
+                            status: {
+                                in: ACTIVE_SYNC_SESSION_STATUSES,
+                            },
+                        },
+                    },
+                    select: { id: true },
+                    take: 1,
+                },
             }
         });
 
@@ -139,7 +151,10 @@ export async function POST(request: Request) {
         });
 
         await persistDeviceSyncRuntime(device.id, syncRuntime);
-        if (!syncRuntime?.sessionId) {
+        const hasActiveSyncAssignment =
+            Array.isArray(device.syncSessionDevices) && device.syncSessionDevices.length > 0;
+
+        if (!syncRuntime?.sessionId && hasActiveSyncAssignment) {
             try {
                 await maybeQueueSyncRejoinPrepareOnHeartbeat(device.id);
             } catch (error) {

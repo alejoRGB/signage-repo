@@ -489,6 +489,51 @@ def test_build_sync_runtime_uses_last_20_seconds_for_avg_drift(mocker):
     assert abs(float(runtime["avg_drift_ms"]) - 100.0) < 0.001
 
 
+def test_build_sync_runtime_omits_fake_zero_drift_before_first_sample(mocker):
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 1.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-no-sample",
+            start_at_ms=0,
+            duration_ms=10_000,
+            local_path="/tmp/video.mp4",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+    machine.transition("WARMING_UP")
+    machine.transition("PLAYING")
+
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+    )
+
+    mocker.patch("videowall_controller.time.time", return_value=5.0)
+    runtime = controller._build_sync_runtime()
+
+    assert runtime is not None
+    assert runtime["drift_ms"] is None
+    assert runtime["avg_drift_ms"] is None
+    assert runtime["max_drift_ms"] is None
+
+
 def test_tick_uses_idle_command_poll_interval_when_no_active_session(mocker):
     manager = DummySyncManager(
         command_batches=[[], []],

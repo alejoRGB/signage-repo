@@ -1581,3 +1581,72 @@ La base del diseño es buena (batching, eventos Sync estructurados, owner-only r
 - rechazo de batch completo por incompatibilidad de enum
 
 Eso puede afectar tanto seguridad como observabilidad real en produccion (justo cuando mas se necesitan logs).
+
+## Update 2026-02-24 (drift/heartbeat/logs + lint closure)
+
+This batch closes or mitigates multiple pending findings from the Sync/Heartbeat/Logs addenda and finishes the frontend lint cleanup.
+
+### Status updates (code changes implemented)
+
+- #29 Drift metrics fake zero contamination: RESOLVED
+  - `player/videowall_controller.py` no longer emits fake `0.0` drift metrics before the first real sample.
+  - Added regression test in `player/tests/test_videowall_controller.py`.
+
+- #30 Legacy `/api/device/preview` duplication: RESOLVED
+  - `web/app/api/device/preview/route.ts` is now an explicit compatibility shim that delegates to `/api/device/heartbeat` and sets deprecation headers.
+
+- #36 Rejoin branch running on every heartbeat for non-sync devices: PARTIALLY RESOLVED
+  - `web/app/api/device/heartbeat/route.ts` now gates rejoin reconciliation unless the device has an active Sync assignment (resolved in the same `findUnique` query).
+  - Remaining improvement: jitter/negative-cache/distributed suppression for very large fleets.
+
+- #40 Player remote logger queue unbounded + pre-pairing backlog + pairing code leakage: RESOLVED
+  - `player/logger_service.py` now uses a bounded queue (`maxsize=500`) with drop-oldest policy.
+  - Remote logger drops logs until `device_token` exists (no pre-pairing backlog upload).
+  - Non-200 / exception during upload now re-queues the batch instead of silently dropping.
+  - `player/player.py` no longer logs the pairing code in plaintext.
+
+- #41 Potential `device_token` leakage by logging `/api/device/sync` payloads: PARTIALLY RESOLVED
+  - `player/sync.py` now logs a structured response summary instead of raw response payload.
+  - URL query secrets (`token`, `device_token`, etc.) are redacted in logged URLs.
+  - Remaining residual: some error paths still log truncated `response.text` (bounded, but not fully redacted).
+
+- #42 Log timestamp semantics (client timestamp trusted as `createdAt`): PARTIALLY RESOLVED
+  - `web/app/api/device/logs/route.ts` now uses server time for `createdAt`.
+  - Parsed client timestamp is preserved as `data.client_timestamp` for diagnostics.
+  - Remaining ideal fix: schema fields for `eventAt` vs `ingestedAt` and UTC/offset emission from player.
+
+- #43 `/api/device/logs` missing `user.isActive` check: RESOLVED
+  - Endpoint now includes `user.isActive` and rejects suspended accounts with `403`.
+
+- #44 Unknown sync event invalidates full batch + player drops on non-200: PARTIALLY RESOLVED
+  - Backend now degrades gracefully: unknown events are normalized to `event = null` and the batch is accepted.
+  - Response includes `ignored_unknown_events` count.
+  - Player logger now re-queues on non-200/exception.
+  - Remaining improvement: shared/versioned event contract (single source of truth).
+
+- #45 Log payload volume/cost (no `data` byte cap): PARTIALLY RESOLVED
+  - Added defensive size cap for per-log `data` JSON (`MAX_DATA_JSON_BYTES`) with structured truncation marker.
+  - Remaining improvement: lower effective ingest rate/batch and add request-byte caps/sampling.
+
+- #46 Log retention cleanup inconsistency/cost: PARTIALLY RESOLVED
+  - Clarified behavior (7-day retention) and throttled inline cleanup so it no longer runs on every POST.
+  - Remaining improvement: scheduled cleanup job + explicit retention policy (age + per-device/global caps).
+
+- #47 Device logs modal stale closure/flicker: RESOLVED
+  - `web/components/devices/device-logs-modal.tsx` now uses an initial-fetch flag inside the effect instead of stale `logs.length` in the polling closure.
+
+- #48 Log injection / severity normalization: PARTIALLY RESOLVED
+  - `/api/device/logs` now sanitizes control characters from `message` and whitelists severity (`debug|info|warning|error|critical`).
+  - Remaining improvement: optional `severityNumber` and multiline-preservation policy if needed.
+
+### Frontend quality status update
+
+- `web` lint: RESOLVED
+  - `npm --prefix web run lint` now passes with 0 errors and 0 warnings.
+
+### Validation run for this batch
+
+- `python -m pytest player/tests/test_sync.py player/tests/test_videowall_controller.py player/tests/test_logger_service.py -q` -> PASS
+- `npm --prefix web run test:api -- --runTestsByPath __tests__/api/device-heartbeat-sync.test.ts __tests__/api/device-logs-sync.test.ts` -> PASS
+- `npm --prefix web run lint` -> PASS (0 warnings)
+- `npm --prefix web run build` -> PASS

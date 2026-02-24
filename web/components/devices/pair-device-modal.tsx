@@ -43,7 +43,7 @@ export default function PairDeviceModal({ isOpen, onClose, onDevicePaired, showT
                 showToast(error.error || "Failed to pair device", "error");
                 setStatus("error");
             }
-        } catch (error) {
+        } catch {
             showToast("Error pairing device", "error");
             setStatus("error");
         }

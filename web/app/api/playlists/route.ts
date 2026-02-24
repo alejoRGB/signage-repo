@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(_request: Request) {
+export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session) {
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json(playlist);
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to create playlist" },
             { status: 500 }

@@ -1018,7 +1018,7 @@ class Player:
         token = reg_data['device_token']
         poll_interval = reg_data.get('poll_interval', 5000) / 1000.0
         
-        logging.info(f"PAIRING CODE: {code}")
+        logging.info("PAIRING CODE generated (redacted)")
         
         image_path = self.sync_manager.generate_pairing_image(code)
         viewer = None

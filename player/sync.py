@@ -6,7 +6,7 @@ import subprocess
 import time
 import requests
 from typing import Dict, List, Optional, Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 class SyncManager:
     def __init__(self, config_path=None):
@@ -77,6 +77,29 @@ class SyncManager:
         if not self.device_token:
             return {}
         return {"X-Device-Token": str(self.device_token)}
+
+    @staticmethod
+    def _redact_url_query_secrets(value: str) -> str:
+        try:
+            parsed = urlparse(value)
+            if not parsed.query:
+                return value
+
+            redacted = []
+            changed = False
+            for key, item_value in parse_qsl(parsed.query, keep_blank_values=True):
+                if key.lower() in {"token", "device_token", "auth", "authorization"}:
+                    redacted.append((key, "REDACTED"))
+                    changed = True
+                else:
+                    redacted.append((key, item_value))
+
+            if not changed:
+                return value
+
+            return urlunparse(parsed._replace(query=urlencode(redacted)))
+        except Exception:
+            return value
 
     def _should_send_device_token_header(self, url: str) -> bool:
         if not self.server_url:
@@ -217,7 +240,27 @@ class SyncManager:
                     data = response.json()
                     if isinstance(data.get("device_id"), str) and data.get("device_id"):
                         self.device_id = str(data.get("device_id"))
-                    logging.info(f"[SYNC] Response: {str(data)[:200]}") # Log first 200 chars to check version
+                    summary: Dict[str, Any] = {
+                        "device_id": data.get("device_id"),
+                        "device_name": data.get("device_name"),
+                        "has_schedule": bool(data.get("schedule")),
+                        "has_default_playlist": bool(data.get("default_playlist")),
+                    }
+                    sync_session = data.get("sync_session")
+                    if isinstance(sync_session, dict):
+                        summary["sync_session_id"] = sync_session.get("id")
+                    current_media = data.get("current_media")
+                    if isinstance(current_media, dict):
+                        redacted_media_url = current_media.get("url")
+                        if isinstance(redacted_media_url, str):
+                            redacted_media_url = self._redact_url_query_secrets(redacted_media_url)
+                        summary["current_media"] = {
+                            "id": current_media.get("id"),
+                            "type": current_media.get("type"),
+                            "filename": current_media.get("filename"),
+                            "url": redacted_media_url,
+                        }
+                    logging.info("[SYNC] Response summary: %s", summary)
                     logging.debug(f"[SYNC] Device: {data.get('device_name')}")
                     return data
                 except json.JSONDecodeError as e:

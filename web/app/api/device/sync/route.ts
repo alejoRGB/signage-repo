@@ -126,8 +126,7 @@ function isRecord(value: unknown): value is SyncRequestPayload {
 
 function formatPlaylist(
     playlist: PlaylistRecord | null,
-    baseUrl: string,
-    deviceToken: string
+    baseUrl: string
 ): FormattedPlaylist | null {
     if (!playlist) {
         return null;
@@ -228,18 +227,18 @@ export async function POST(request: Request) {
                         dayOfWeek: item.dayOfWeek,
                         startTime: item.startTime,
                         endTime: item.endTime,
-                        playlist: formatPlaylist(item.playlist, baseUrl, deviceToken),
+                        playlist: formatPlaylist(item.playlist, baseUrl),
                     })),
                 }
               : null;
 
         const defaultPlaylistPayload = isSyncVideowallDirectiveActive
             ? null
-            : formatPlaylist(defaultPlaylistRecord, baseUrl, deviceToken);
+            : formatPlaylist(defaultPlaylistRecord, baseUrl);
 
         const legacyPlaylistPayload = isSyncVideowallDirectiveActive
             ? null
-            : formatPlaylist(activePlaylistRecord ?? defaultPlaylistRecord, baseUrl, deviceToken);
+            : formatPlaylist(activePlaylistRecord ?? defaultPlaylistRecord, baseUrl);
 
         const responsePayload: DeviceSyncResponse = {
             device_id: device.id,

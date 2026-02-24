@@ -192,6 +192,7 @@ export default function PlaylistEditor({
                                             <Globe className="h-6 w-6 text-indigo-400" />
                                         </div>
                                     ) : (
+                                        // eslint-disable-next-line @next/next/no-img-element -- internal playlist thumbnail preview
                                         <img src={item.mediaItem.url} alt={item.mediaItem.name} className="w-full h-full object-cover" />
                                     )}
                                 </div>
@@ -250,6 +251,7 @@ export default function PlaylistEditor({
                                         <Globe className="h-5 w-5 text-indigo-400" />
                                     </div>
                                 ) : (
+                                    // eslint-disable-next-line @next/next/no-img-element -- internal media library thumbnail preview
                                     <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
                                 )}
                             </div>

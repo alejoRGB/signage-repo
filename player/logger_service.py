@@ -4,6 +4,7 @@ import threading
 import time
 import requests
 import queue
+import re
 from datetime import datetime
 from typing import Dict, Optional
 
@@ -45,25 +46,54 @@ class LoggerService(logging.Handler):
     def __init__(self, sync_manager):
         super().__init__()
         self.sync_manager = sync_manager
-        self.log_queue = queue.Queue()
+        self.max_queue_size = 500
+        self.log_queue = queue.Queue(maxsize=self.max_queue_size)
         self.buffer_size = 50
         self.flush_interval = 10  # seconds (Reduced for better responsiveness)
         self.last_flush = time.time()
         self.running = True
+        self._dropped_logs = 0
         
         # Start background flusher thread
         self.flush_thread = threading.Thread(target=self._flush_loop, daemon=True)
         self.flush_thread.start()
 
+    @staticmethod
+    def _sanitize_message(message: str) -> str:
+        # Prevent control-character log injection and avoid leaking pairing/device tokens remotely.
+        sanitized = re.sub(r"[\r\n\t\x00-\x1f\x7f]+", " ", message)
+        sanitized = re.sub(r"(PAIRING CODE:\s*)([A-Za-z0-9_-]+)", r"\1REDACTED", sanitized, flags=re.IGNORECASE)
+        sanitized = re.sub(r"(device_token['\"=: ]+)([A-Za-z0-9_-]{6,})", r"\1REDACTED", sanitized, flags=re.IGNORECASE)
+        return sanitized.strip()[:4000]
+
+    def _enqueue_log(self, log_entry):
+        try:
+            self.log_queue.put_nowait(log_entry)
+            return
+        except queue.Full:
+            self._dropped_logs += 1
+            try:
+                self.log_queue.get_nowait()
+            except queue.Empty:
+                pass
+            try:
+                self.log_queue.put_nowait(log_entry)
+            except queue.Full:
+                self._dropped_logs += 1
+
     def emit(self, record):
         try:
+            if not self.sync_manager.device_token:
+                # Avoid unbounded pre-pairing backlog and uploading historical sensitive logs later.
+                return
+
             sync_event = getattr(record, "sync_event", None)
             sync_session_id = getattr(record, "sync_session_id", None)
             sync_data = getattr(record, "sync_data", None)
 
             log_entry = {
                 "level": record.levelname.lower(),
-                "message": self.format(record),
+                "message": self._sanitize_message(self.format(record)),
                 "timestamp": datetime.fromtimestamp(record.created).isoformat()
             }
 
@@ -76,7 +106,7 @@ class LoggerService(logging.Handler):
             if isinstance(sync_data, dict) and sync_data:
                 log_entry["data"] = sync_data
 
-            self.log_queue.put(log_entry)
+            self._enqueue_log(log_entry)
             
             # REMOVED: Do not flush synchronously from the main thread
             # if self.log_queue.qsize() >= self.buffer_size:
@@ -125,12 +155,15 @@ class LoggerService(logging.Handler):
             response = requests.post(url, json=payload, timeout=5)
             if response.status_code != 200:
                 print(f"[LOGGER] Failed to upload logs: {response.status_code}")
-                # Put back into queue if failed? For now, just drop to avoid memory leak loops
+                for entry in reversed(logs_to_send):
+                    self._enqueue_log(entry)
             else:
                 self.last_flush = time.time()
                 
         except Exception as e:
             print(f"[LOGGER] Error uploading logs: {e}")
+            for entry in reversed(logs_to_send):
+                self._enqueue_log(entry)
 
     def stop(self):
         self.running = False

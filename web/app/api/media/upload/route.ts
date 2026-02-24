@@ -11,7 +11,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async (_pathname, _clientPayload) => {
+      onBeforeGenerateToken: async () => {
         const session = await getServerSession(authOptions);
         if (!session) {
           throw new Error('Unauthorized');

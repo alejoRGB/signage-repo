@@ -119,13 +119,13 @@ export async function GET(request: Request) {
 
     // Calculate dynamic status based on lastSeenAt
     const devicesWithStatus = devices.map(device => {
-        const {
-            syncSessionDevices,
-            // Defense in depth: do not leak if Prisma select is widened in the future.
-            token: _token,
-            userId: _userId,
-            ...deviceBase
-        } = device as typeof device & { token?: string; userId?: string };
+        const { syncSessionDevices, ...restDevice } = device;
+        const deviceBase = {
+            ...restDevice,
+        } as Omit<typeof restDevice, "token" | "userId"> & { token?: string; userId?: string };
+        // Defense in depth: do not leak if Prisma select is widened in the future.
+        delete deviceBase.token;
+        delete deviceBase.userId;
         const status = getDeviceConnectivityStatus(device.lastSeenAt);
 
         const latestRuntime = syncSessionDevices[0] ?? null;

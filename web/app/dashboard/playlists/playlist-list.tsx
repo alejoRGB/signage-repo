@@ -35,7 +35,7 @@ export default function PlaylistList({ initialPlaylists }: { initialPlaylists: P
                 method: "DELETE",
             });
             router.refresh();
-        } catch (error) {
+        } catch {
             showToast("Error deleting playlist", "error");
         } finally {
             setDeleteId(null);
