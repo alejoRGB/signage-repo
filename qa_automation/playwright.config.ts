@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { requireE2EBaseUrl } from './requireBaseUrl';
 
-const baseURL = process.env.E2E_BASE_URL?.trim() || 'https://signage-repo-dc5s.vercel.app';
+const baseURL = requireE2EBaseUrl();
 
 export default defineConfig({
     testDir: './tests/production',

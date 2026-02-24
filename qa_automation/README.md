@@ -3,12 +3,12 @@
 Este directorio contiene la suite de QA automatizada (Playwright) y referencias para validaciones manuales del modulo Sync.
 
 ## Estructura
-- `tests/production/`: suite QA E2E contra entorno real (`/login`, `/admin`, Sync, failover).
+- `tests/production/`: suite QA E2E contra entorno objetivo (definir `E2E_BASE_URL` explicitamente; no tiene fallback a prod).
 - `tests/local/`: smoke tests E2E para validar la app local (`web`) con `npm run dev`.
-- `tests/visual/`: capturas UI contra produccion (manual/soporte visual).
+- `tests/visual/`: capturas UI contra entorno objetivo (`E2E_BASE_URL`) para soporte visual.
 - `plans/testsprite/`: planes/artefactos de QA generados (no ejecutables).
 - `package.json`: dependencias y scripts de Playwright.
-- `playwright.config.ts`: config QA contra produccion (default).
+- `playwright.config.ts`: config QA para entorno remoto con `E2E_BASE_URL` obligatorio.
 - `playwright.local.config.ts`: config QA local con `webServer`.
 - `playwright.visual.config.ts`: config visual/screenshot con timeout extendido.
 - `../docs/sync_qa_runbook.md`: runbook manual de carga y caos para Sync (2/5/10/20 devices).
@@ -28,6 +28,7 @@ npx playwright install --with-deps
 
 ### QA E2E (Playwright)
 ```powershell
+$env:E2E_BASE_URL="https://staging.tu-dominio.com"
 npm test
 ```
 
@@ -38,6 +39,7 @@ npm run test:local
 
 ### Capturas visuales de produccion
 ```powershell
+$env:E2E_BASE_URL="https://staging.tu-dominio.com" # o prod, explicitamente
 npm run test:visual
 ```
 

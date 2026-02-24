@@ -696,6 +696,15 @@ Cambios necesarios:
 
 - Forzar `E2E_BASE_URL` explícito en prod tests o usar un valor dummy que falle si no está seteado.
 
+Estado (24/02): RESUELTO
+
+- `qa_automation/playwright.config.ts` y `qa_automation/playwright.visual.config.ts` ahora requieren `E2E_BASE_URL` explicito (sin fallback a produccion).
+- Se agrego helper `qa_automation/requireBaseUrl.ts` para centralizar el guardrail y fallar rapido si falta la variable.
+- `qa_automation/tests/visual/capture_screenshots.prod.spec.ts` tambien elimina fallback a prod y hace `skip` si faltan `E2E_BASE_URL`/credenciales.
+- `web/.env.example` deja `E2E_BASE_URL` vacio por defecto para evitar ejecuciones accidentales contra prod.
+- `qa_automation/README.md` actualizado para documentar `E2E_BASE_URL` explicito en ejemplos.
+- Validacion: `npx playwright test --list` en configs de QA/visual con `E2E_BASE_URL=http://localhost:3000`.
+
 ### 25) Instaladores/documentación usan `curl | bash` desde branch `master` y repo hardcodeado
 
 Evidencia:
