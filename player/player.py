@@ -82,6 +82,7 @@ class Player:
         self.current_playlist_id_for_preview = None
         self.current_content_name_for_preview = None
         self.preview_thread = None
+        self._heartbeat_send_lock = threading.Lock()
         self.hwaccel_profile = probe_and_select_mpv_hwaccel()
         
         # Ensure DISPLAY is set
@@ -101,6 +102,7 @@ class Player:
             set_playback_speed=self.set_mpv_playback_speed,
             get_playback_time_ms=self.get_mpv_time_pos_ms,
             get_playback_duration_ms=self.get_mpv_duration_ms,
+            emit_sync_heartbeat=self._emit_sync_heartbeat,
         )
         try:
             self.videowall_controller.clock_max_offset_ms = float(
@@ -204,10 +206,10 @@ class Player:
                 # During Sync/VideoWall the controller emits richer heartbeats with
                 # sync_runtime; skip the generic emitter to avoid duplicate signals.
                 if not self.videowall_controller.is_active():
-                    self.sync_manager.report_playback_state(
+                    self._emit_heartbeat(
                         playing_playlist_id=self.current_playlist_id_for_preview,
                         current_content_name=self.current_content_name_for_preview,
-                        preview_path=None,
+                        sync_runtime=None,
                     )
             except Exception as e:
                 logging.warning(f"[PREVIEW] Reporting failed: {e}")
@@ -218,6 +220,31 @@ class Player:
                 if remaining <= 0:
                     break
                 time.sleep(min(1.0, max(0.1, remaining)))
+
+    def _emit_heartbeat(
+        self,
+        *,
+        playing_playlist_id: Optional[str],
+        current_content_name: Optional[str],
+        sync_runtime: Optional[Dict],
+    ) -> bool:
+        with self._heartbeat_send_lock:
+            return self.sync_manager.report_playback_state(
+                playing_playlist_id=playing_playlist_id,
+                current_content_name=current_content_name,
+                preview_path=None,
+                sync_runtime=sync_runtime,
+            )
+
+    def _emit_sync_heartbeat(self, sync_runtime: Dict) -> bool:
+        current_content_name = None
+        if self.sync_state_machine.context:
+            current_content_name = os.path.basename(str(self.sync_state_machine.context.local_path))
+        return self._emit_heartbeat(
+            playing_playlist_id=None,
+            current_content_name=current_content_name,
+            sync_runtime=sync_runtime,
+        )
 
     def start_unclutter(self):
         """Start unclutter to hide mouse cursor"""

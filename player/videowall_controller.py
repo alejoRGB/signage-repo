@@ -42,6 +42,7 @@ class VideowallController:
         get_playback_time_ms: Optional[Callable[[], Optional[float]]] = None,
         get_playback_duration_ms: Optional[Callable[[], Optional[float]]] = None,
         lan_sync: Optional[LanSyncService] = None,
+        emit_sync_heartbeat: Optional[Callable[[Dict[str, object]], bool]] = None,
     ):
         self.sync_manager = sync_manager
         self.state_machine = state_machine
@@ -53,6 +54,7 @@ class VideowallController:
         self.set_playback_speed = set_playback_speed or (lambda _speed: True)
         self.get_playback_time_ms = get_playback_time_ms or (lambda: None)
         self.get_playback_duration_ms = get_playback_duration_ms or (lambda: None)
+        self.emit_sync_heartbeat = emit_sync_heartbeat or self._default_emit_sync_heartbeat
 
         # Runtime tuning defaults (P0 efficiency): slower idle polling, faster warm-up status.
         self.command_poll_idle_interval_s = self._resolve_interval_env("SYNC_COMMAND_POLL_IDLE_S", 10.0)
@@ -113,6 +115,16 @@ class VideowallController:
         }
         self._command_poll_interval_jitter_factor = self._stable_interval_jitter_factor("command-poll")
         self._status_interval_jitter_factor = self._stable_interval_jitter_factor("status-report")
+
+    def _default_emit_sync_heartbeat(self, runtime: Dict[str, object]) -> bool:
+        return bool(
+            self.sync_manager.report_playback_state(
+                playing_playlist_id=None,
+                current_content_name=os.path.basename(str(self.state_machine.context.local_path)),
+                preview_path=None,
+                sync_runtime=runtime,
+            )
+        )
 
     @staticmethod
     def _resolve_interval_env(name: str, default_value: float, minimum: float = 0.2) -> float:
@@ -952,9 +964,4 @@ class VideowallController:
                     },
                 )
 
-        self.sync_manager.report_playback_state(
-            playing_playlist_id=None,
-            current_content_name=os.path.basename(str(self.state_machine.context.local_path)),
-            preview_path=None,
-            sync_runtime=runtime,
-        )
+        self.emit_sync_heartbeat(runtime)

@@ -122,6 +122,51 @@ def test_prepare_command_acks_when_clock_is_healthy(tmp_path):
     assert controller.is_active() is True
 
 
+def test_sync_status_uses_injected_heartbeat_emitter():
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 2.0,
+            "health_score": 1.0,
+            "throttled": False,
+            "cpu_temp": 58.0,
+        },
+    )
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-heartbeat-callback",
+            start_at_ms=int(time.time() * 1000) - 1000,
+            duration_ms=10000,
+            local_path="/tmp/test.mp4",
+            device_id="device-local",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+
+    emitted = []
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda _phase_ms: True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+        emit_sync_heartbeat=lambda runtime: emitted.append(runtime) or True,
+    )
+
+    controller._report_status()
+
+    assert len(emitted) == 1
+    assert emitted[0]["session_id"] == "session-heartbeat-callback"
+    assert manager.status_reports == []
+
+
 def test_prepare_command_fails_when_clock_is_critical(tmp_path):
     media_file = tmp_path / "sync.mp4"
     media_file.write_bytes(b"test")

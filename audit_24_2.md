@@ -1971,3 +1971,14 @@ Estado: RESUELTO parcialmente (hot path de liveness desacoplado + budgets; sin q
 
 Nota:
 - `/api/device/preview` se reintroduce como endpoint especializado (intencional). `#30` sigue resuelto en el sentido de que ya no es un duplicado completo del heartbeat.
+
+### Update 2026-02-24 (Heartbeat architecture unification - sender path)
+
+#### 33) Doble emisor de heartbeat durante Sync/VideoWall
+
+Estado: RESUELTO (refuerzo arquitectonico)
+
+- Ademas de suspender el emisor general durante Sync, se unifico el path de envio:
+  - `player/videowall_controller.py` ya no depende directamente de `sync_manager.report_playback_state` cuando se inyecta callback.
+  - `player/player.py` ahora provee `emit_sync_heartbeat` y centraliza el envio en `_emit_heartbeat(...)` con lock de serializacion.
+- Resultado: un solo sender/logica de transporte desde `Player` para heartbeats genericos y heartbeats Sync (el controller queda mas enfocado en estado/cadencia).
