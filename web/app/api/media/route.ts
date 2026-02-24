@@ -5,6 +5,7 @@ import { CreateMediaItemSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
 import { assertUserMediaQuotaAvailable } from "@/lib/media-upload-quota";
+import { linkMediaUploadReceiptToMediaItem } from "@/lib/media-upload-receipts";
 
 
 export async function GET() {
@@ -146,6 +147,16 @@ export async function POST(request: Request) {
                 userId: session.user.id,
             },
         });
+
+        if (data.url && data.url.includes("public.blob.vercel-storage.com")) {
+            await linkMediaUploadReceiptToMediaItem({
+                userId: session.user.id,
+                blobUrl: data.url,
+                mediaItemId: mediaItem.id,
+            }).catch((error) => {
+                console.warn("Failed to link media upload receipt:", error);
+            });
+        }
 
         return NextResponse.json(mediaItem);
     } catch (error) {

@@ -1847,3 +1847,51 @@ Validation:
 - `npm --prefix web run test:api -- --runTestsByPath __tests__/api/device-logs-sync.test.ts` -> PASS
 - `npm --prefix web run lint` -> PASS
 - `npm --prefix web run build` -> PASS
+
+## Update 2026-02-24 (contact async queue/worker + media upload receipts/reconciliation)
+
+Implemented DB-backed async processing for contact leads and durable upload receipts with reconciliation for media uploads.
+
+### Contact delivery status update (#16)
+
+- Contact webhook/email resiliency (#16): RESOLVED (implementation + worker architecture)
+  - `/api/contact` now validates/rate-limits and enqueues a `ContactLeadJob` (async acceptance) instead of doing synchronous delivery inline.
+  - Added DB-backed queue model `ContactLeadJob` with retry/dead-letter state (`PENDING/PROCESSING/RETRY/SUCCEEDED/DEAD_LETTER`).
+  - Added internal worker endpoint: `/api/internal/contact-worker` (GET/POST) protected by `INTERNAL_WORKER_SECRET` bearer auth.
+  - Added `web/lib/contact-delivery.ts` queue processor with:
+    - SMTP + webhook delivery attempts
+    - bounded retries/backoff
+    - dead-letter on invalid payload/no channel/max attempts
+  - Route now returns `202` with queue metadata (`queued`, `jobId`, `deliveryConfigured`).
+
+Residual operational work for #16:
+- Schedule/invoke `/api/internal/contact-worker` (cron/worker trigger) in production with `INTERNAL_WORKER_SECRET`.
+- Optional future enhancement: dedicated external queue/worker runtime if traffic grows beyond DB queue comfort.
+
+### Media upload receipt/reconciliation status update (#15)
+
+- Durable receipt + reconciliation (#15): RESOLVED (implementation)
+  - Added DB model `MediaUploadReceipt` to persist upload-callback verification outcomes and reconciliation state.
+  - `onUploadCompleted` now records verified/rejected receipts (including verification errors and deleted-blob outcomes).
+  - `POST /api/media` links `MediaUploadReceipt` -> `MediaItem` after metadata persistence to prevent false orphan cleanup.
+  - Added internal worker endpoint: `/api/internal/media-upload-reconcile` (GET/POST) protected by `INTERNAL_WORKER_SECRET`.
+  - Added `web/lib/media-upload-receipts.ts` reconciler that:
+    - marks receipts as linked if metadata appears later
+    - deletes orphaned Vercel blobs after grace period
+    - records reconcile errors instead of failing silently
+
+Residual for #15:
+- Policy-level quotas by plan/tier (current quota remains global env-configurable limit).
+- Optional admin/ops dashboard for dead-lettered receipts/jobs and manual replay.
+
+### New required env/config (production)
+
+- `INTERNAL_WORKER_SECRET` (required for `/api/internal/contact-worker` and `/api/internal/media-upload-reconcile`)
+- `CONTACT_JOB_MAX_ATTEMPTS` / `CONTACT_JOB_RETRY_BACKOFF_MS` (optional tuning)
+- `MEDIA_UPLOAD_RECONCILE_GRACE_MS` (optional tuning)
+
+Validation:
+- `npm --prefix web run prisma:generate` -> PASS
+- `npm --prefix web run test:api -- --runTestsByPath __tests__/lib/contact-delivery.test.ts __tests__/lib/media-upload-receipts.test.ts __tests__/api/contact.test.ts __tests__/api/media-upload-route.test.ts __tests__/api/create-media.test.ts` -> PASS
+- `npm --prefix web run lint` -> PASS
+- `npm --prefix web run build` -> PASS
