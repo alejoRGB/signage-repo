@@ -24,7 +24,7 @@ function buildProtectedRouteCsp(_nonce: string) {
         `style-src 'self' 'unsafe-inline'`,
         `img-src 'self' blob: data: https:`,
         `media-src 'self' blob: data: https:`,
-        `connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://blob.vercel-storage.com https://*.blob.vercel-storage.com`,
+        `connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://vercel.com https://api.vercel.com https://blob.vercel-storage.com https://*.blob.vercel-storage.com`,
         `font-src 'self' data:`,
         `frame-src 'self'`,
         `worker-src 'self' blob:`,
