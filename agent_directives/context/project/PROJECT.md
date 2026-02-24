@@ -171,6 +171,12 @@
   - If a device assigned to an active Sync/VideoWall session reconnects/reboots and resumes heartbeats without active `sync_runtime`, backend heartbeat reconciliation may enqueue a fresh `SYNC_PREPARE` for that device.
   - Rejoin enqueue is guarded by session-device heartbeat staleness/disconnected state plus throttle/dedupe protections to avoid command spam.
   - Rejoin uses the existing cloud control plane (`/api/device/heartbeat` + `/api/device/commands`), then the player resumes normal sync timing (including LAN beacons when enabled).
+- **Device temperature telemetry source (updated):**
+  - Player heartbeats now report generic device CPU temperature outside Sync runtime payloads.
+  - Dashboard device temperature displays (including `Schedules`) must use the latest available CPU temperature from generic device heartbeat telemetry, with Sync session telemetry as fallback when newer.
+- **Sync startup media download UX (updated):**
+  - Sync session startup must wait for missing media downloads to complete on each player before the device becomes ready to start playback.
+  - Sync device cards show `downloading media` while `SYNC_PREPARE` remains pending during preloading.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.

@@ -83,3 +83,31 @@ def test_get_current_device_id_from_cached_playlist(tmp_path):
     (tmp_path / "playlist.json").write_text(json.dumps(cache_payload))
 
     assert manager.get_current_device_id() == "device-cache-1"
+
+
+def test_ensure_sync_media_available_waits_without_read_timeout(tmp_path, mocker):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({
+        "server_url": "http://test.com",
+        "device_token": "token-1",
+    }))
+    manager = SyncManager(config_path=str(config_file))
+
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.iter_content.return_value = [b"abc", b"def"]
+    mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+    resolved = manager.ensure_sync_media_available("media-1", "video-new.mp4")
+
+    assert resolved is not None
+    assert resolved.endswith("video-new.mp4")
+    assert os.path.exists(resolved)
+    with open(resolved, "rb") as fh:
+        assert fh.read() == b"abcdef"
+
+    mock_get.assert_called_once_with(
+        "http://test.com/api/media/download/media-1?token=token-1",
+        stream=True,
+        timeout=(manager.sync_media_download_connect_timeout_s, None),
+    )

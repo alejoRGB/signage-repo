@@ -18,6 +18,12 @@ jest.mock("@/lib/prisma", () => ({
         syncSessionDevice: {
             findFirst: jest.fn(),
         },
+        syncDeviceCommand: {
+            findMany: jest.fn(),
+        },
+        deviceLog: {
+            findMany: jest.fn(),
+        },
         $transaction: jest.fn(),
     },
 }));
@@ -370,5 +376,58 @@ describe("Sync session API", () => {
         expect(response.status).toBe(200);
         expect(body.session.id).toBe("session-1");
         expect(typeof body.session.startAtMs).toBe("number");
+    });
+
+    it("ACTIVE exposes pending SYNC_PREPARE state per device for downloading indicator", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({
+            user: { id: "user-1", role: "USER" },
+        });
+        (prisma.syncSession.findFirst as jest.Mock).mockResolvedValue({
+            id: "session-1",
+            status: "STARTING",
+            devices: [
+                {
+                    id: "ssd-1",
+                    deviceId: "device-1",
+                    status: "PRELOADING",
+                    resyncCount: 0,
+                    healthScore: null,
+                    maxDriftMs: null,
+                    driftHistory: null,
+                    device: {
+                        id: "device-1",
+                        name: "Lobby",
+                        status: "online",
+                        lastSeenAt: new Date(),
+                    },
+                },
+                {
+                    id: "ssd-2",
+                    deviceId: "device-2",
+                    status: "ASSIGNED",
+                    resyncCount: 0,
+                    healthScore: null,
+                    maxDriftMs: null,
+                    driftHistory: null,
+                    device: {
+                        id: "device-2",
+                        name: "Window",
+                        status: "online",
+                        lastSeenAt: new Date(),
+                    },
+                },
+            ],
+        });
+        (prisma.syncDeviceCommand.findMany as jest.Mock).mockResolvedValue([{ deviceId: "device-1" }]);
+        (prisma.deviceLog.findMany as jest.Mock).mockResolvedValue([]);
+
+        const response = await GET_ACTIVE_SYNC();
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.prepareCommandPendingByDeviceId).toEqual({
+            "device-1": true,
+            "device-2": false,
+        });
     });
 });

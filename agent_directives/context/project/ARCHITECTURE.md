@@ -126,3 +126,11 @@
      - `SYNC_LAN_BEACON_PORT`
      - `SYNC_LAN_TIMEOUT_MS`
      - `SYNC_LAN_FALLBACK_TO_CLOUD`
+18. **Device CPU Telemetry Path (updated Feb 24, 2026):**
+   - Generic device CPU temperature is reported in the standard heartbeat payload and persisted on `Device` (`cpuTemp`, `cpuTempUpdatedAt`).
+   - Sync-specific runtime CPU temperature may still be persisted in `SyncSessionDevice`.
+   - Dashboard/API consumers must resolve CPU temperature from the most recent available source across `Device` and `SyncSessionDevice`.
+19. **Sync Prepare Download State (updated Feb 24, 2026):**
+   - Missing Sync media is downloaded during `SYNC_PREPARE` on the player before readiness transition.
+   - Player download flow waits for full file completion (no read timeout abort) and retries transient failures.
+   - Active session API exposes per-device pending `SYNC_PREPARE` state so UI can render explicit `downloading media` status during preloading.

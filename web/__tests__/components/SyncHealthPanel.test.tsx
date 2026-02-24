@@ -186,4 +186,77 @@ describe("Sync health panel", () => {
         expect(await screen.findByText("28.4ms")).toBeInTheDocument();
         unmount();
     });
+
+    it("shows downloading media label while SYNC_PREPARE is still pending", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                if (url.includes("/api/devices")) {
+                    return {
+                        ok: true,
+                        json: async () => [{ id: "device-1", name: "Lobby", connectivityStatus: "online" }],
+                    } as Response;
+                }
+                if (url.includes("/api/media")) {
+                    return {
+                        ok: true,
+                        json: async () => [{ id: "media-1", name: "Promo", type: "video", durationMs: 10000 }],
+                    } as Response;
+                }
+                if (url.includes("/api/sync/presets") && !init?.method) {
+                    return {
+                        ok: true,
+                        json: async () => [],
+                    } as Response;
+                }
+                if (url.includes("/api/sync/session/active")) {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            session: {
+                                id: "session-1",
+                                status: "STARTING",
+                                presetId: "preset-1",
+                                masterDeviceId: "device-1",
+                                devices: [
+                                    {
+                                        id: "ssd-1",
+                                        deviceId: "device-1",
+                                        status: "PRELOADING",
+                                        lastSeenAt: new Date().toISOString(),
+                                        avgDriftMs: null,
+                                        maxDriftMs: null,
+                                        clockOffsetMs: null,
+                                        cpuTemp: 60.1,
+                                        healthScore: null,
+                                        resyncCount: 0,
+                                        resyncRate: 0,
+                                        device: {
+                                            id: "device-1",
+                                            name: "Lobby",
+                                            status: "online",
+                                        },
+                                    },
+                                ],
+                            },
+                            correctionTelemetryByDeviceId: {},
+                            prepareCommandPendingByDeviceId: {
+                                "device-1": true,
+                            },
+                        }),
+                    } as Response;
+                }
+
+                return { ok: true, json: async () => ({}) } as Response;
+            }) as unknown as typeof fetch
+        );
+
+        render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+        expect(await screen.findByTestId("sync-health-panel")).toBeInTheDocument();
+        expect(await screen.findByText("downloading media")).toBeInTheDocument();
+        expect(screen.getByText("preloading")).toBeInTheDocument();
+    });
 });
