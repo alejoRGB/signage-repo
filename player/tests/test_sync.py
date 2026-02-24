@@ -44,6 +44,25 @@ def test_register_success(tmp_path, mock_requests):
     mock_requests.assert_called_once()
 
 
+def test_poll_status_uses_device_token_header(tmp_path, mock_get):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"server_url": "http://test.com"}))
+    manager = SyncManager(config_path=str(config_file))
+
+    mock_response = mock_get.return_value
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "paired"}
+
+    status = manager.poll_status("token-abc")
+
+    assert status == "paired"
+    mock_get.assert_called_once_with(
+        "http://test.com/api/device/status",
+        headers={"X-Device-Token": "token-abc"},
+        timeout=5,
+    )
+
+
 def test_clock_sync_health_parses_leap_status_and_marks_healthy(tmp_path, mocker):
     """Clock health should be healthy when leap status is Normal and offset is within threshold."""
     config_file = tmp_path / "config.json"
@@ -107,8 +126,9 @@ def test_ensure_sync_media_available_waits_without_read_timeout(tmp_path, mocker
         assert fh.read() == b"abcdef"
 
     mock_get.assert_called_once_with(
-        "http://test.com/api/media/download/media-1?token=token-1",
+        "http://test.com/api/media/download/media-1",
         stream=True,
+        headers={"X-Device-Token": "token-1"},
         timeout=(manager.sync_media_download_connect_timeout_s, None),
     )
 

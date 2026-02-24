@@ -279,6 +279,26 @@ Cambios necesarios:
 - Mover autenticación del device a header (`Authorization: Bearer ...` o `X-Device-Token`).
 - Evitar URLs presignadas con token reutilizable; usar URLs cortas firmadas por request si hace falta.
 
+Estado (24/02): RESUELTO parcialmente (migración a header aplicada + fallback legacy)
+
+- `web/lib/device-token-request.ts` centraliza extracción de token de device desde:
+  - `X-Device-Token`
+  - `Authorization: Bearer ...`
+  - fallback temporal `?token=` (compatibilidad)
+- `web/app/api/device/status/route.ts` y `web/app/api/media/download/[id]/route.ts` ya aceptan headers y dejan de depender exclusivamente de query params.
+- `web/app/api/device/sync/route.ts` ya no embebe `?token=` en URLs de media enviadas al player.
+- `player/sync.py` migrado:
+  - `poll_status()` usa `X-Device-Token`
+  - descargas internas `/api/media/download/*` envían `X-Device-Token` por header
+  - evita filtrar token a URLs externas (solo agrega header en same-origin endpoints internos)
+- `web/public/sync.py` (cliente legacy expuesto) también migrado a header para `status` y descargas internas.
+- Tests agregados/actualizados:
+  - `web/__tests__/api/device-status-route.test.ts`
+  - `web/__tests__/api/media-download-route.test.ts`
+  - `web/__tests__/api/device-heartbeat-sync.test.ts`
+  - `player/tests/test_sync.py`
+- Pendiente para cierre total del hallazgo: eliminar fallback de `?token=` en backend después de migrar todos los players desplegados (y comunicar ventana de deprecación).
+
 ### 10) `device/register` filtra detalles internos y maneja mal colisiones de pairing code
 
 Evidencia:

@@ -39,7 +39,9 @@ describe("GET /api/media/download/[id]", () => {
         });
 
         const response = await GET(
-            new Request("http://localhost/api/media/download/media-1?token=token-1"),
+            new Request("http://localhost/api/media/download/media-1", {
+                headers: { "X-Device-Token": "token-1" },
+            }),
             { params: Promise.resolve({ id: "media-1" }) }
         );
 
@@ -57,7 +59,9 @@ describe("GET /api/media/download/[id]", () => {
         });
 
         const response = await GET(
-            new Request("http://localhost/api/media/download/media-1?token=token-1"),
+            new Request("http://localhost/api/media/download/media-1", {
+                headers: { "X-Device-Token": "token-1" },
+            }),
             { params: Promise.resolve({ id: "media-1" }) }
         );
 
@@ -74,12 +78,34 @@ describe("GET /api/media/download/[id]", () => {
         });
 
         const response = await GET(
-            new Request("http://localhost/api/media/download/media-1?token=token-1"),
+            new Request("http://localhost/api/media/download/media-1", {
+                headers: { "X-Device-Token": "token-1" },
+            }),
             { params: Promise.resolve({ id: "media-1" }) }
         );
 
         expect(response.status).toBeGreaterThanOrEqual(300);
         expect(response.status).toBeLessThan(400);
         expect(response.headers.get("location")).toBe("https://cdn.example.com/video.mp4");
+    });
+
+    it("accepts legacy token query param as temporary fallback", async () => {
+        (prisma.mediaItem.findFirst as jest.Mock).mockResolvedValue({
+            id: "media-1",
+            userId: "user-1",
+            url: "https://cdn.example.com/video.mp4",
+            filename: "video.mp4",
+        });
+
+        const response = await GET(
+            new Request("http://localhost/api/media/download/media-1?token=legacy-token"),
+            { params: Promise.resolve({ id: "media-1" }) }
+        );
+
+        expect(prisma.device.findUnique).toHaveBeenCalledWith({
+            where: { token: "legacy-token" },
+        });
+        expect(response.status).toBeGreaterThanOrEqual(300);
+        expect(response.status).toBeLessThan(400);
     });
 });

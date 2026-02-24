@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
+import { getDeviceTokenFromRequest } from "@/lib/device-token-request";
 
 export async function GET(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const token = searchParams.get("token");
+        const { token } = getDeviceTokenFromRequest(request);
 
         if (!token) {
-            return NextResponse.json({ error: "Token required" }, { status: 400 });
+            return NextResponse.json({ error: "Device token required" }, { status: 400 });
         }
 
         // Rate Limit Check

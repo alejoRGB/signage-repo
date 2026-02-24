@@ -326,7 +326,7 @@ describe("Device runtime sync persistence", () => {
             expect(response.status).toBe(200);
             const body = await response.json();
             expect(body.playlist.items[0].url).toBe(
-                "https://senaldigital.xyz/api/media/download/m-2?token=token-1"
+                "https://senaldigital.xyz/api/media/download/m-2"
             );
         } finally {
             if (typeof previousBaseUrl === "string") {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isSafeStoredMediaFilename } from "@/lib/validations";
+import { getDeviceTokenFromRequest } from "@/lib/device-token-request";
 import fs from "fs";
 import path from "path";
 
@@ -37,14 +38,11 @@ export async function GET(
 ) {
     try {
         const { id } = await context.params;
-
-        // Get token from query params
-        const url = new URL(request.url);
-        const token = url.searchParams.get("token");
+        const { token } = getDeviceTokenFromRequest(request);
 
         if (!token) {
             return NextResponse.json(
-                { error: "Authentication token required" },
+                { error: "Device token required" },
                 { status: 401 }
             );
         }

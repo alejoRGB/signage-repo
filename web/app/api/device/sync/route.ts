@@ -149,7 +149,7 @@ function formatPlaylist(
                 filename: item.mediaItem.filename ?? `file-${item.mediaItem.id}`,
                 url: item.mediaItem.url.startsWith("http")
                     ? item.mediaItem.url
-                    : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${deviceToken}`,
+                    : `${baseUrl}/api/media/download/${item.mediaItem.id}`,
                 order: item.order,
                 duration: finalDuration,
                 orientation: playlist.orientation ?? "landscape",

@@ -6,6 +6,7 @@ import subprocess
 import time
 import requests
 from typing import Dict, List, Optional, Any
+from urllib.parse import urlparse
 
 class SyncManager:
     def __init__(self, config_path=None):
@@ -70,6 +71,29 @@ class SyncManager:
         except ValueError:
             return None
         return candidate
+
+    def _device_auth_headers(self) -> Dict[str, str]:
+        if not self.device_token:
+            return {}
+        return {"X-Device-Token": str(self.device_token)}
+
+    def _should_send_device_token_header(self, url: str) -> bool:
+        if not self.server_url:
+            return False
+        try:
+            parsed_target = urlparse(url)
+            parsed_server = urlparse(self.server_url)
+        except Exception:
+            return False
+
+        same_origin = (
+            parsed_target.scheme == parsed_server.scheme
+            and parsed_target.netloc == parsed_server.netloc
+        )
+        if not same_origin:
+            return False
+
+        return parsed_target.path.startswith("/api/media/download/") or parsed_target.path.startswith("/api/device/status")
     
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from JSON file"""
@@ -106,8 +130,8 @@ class SyncManager:
     def poll_status(self, token: str) -> Optional[str]:
         """Check if device has been paired"""
         try:
-            url = f"{self.server_url}/api/device/status?token={token}"
-            response = requests.get(url, timeout=5)
+            url = f"{self.server_url}/api/device/status"
+            response = requests.get(url, headers={"X-Device-Token": token}, timeout=5)
             
             if response.status_code == 200:
                 data = response.json()
@@ -527,7 +551,13 @@ class SyncManager:
         
         try:
             logging.info(f"[DOWNLOAD] Downloading {filename}...")
-            response = requests.get(url, stream=True, timeout=30)
+            request_kwargs: Dict[str, Any] = {
+                "stream": True,
+                "timeout": 30,
+            }
+            if self._should_send_device_token_header(url):
+                request_kwargs["headers"] = self._device_auth_headers()
+            response = requests.get(url, **request_kwargs)
             
             if response.status_code == 200:
                 with open(filepath, 'wb') as f:
@@ -580,7 +610,7 @@ class SyncManager:
             logging.error("[SYNC] Cannot download sync media: missing server_url/device_token")
             return None
 
-        download_url = f"{self.server_url}/api/media/download/{media_id}?token={self.device_token}"
+        download_url = f"{self.server_url}/api/media/download/{media_id}"
         temp_path = f"{target_path}.part"
         total_attempts = max(1, self.sync_media_download_retries)
 
@@ -598,6 +628,7 @@ class SyncManager:
                 response = requests.get(
                     download_url,
                     stream=True,
+                    headers=self._device_auth_headers(),
                     timeout=(self.sync_media_download_connect_timeout_s, None),
                 )
                 if response.status_code != 200:
