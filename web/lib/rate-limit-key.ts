@@ -56,7 +56,13 @@ function getForwardedHeaderIp(headers: Headers) {
 }
 
 export function getClientIpForRateLimit(request: Request) {
+    if (!shouldTrustProxyHeadersForRateLimit()) {
+        return "unknown";
+    }
+
     return (
+        getFirstHeaderValue(request.headers, "x-vercel-forwarded-for") ??
+        getFirstHeaderValue(request.headers, "cf-connecting-ip") ??
         getFirstHeaderValue(request.headers, "x-forwarded-for") ??
         getFirstHeaderValue(request.headers, "x-real-ip") ??
         getForwardedHeaderIp(request.headers) ??
@@ -85,4 +91,22 @@ export function rateLimitKeyForContactLead(input: { email: string; phone: string
     const email = clamp(input.email.trim().toLowerCase());
     const phone = clamp(input.phone.replace(/\s+/g, ""));
     return `contact-lead:${hashIdentifier(`${email}|${phone}`)}`;
+}
+function parseEnvBoolean(name: string): boolean | null {
+    const raw = process.env[name];
+    if (!raw) return null;
+    const normalized = raw.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(normalized)) return true;
+    if (["0", "false", "no", "off"].includes(normalized)) return false;
+    return null;
+}
+
+export function shouldTrustProxyHeadersForRateLimit() {
+    const explicit = parseEnvBoolean("RATE_LIMIT_TRUST_PROXY_HEADERS");
+    if (explicit !== null) {
+        return explicit;
+    }
+
+    // Preserve current behavior by default while allowing explicit hardening per environment.
+    return true;
 }

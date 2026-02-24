@@ -871,6 +871,7 @@ class VideowallController:
         return {
             "session_id": context.session_id,
             "status": status,
+            "runtime_sent_at_ms": now_ms,
             # Avoid publishing fake zero drift before the first real sample exists.
             "drift_ms": self._last_drift_ms,
             "resync_count": self._resync_count,

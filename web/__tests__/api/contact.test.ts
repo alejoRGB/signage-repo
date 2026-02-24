@@ -61,6 +61,10 @@ function clearDeliveryEnv() {
     delete process.env.CONTACT_TO_EMAIL;
     delete process.env.CONTACT_FROM_EMAIL;
     delete process.env.CONTACT_SMTP_SECURE;
+    delete process.env.CONTACT_WEBHOOK_TIMEOUT_MS;
+    delete process.env.CONTACT_WEBHOOK_RETRIES;
+    delete process.env.CONTACT_WEBHOOK_RETRY_BACKOFF_MS;
+    delete process.env.RATE_LIMIT_TRUST_PROXY_HEADERS;
 }
 
 describe("POST /api/contact", () => {
@@ -162,6 +166,7 @@ describe("POST /api/contact", () => {
         mockedCheckRateLimit.mockResolvedValue(true);
         process.env.CONTACT_WEBHOOK_URL = "https://example.com/webhook";
         process.env.CONTACT_WEBHOOK_TIMEOUT_MS = "500";
+        process.env.CONTACT_WEBHOOK_RETRIES = "0";
         const errorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
 
         const abortError = new Error("aborted");
@@ -180,6 +185,23 @@ describe("POST /api/contact", () => {
                 message: expect.stringContaining("timeout"),
             })
         );
+    });
+
+    it("retries webhook on transient 5xx and succeeds on a later attempt", async () => {
+        mockedCheckRateLimit.mockResolvedValue(true);
+        process.env.CONTACT_WEBHOOK_URL = "https://example.com/webhook";
+        process.env.CONTACT_WEBHOOK_RETRIES = "1";
+        process.env.CONTACT_WEBHOOK_RETRY_BACKOFF_MS = "1";
+        const fetchSpy = jest.spyOn(global, "fetch")
+            .mockResolvedValueOnce({ ok: false, status: 503 } as Response)
+            .mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+        const response = await POST(createRequest(validPayload));
+        const data = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(data).toEqual({ ok: true, emailed: false, forwarded: true });
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
 
     it("returns 502 when smtp is configured but delivery fails and no webhook exists", async () => {

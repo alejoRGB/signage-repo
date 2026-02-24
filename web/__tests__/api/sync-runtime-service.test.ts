@@ -39,6 +39,7 @@ describe("sync-runtime-service LAN runtime fields", () => {
             sync_runtime: {
                 session_id: "session-1",
                 status: "PLAYING",
+                runtime_sent_at_ms: 123456,
                 lan_mode: "FOLLOWER",
                 lan_beacon_age_ms: 41.9,
             },
@@ -47,6 +48,7 @@ describe("sync-runtime-service LAN runtime fields", () => {
         expect(runtime).toEqual(
             expect.objectContaining({
                 sessionId: "session-1",
+                runtimeSentAtMs: 123456,
                 lanMode: "follower",
                 lanBeaconAgeMs: 41.9,
             })
@@ -57,6 +59,7 @@ describe("sync-runtime-service LAN runtime fields", () => {
         const formData = new FormData();
         formData.set("sync_session_id", "session-1");
         formData.set("sync_status", "PLAYING");
+        formData.set("sync_runtime_sent_at_ms", "999");
         formData.set("sync_lan_mode", " CLOUD_FALLBACK ");
         formData.set("sync_lan_beacon_age_ms", "123");
 
@@ -64,8 +67,35 @@ describe("sync-runtime-service LAN runtime fields", () => {
         expect(runtime).toEqual(
             expect.objectContaining({
                 sessionId: "session-1",
+                runtimeSentAtMs: 999,
                 lanMode: "cloud_fallback",
                 lanBeaconAgeMs: 123,
+            })
+        );
+    });
+
+    it("does not regress device status when an older state arrives later", async () => {
+        (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue({
+            id: "session-device-1",
+            sessionId: "session-1",
+            status: "PLAYING",
+            driftHistory: null,
+            session: { id: "session-1", status: "RUNNING" },
+        });
+
+        await persistDeviceSyncRuntime("device-1", {
+            sessionId: "session-1",
+            status: "READY",
+            runtimeSentAtMs: 1000,
+            driftMs: 4,
+        });
+
+        expect(prisma.syncSessionDevice.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: "session-device-1" },
+                data: expect.not.objectContaining({
+                    status: "READY",
+                }),
             })
         );
     });

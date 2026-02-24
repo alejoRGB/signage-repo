@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Device } from "@/types/device";
+import { startJitteredPolling } from "@/lib/jittered-polling";
 
 type DeviceLogsModalProps = {
     device: Device | null;
@@ -48,8 +49,7 @@ export default function DeviceLogsModal({ device, isOpen, onClose }: DeviceLogsM
         };
 
         fetchLogs(); // Fetch immediately
-        const interval = setInterval(fetchLogs, 5000);
-        return () => clearInterval(interval);
+        return startJitteredPolling(fetchLogs, 5000);
     }, [isOpen, device]);
 
     if (!isOpen || !device) return null;

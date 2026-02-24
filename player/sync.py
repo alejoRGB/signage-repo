@@ -306,6 +306,8 @@ class SyncManager:
             if sync_runtime:
                 data["sync_session_id"] = str(sync_runtime.get("session_id", ""))
                 data["sync_status"] = str(sync_runtime.get("status", ""))
+                if sync_runtime.get("runtime_sent_at_ms") is not None:
+                    data["sync_runtime_sent_at_ms"] = str(sync_runtime.get("runtime_sent_at_ms"))
                 if sync_runtime.get("drift_ms") is not None:
                     data["sync_drift_ms"] = str(sync_runtime.get("drift_ms"))
                 if sync_runtime.get("resync_count") is not None:
@@ -409,6 +411,7 @@ class SyncManager:
                 runtime_payload = {
                     "session_id": sync_runtime.get("session_id"),
                     "status": sync_runtime.get("status"),
+                    "runtime_sent_at_ms": sync_runtime.get("runtime_sent_at_ms"),
                     "drift_ms": sync_runtime.get("drift_ms"),
                     "resync_count": sync_runtime.get("resync_count"),
                     "clock_offset_ms": sync_runtime.get("clock_offset_ms"),

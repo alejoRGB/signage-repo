@@ -1650,3 +1650,39 @@ This batch closes or mitigates multiple pending findings from the Sync/Heartbeat
 - `npm --prefix web run test:api -- --runTestsByPath __tests__/api/device-heartbeat-sync.test.ts __tests__/api/device-logs-sync.test.ts` -> PASS
 - `npm --prefix web run lint` -> PASS (0 warnings)
 - `npm --prefix web run build` -> PASS
+
+## Update 2026-02-24 (heartbeat monotonicity/jitter + contact retries)
+
+Additional hardening implemented for heartbeat/runtime consistency and contact delivery resiliency.
+
+### Status updates (code changes implemented)
+
+- Heartbeat / Sync runtime monotonicity (#37): PARTIALLY RESOLVED
+  - `web/lib/sync-runtime-service.ts` now guards against regressive status overwrites (e.g. late `READY` no longer downgrades a device already in `PLAYING`).
+  - Terminal statuses (`ERRORED`, `DISCONNECTED`) are still allowed.
+  - Added plumbing for optional `runtime_sent_at_ms` across player -> heartbeat/ack -> backend extractors (future-proofing for stronger ordering).
+  - Remaining improvement: persist/order by client monotonic sequence or `runtime_sent_at_ms` server-side (DB field / schema-level contract).
+
+- Heartbeat interval jitter / thundering-herd mitigation (#35): PARTIALLY RESOLVED
+  - Added `web/lib/jittered-polling.ts` and migrated UI polling loops to jittered scheduling in:
+    - `web/components/dashboard/sync-videowall-panel.tsx`
+    - `web/app/dashboard/devices/device-manager.tsx`
+    - `web/components/dashboard/device-preview-grid.tsx`
+    - `web/components/devices/device-logs-modal.tsx`
+  - Remaining improvement: apply stable per-device jitter on player-side heartbeats/command polls (especially `videowall_controller`).
+
+- Contact webhook resiliency / proxy policy (#16): PARTIALLY RESOLVED (further improved)
+  - `web/app/api/contact/route.ts` now retries transient webhook failures (timeouts/network/5xx/429) with bounded retries/backoff.
+  - Added explicit env knobs:
+    - `CONTACT_WEBHOOK_RETRIES`
+    - `CONTACT_WEBHOOK_RETRY_BACKOFF_MS`
+  - `web/lib/rate-limit-key.ts` now supports explicit proxy-header trust policy via `RATE_LIMIT_TRUST_PROXY_HEADERS` (defaults to preserving current behavior).
+  - Remaining improvement: async queue/worker delivery for webhook/email and environment-specific enforced trusted-proxy policy in production.
+
+### Validation run for this batch
+
+- `python -m pytest player/tests/test_videowall_controller.py -q` -> PASS
+- `npm --prefix web run test:api -- --runTestsByPath __tests__/api/contact.test.ts __tests__/lib/rate-limit-key.test.ts __tests__/api/sync-runtime-service.test.ts __tests__/api/device-heartbeat-sync.test.ts` -> PASS
+- `npm --prefix web run lint` -> PASS
+- `npm --prefix web run build` -> PASS
+- `vercel build --yes` -> FAIL (same known local Windows Vercel CLI packaging bug: `Unable to find lambda for route: /recursos/costos-carteleria-digital-pymes`)

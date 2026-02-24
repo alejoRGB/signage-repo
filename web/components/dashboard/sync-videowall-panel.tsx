@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast-context";
 import { DIRECTIVE_TAB, type DirectiveTab } from "@/lib/directive-tabs";
 import { getDeviceStatusPollIntervalMs, isDeviceConsideredOnline } from "@/lib/device-connectivity";
 import { SYNC_PRESET_MODE, type SyncPresetMode } from "@/types/sync";
+import { startJitteredPolling } from "@/lib/jittered-polling";
 
 type SyncDevice = {
     id: string;
@@ -456,30 +457,30 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
             }
         });
 
-        const intervalId = window.setInterval(() => {
+        const stopPolling = startJitteredPolling(() => {
             if (!disposed) {
-                void refreshActiveSession();
+                return refreshActiveSession();
             }
         }, 1500);
 
         return () => {
             disposed = true;
-            window.clearInterval(intervalId);
+            stopPolling();
         };
     }, []);
 
     useEffect(() => {
         let disposed = false;
 
-        const intervalId = window.setInterval(() => {
+        const stopPolling = startJitteredPolling(() => {
             if (!disposed) {
-                void refreshSyncDevices();
+                return refreshSyncDevices();
             }
         }, SYNC_DEVICE_STATUS_POLL_MS);
 
         return () => {
             disposed = true;
-            window.clearInterval(intervalId);
+            stopPolling();
         };
     }, [refreshSyncDevices]);
 

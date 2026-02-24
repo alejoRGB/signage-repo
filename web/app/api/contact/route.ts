@@ -12,6 +12,8 @@ const DEFAULT_CONTACT_EMAIL = "info.senaldigital@gmail.com";
 const DEFAULT_CONTACT_WEBHOOK_TIMEOUT_MS = 5000;
 const MIN_CONTACT_WEBHOOK_TIMEOUT_MS = 500;
 const MAX_CONTACT_WEBHOOK_TIMEOUT_MS = 30000;
+const DEFAULT_CONTACT_WEBHOOK_RETRIES = 1;
+const DEFAULT_CONTACT_WEBHOOK_RETRY_BACKOFF_MS = 250;
 
 function getSmtpConfig() {
     const host = (process.env.CONTACT_SMTP_HOST ?? "smtp.gmail.com").trim();
@@ -99,6 +101,22 @@ function getContactWebhookTimeoutMs() {
     return Math.min(MAX_CONTACT_WEBHOOK_TIMEOUT_MS, Math.max(MIN_CONTACT_WEBHOOK_TIMEOUT_MS, Math.round(parsed)));
 }
 
+function getContactWebhookRetries() {
+    const raw = process.env.CONTACT_WEBHOOK_RETRIES?.trim();
+    if (!raw) return DEFAULT_CONTACT_WEBHOOK_RETRIES;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return DEFAULT_CONTACT_WEBHOOK_RETRIES;
+    return Math.min(3, Math.max(0, Math.round(parsed)));
+}
+
+function getContactWebhookRetryBackoffMs() {
+    const raw = process.env.CONTACT_WEBHOOK_RETRY_BACKOFF_MS?.trim();
+    if (!raw) return DEFAULT_CONTACT_WEBHOOK_RETRY_BACKOFF_MS;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return DEFAULT_CONTACT_WEBHOOK_RETRY_BACKOFF_MS;
+    return Math.min(2000, Math.max(50, Math.round(parsed)));
+}
+
 async function sendLeadByEmail(lead: ContactLead, smtp: NonNullable<ReturnType<typeof getSmtpConfig>>) {
     const transporter = nodemailer.createTransport({
         host: smtp.host,
@@ -123,7 +141,7 @@ async function sendLeadByEmail(lead: ContactLead, smtp: NonNullable<ReturnType<t
     return { delivered: true };
 }
 
-async function forwardLeadToWebhook(lead: ContactLead, webhookUrl: string) {
+async function postLeadToWebhookOnce(lead: ContactLead, webhookUrl: string) {
     const controller = new AbortController();
     const timeoutMs = getContactWebhookTimeoutMs();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -157,6 +175,46 @@ async function forwardLeadToWebhook(lead: ContactLead, webhookUrl: string) {
     }
 
     return { forwarded: true };
+}
+
+function shouldRetryWebhookError(error: unknown) {
+    if (!(error instanceof Error)) {
+        return false;
+    }
+    if (error.name === "AbortError") {
+        return true;
+    }
+    const match = error.message.match(/status\s+(\d+)/i);
+    if (!match) {
+        return true; // network-ish / unknown fetch error
+    }
+    const status = Number(match[1]);
+    return status === 429 || status >= 500;
+}
+
+async function sleep(ms: number) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function forwardLeadToWebhook(lead: ContactLead, webhookUrl: string) {
+    const retries = getContactWebhookRetries();
+    const baseBackoffMs = getContactWebhookRetryBackoffMs();
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+        try {
+            return await postLeadToWebhookOnce(lead, webhookUrl);
+        } catch (error) {
+            lastError = error;
+            const canRetry = attempt < retries && shouldRetryWebhookError(error);
+            if (!canRetry) {
+                throw error;
+            }
+            await sleep(baseBackoffMs * (attempt + 1));
+        }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error("Webhook delivery failed");
 }
 
 export async function POST(request: NextRequest) {

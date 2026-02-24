@@ -7,6 +7,7 @@ import { abortExpiredSyncStartSessionById } from "@/lib/sync-start-timeout-servi
 type SyncRuntimeInput = {
     sessionId?: string | null;
     status?: string | null;
+    runtimeSentAtMs?: number | null;
     driftMs?: number | null;
     resyncCount?: number | null;
     clockOffsetMs?: number | null;
@@ -43,6 +44,13 @@ const SESSION_STATUSES_BEFORE_WARMUP: SyncSessionStatus[] = [
 
 const READY_BARRIER_MIN_LEAD_MS = 1500;
 const READY_BARRIER_MAX_LEAD_MS = 12000;
+const STATUS_PROGRESS_RANK: Partial<Record<SyncSessionDeviceStatus, number>> = {
+    [SyncSessionDeviceStatus.ASSIGNED]: 1,
+    [SyncSessionDeviceStatus.PRELOADING]: 2,
+    [SyncSessionDeviceStatus.READY]: 3,
+    [SyncSessionDeviceStatus.WARMING_UP]: 4,
+    [SyncSessionDeviceStatus.PLAYING]: 5,
+};
 
 type SessionPrepareMedia = {
     id: string;
@@ -146,6 +154,7 @@ export function extractSyncRuntimeFromJson(payload: unknown): SyncRuntimeInput |
     return {
         sessionId: (runtimeRecord.session_id as string | undefined) ?? (runtimeRecord.sessionId as string | undefined) ?? null,
         status: (runtimeRecord.status as string | undefined) ?? null,
+        runtimeSentAtMs: toOptionalNumber(runtimeRecord.runtime_sent_at_ms ?? runtimeRecord.runtimeSentAtMs),
         driftMs: toOptionalNumber(runtimeRecord.drift_ms ?? runtimeRecord.driftMs),
         resyncCount: toOptionalNumber(runtimeRecord.resync_count ?? runtimeRecord.resyncCount),
         clockOffsetMs: toOptionalNumber(runtimeRecord.clock_offset_ms ?? runtimeRecord.clockOffsetMs),
@@ -171,6 +180,7 @@ export function extractSyncRuntimeFromFormData(formData: FormData): SyncRuntimeI
     return {
         sessionId,
         status: typeof status === "string" ? status : null,
+        runtimeSentAtMs: toOptionalNumber(formData.get("sync_runtime_sent_at_ms")),
         driftMs: toOptionalNumber(formData.get("sync_drift_ms")),
         resyncCount: toOptionalNumber(formData.get("sync_resync_count")),
         clockOffsetMs: toOptionalNumber(formData.get("sync_clock_offset_ms")),
@@ -188,7 +198,8 @@ export function extractSyncRuntimeFromFormData(formData: FormData): SyncRuntimeI
 function nextDriftHistory(
     currentHistory: unknown,
     driftMs: number | null | undefined,
-    status: SyncSessionDeviceStatus | null
+    status: SyncSessionDeviceStatus | null,
+    runtimeSentAtMs?: number | null
 ): Prisma.InputJsonValue | undefined {
     if (driftMs === null || driftMs === undefined) {
         return undefined;
@@ -201,6 +212,7 @@ function nextDriftHistory(
             at: Date.now(),
             driftMs,
             status,
+            runtimeSentAtMs: runtimeSentAtMs ?? null,
         },
     ];
 
@@ -241,13 +253,14 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
         lastSeenAt: new Date(),
     };
 
-    if (normalizedStatus) {
+    if (normalizedStatus && shouldApplyIncomingStatus(sessionDevice.status, normalizedStatus)) {
         updateData.status = normalizedStatus;
     }
     const driftHistory = nextDriftHistory(
         sessionDevice.driftHistory,
         runtime.driftMs,
-        normalizedStatus
+        normalizedStatus,
+        runtime.runtimeSentAtMs
     );
     if (driftHistory !== undefined) {
         updateData.driftHistory = driftHistory;
@@ -273,9 +286,10 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
         data: updateData,
     });
 
+    const effectiveStatus = (updateData.status as SyncSessionDeviceStatus | undefined) ?? sessionDevice.status;
     const sessionStatus = sessionDevice.session.status;
     if (
-        normalizedStatus === SyncSessionDeviceStatus.PLAYING &&
+        effectiveStatus === SyncSessionDeviceStatus.PLAYING &&
         SESSION_STATUSES_BEFORE_RUNNING.includes(sessionStatus)
     ) {
         await prisma.syncSession.update({
@@ -289,7 +303,7 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
     }
 
     if (
-        normalizedStatus === SyncSessionDeviceStatus.READY &&
+        effectiveStatus === SyncSessionDeviceStatus.READY &&
         SESSION_STATUSES_BEFORE_WARMUP.includes(sessionStatus)
     ) {
         const nonReadyCount = await prisma.syncSessionDevice.count({
@@ -418,4 +432,30 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
             });
         }
     }
+}
+
+function shouldApplyIncomingStatus(
+    currentStatus: SyncSessionDeviceStatus,
+    incomingStatus: SyncSessionDeviceStatus
+) {
+    switch (incomingStatus) {
+        case SyncSessionDeviceStatus.ERRORED:
+        case SyncSessionDeviceStatus.DISCONNECTED:
+            return true;
+        default:
+            break;
+    }
+
+    switch (currentStatus) {
+        case SyncSessionDeviceStatus.ERRORED:
+            return false;
+        case SyncSessionDeviceStatus.DISCONNECTED:
+            return true;
+        default:
+            break;
+    }
+
+    const currentRank = STATUS_PROGRESS_RANK[currentStatus] ?? 0;
+    const incomingRank = STATUS_PROGRESS_RANK[incomingStatus] ?? 0;
+    return incomingRank >= currentRank;
 }

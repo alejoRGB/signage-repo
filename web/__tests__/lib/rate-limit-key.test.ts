@@ -3,6 +3,7 @@ import {
     rateLimitKeyForContactLead,
     rateLimitKeyForDeviceToken,
     rateLimitKeyForIp,
+    shouldTrustProxyHeadersForRateLimit,
 } from "@/lib/rate-limit-key";
 
 function makeRequest(headers: Record<string, string>) {
@@ -10,6 +11,16 @@ function makeRequest(headers: Record<string, string>) {
 }
 
 describe("rate-limit-key helpers", () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+        process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+        process.env = originalEnv;
+    });
+
     it("uses the first x-forwarded-for IP and strips port", () => {
         const request = makeRequest({
             "x-forwarded-for": "203.0.113.10:443, 10.0.0.4",
@@ -29,6 +40,16 @@ describe("rate-limit-key helpers", () => {
 
         expect(getClientIpForRateLimit(realIpRequest)).toBe("198.51.100.20");
         expect(getClientIpForRateLimit(forwardedRequest)).toBe("2001:db8::1");
+    });
+
+    it("supports explicit disabling of proxy header trust via env policy", () => {
+        process.env.RATE_LIMIT_TRUST_PROXY_HEADERS = "false";
+        const request = makeRequest({
+            "x-forwarded-for": "203.0.113.10",
+        });
+
+        expect(shouldTrustProxyHeadersForRateLimit()).toBe(false);
+        expect(getClientIpForRateLimit(request)).toBe("unknown");
     });
 
     it("hashes device tokens so raw secrets are not used as backend keys", () => {

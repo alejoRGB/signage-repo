@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/toast-context";
 import { useDirectiveTabs } from "@/components/dashboard/directive-tabs-context";
 import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
 import { getDeviceStatusPollIntervalMs } from "@/lib/device-connectivity";
+import { startJitteredPolling } from "@/lib/jittered-polling";
 
 export default function DeviceManager({
     devices: initialDevices,
@@ -53,9 +54,7 @@ export default function DeviceManager({
 
     // Poll device connectivity/data while the Schedules tab content is visible.
     useEffect(() => {
-        const interval = setInterval(refreshDevices, schedulesDevicePollMs);
-
-        return () => clearInterval(interval);
+        return startJitteredPolling(refreshDevices, schedulesDevicePollMs);
     }, [refreshDevices, schedulesDevicePollMs]);
 
     // Toast Logic replaced by useToast hook

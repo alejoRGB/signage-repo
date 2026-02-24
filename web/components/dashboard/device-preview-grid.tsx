@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, FileVideo, Globe } from "lucide-react";
 import { DeviceConnectivityBadge, DeviceCpuTempBadge } from "@/components/dashboard/device-status-telemetry-badges";
 import { getDeviceStatusPollIntervalMs, isDeviceConsideredOnline } from "@/lib/device-connectivity";
 import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
+import { startJitteredPolling } from "@/lib/jittered-polling";
 
 type DashboardDevice = {
     id: string;
@@ -81,8 +82,7 @@ export default function DevicePreviewGrid({
     }, []);
 
     useEffect(() => {
-        const timer = setInterval(refreshDevices, POLL_INTERVAL_MS);
-        return () => clearInterval(timer);
+        return startJitteredPolling(refreshDevices, POLL_INTERVAL_MS);
     }, [refreshDevices]);
 
     const toggleExpanded = (deviceId: string) => {

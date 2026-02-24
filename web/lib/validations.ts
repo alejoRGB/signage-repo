@@ -290,6 +290,7 @@ export const DeviceCommandAckSchema = z.object({
         .object({
             session_id: z.string().min(1).optional(),
             status: z.string().optional(),
+            runtime_sent_at_ms: z.number().optional(),
             drift_ms: z.number().optional(),
             resync_count: z.number().optional(),
             clock_offset_ms: z.number().optional(),
