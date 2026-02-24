@@ -32,15 +32,18 @@ function buildProtectedRouteCsp(nonce: string) {
 }
 
 function nextWithProtectedCsp(req: NextRequest, nonce: string) {
+    const csp = buildProtectedRouteCsp(nonce);
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-csp-nonce", nonce);
+    requestHeaders.set("x-nonce", nonce);
+    requestHeaders.set("Content-Security-Policy", csp);
 
     const response = NextResponse.next({
         request: {
             headers: requestHeaders,
         },
     });
-    response.headers.set("Content-Security-Policy", buildProtectedRouteCsp(nonce));
+    response.headers.set("Content-Security-Policy", csp);
     return response;
 }
 
