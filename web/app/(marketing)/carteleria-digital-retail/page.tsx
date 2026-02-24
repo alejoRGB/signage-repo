@@ -1,46 +1,10 @@
 import type { Metadata } from "next";
 import { IntentPage } from "@/components/marketing/intent-page";
+import { retailIntentFaqs as faqs, buildFaqServiceJsonLd, serializeJsonLd } from "@/lib/marketing-jsonld";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 const pagePath = "/carteleria-digital-retail";
 const pageUrl = `${siteUrl}${pagePath}`;
-
-const faqs = [
-    {
-        question: "Puedo cambiar precios y promociones en el dia?",
-        answer: "Si. Puedes actualizar contenido en minutos y programar cambios por franja horaria o fecha.",
-    },
-    {
-        question: "Funciona para vidriera y tambien dentro del local?",
-        answer: "Si. Puedes gestionar pantallas de vidriera, cajas y sectores internos desde el mismo panel.",
-    },
-    {
-        question: "Que necesito para arrancar?",
-        answer: "Con una pantalla compatible y conectividad basica puedes empezar. Te guiamos en la implementacion.",
-    },
-];
-
-const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-        {
-            "@type": "Service",
-            name: "Carteleria digital para retail",
-            provider: { "@type": "Organization", name: "Expanded Signage", url: siteUrl },
-            areaServed: ["CABA", "GBA", "Buenos Aires"],
-            url: pageUrl,
-            serviceType: "Carteleria digital para tiendas y comercios minoristas",
-        },
-        {
-            "@type": "FAQPage",
-            mainEntity: faqs.map((faq) => ({
-                "@type": "Question",
-                name: faq.question,
-                acceptedAnswer: { "@type": "Answer", text: faq.answer },
-            })),
-        },
-    ],
-};
 
 export const metadata: Metadata = {
     title: "Carteleria Digital para Retail",
@@ -61,9 +25,16 @@ export const metadata: Metadata = {
 };
 
 export default function CarteleriaDigitalRetailPage() {
+    const jsonLd = buildFaqServiceJsonLd({
+        serviceName: "Carteleria digital para retail",
+        siteUrl,
+        pageUrl,
+        serviceType: "Carteleria digital para tiendas y comercios minoristas",
+        faqs,
+    });
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
             <IntentPage
                 badge="Retail"
                 title="Carteleria digital para retail orientada a ventas"

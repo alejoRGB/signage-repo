@@ -1,46 +1,10 @@
 import type { Metadata } from "next";
 import { IntentPage } from "@/components/marketing/intent-page";
+import { menuRestaurantesIntentFaqs as faqs, buildFaqServiceJsonLd, serializeJsonLd } from "@/lib/marketing-jsonld";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 const pagePath = "/menu-digital-para-restaurantes";
 const pageUrl = `${siteUrl}${pagePath}`;
-
-const faqs = [
-    {
-        question: "Se pueden programar menus por horario?",
-        answer: "Si. Puedes definir desayuno, almuerzo, merienda y cena con cambios automaticos por franja horaria.",
-    },
-    {
-        question: "Puedo actualizar precios o combos rapido?",
-        answer: "Si. El panel permite editar y publicar cambios en minutos para una o varias sucursales.",
-    },
-    {
-        question: "Sirve para cadenas gastronomicas?",
-        answer: "Si. Es ideal para centralizar menus y promociones en multiples locales.",
-    },
-];
-
-const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-        {
-            "@type": "Service",
-            name: "Menu digital para restaurantes",
-            provider: { "@type": "Organization", name: "Expanded Signage", url: siteUrl },
-            areaServed: ["CABA", "GBA", "Buenos Aires"],
-            url: pageUrl,
-            serviceType: "Pantallas de menu digital para gastronomia",
-        },
-        {
-            "@type": "FAQPage",
-            mainEntity: faqs.map((faq) => ({
-                "@type": "Question",
-                name: faq.question,
-                acceptedAnswer: { "@type": "Answer", text: faq.answer },
-            })),
-        },
-    ],
-};
 
 export const metadata: Metadata = {
     title: "Menu Digital para Restaurantes",
@@ -61,9 +25,16 @@ export const metadata: Metadata = {
 };
 
 export default function MenuDigitalParaRestaurantesPage() {
+    const jsonLd = buildFaqServiceJsonLd({
+        serviceName: "Menu digital para restaurantes",
+        siteUrl,
+        pageUrl,
+        serviceType: "Pantallas de menu digital para gastronomia",
+        faqs,
+    });
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
             <IntentPage
                 badge="Gastronomia"
                 title="Menu digital para restaurantes y cafeterias"

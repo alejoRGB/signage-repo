@@ -1,46 +1,10 @@
 import type { Metadata } from "next";
 import { IntentPage } from "@/components/marketing/intent-page";
+import { preciosIntentFaqs as faqs, buildFaqServiceJsonLd, serializeJsonLd } from "@/lib/marketing-jsonld";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 const pagePath = "/precios-carteleria-digital";
 const pageUrl = `${siteUrl}${pagePath}`;
-
-const faqs = [
-    {
-        question: "Como se define el precio de carteleria digital?",
-        answer: "Depende de cantidad de pantallas, sucursales, tipo de contenido y necesidades de soporte. Cotizamos segun tu escenario real.",
-    },
-    {
-        question: "Hay planes para pymes?",
-        answer: "Si. Tenemos propuestas para comercios pequenos y para operaciones que escalan a varias sucursales.",
-    },
-    {
-        question: "La cotizacion incluye implementacion?",
-        answer: "Podemos incluir implementacion, configuracion inicial y acompanamiento segun el alcance que necesites.",
-    },
-];
-
-const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-        {
-            "@type": "Service",
-            name: "Precios de carteleria digital",
-            provider: { "@type": "Organization", name: "Expanded Signage", url: siteUrl },
-            areaServed: ["CABA", "GBA", "Buenos Aires"],
-            url: pageUrl,
-            serviceType: "Cotizacion de carteleria digital para pymes y franquicias",
-        },
-        {
-            "@type": "FAQPage",
-            mainEntity: faqs.map((faq) => ({
-                "@type": "Question",
-                name: faq.question,
-                acceptedAnswer: { "@type": "Answer", text: faq.answer },
-            })),
-        },
-    ],
-};
 
 export const metadata: Metadata = {
     title: "Precios de Carteleria Digital para Pymes",
@@ -61,9 +25,16 @@ export const metadata: Metadata = {
 };
 
 export default function PreciosCarteleriaDigitalPage() {
+    const jsonLd = buildFaqServiceJsonLd({
+        serviceName: "Precios de carteleria digital",
+        siteUrl,
+        pageUrl,
+        serviceType: "Cotizacion de carteleria digital para pymes y franquicias",
+        faqs,
+    });
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
             <IntentPage
                 badge="Precios y cotizacion"
                 title="Precios de carteleria digital para pymes y franquicias"

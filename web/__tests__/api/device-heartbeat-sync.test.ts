@@ -125,6 +125,43 @@ describe("Device runtime sync persistence", () => {
         }
     });
 
+    it("keeps heartbeat liveness successful when master reelection exceeds time budget", async () => {
+        (extractSyncRuntimeFromFormData as jest.Mock).mockReturnValue({
+            sessionId: "session-budget",
+            status: "PLAYING",
+        });
+        (maybeReelectMasterForSession as jest.Mock).mockImplementation(
+            () => new Promise(() => {
+                // Intentionally unresolved to simulate a slow dependency.
+            })
+        );
+
+        const previousBudget = process.env.DEVICE_HEARTBEAT_REELECTION_BUDGET_MS;
+        process.env.DEVICE_HEARTBEAT_REELECTION_BUDGET_MS = "5";
+
+        try {
+            const formData = new FormData();
+            formData.set("device_token", "token-1");
+            formData.set("sync_session_id", "session-budget");
+
+            const response = await HEARTBEAT_POST(
+                new Request("http://localhost/api/device/heartbeat", {
+                    method: "POST",
+                    body: formData,
+                })
+            );
+
+            expect(response.status).toBe(200);
+            expect(persistDeviceSyncRuntime).toHaveBeenCalled();
+        } finally {
+            if (previousBudget === undefined) {
+                delete process.env.DEVICE_HEARTBEAT_REELECTION_BUDGET_MS;
+            } else {
+                process.env.DEVICE_HEARTBEAT_REELECTION_BUDGET_MS = previousBudget;
+            }
+        }
+    });
+
     it("heartbeat without sync runtime attempts sync rejoin reconciliation", async () => {
         (extractSyncRuntimeFromFormData as jest.Mock).mockReturnValue(null);
         (prisma.device.findUnique as jest.Mock).mockResolvedValue({

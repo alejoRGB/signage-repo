@@ -1,50 +1,10 @@
 import type { Metadata } from "next";
 import { IntentPage } from "@/components/marketing/intent-page";
+import { buenosAiresIntentFaqs as faqs, buildFaqServiceJsonLd, serializeJsonLd } from "@/lib/marketing-jsonld";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 const pagePath = "/carteleria-digital-buenos-aires";
 const pageUrl = `${siteUrl}${pagePath}`;
-
-const faqs = [
-    {
-        question: "Trabajan solo en CABA o tambien en GBA?",
-        answer: "Operamos en CABA y GBA. Podemos ayudarte tanto con una sola sucursal como con multiples puntos de venta.",
-    },
-    {
-        question: "La plataforma sirve para locales chicos?",
-        answer: "Si. Expanded Signage esta pensado para pymes y comercios que buscan implementar carteleria digital sin complejidad tecnica.",
-    },
-    {
-        question: "Cuanto tarda la implementacion?",
-        answer: "Depende de la cantidad de pantallas, pero la puesta en marcha suele ser rapida. En la cotizacion te damos tiempos concretos.",
-    },
-];
-
-const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-        {
-            "@type": "Service",
-            name: "Carteleria digital en Buenos Aires",
-            provider: { "@type": "Organization", name: "Expanded Signage", url: siteUrl },
-            areaServed: ["Buenos Aires", "CABA", "GBA"],
-            url: pageUrl,
-            serviceType: "Carteleria digital para comercios y pymes",
-            offers: {
-                "@type": "Offer",
-                url: `${siteUrl}/cotizacion-carteleria-digital`,
-            },
-        },
-        {
-            "@type": "FAQPage",
-            mainEntity: faqs.map((faq) => ({
-                "@type": "Question",
-                name: faq.question,
-                acceptedAnswer: { "@type": "Answer", text: faq.answer },
-            })),
-        },
-    ],
-};
 
 export const metadata: Metadata = {
     title: "Carteleria Digital en Buenos Aires (CABA y GBA)",
@@ -66,9 +26,18 @@ export const metadata: Metadata = {
 };
 
 export default function CarteleriaDigitalBuenosAiresPage() {
+    const jsonLd = buildFaqServiceJsonLd({
+        serviceName: "Carteleria digital en Buenos Aires",
+        siteUrl,
+        pageUrl,
+        serviceType: "Carteleria digital para comercios y pymes",
+        faqs,
+        areaServed: ["Buenos Aires", "CABA", "GBA"],
+        offersUrl: `${siteUrl}/cotizacion-carteleria-digital`,
+    });
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
             <IntentPage
                 badge="CABA y GBA"
                 title="Carteleria digital en Buenos Aires para comercios y pymes"

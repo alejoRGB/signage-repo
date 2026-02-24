@@ -1,14 +1,24 @@
 import type { NextConfig } from "next";
+import { getAllMarketingJsonLdInlineScripts, resolveMarketingSiteUrl } from "./lib/marketing-jsonld";
+import { buildGoogleAnalyticsInitInlineScript } from "./lib/google-analytics-inline";
+import { toCspSha256Hash } from "./lib/csp-inline-hash";
 
 function buildContentSecurityPolicy() {
   const isProduction = process.env.NODE_ENV === "production";
   const isVercelPreview = process.env.VERCEL_ENV === "preview";
   const allowVercelLive = !isProduction || isVercelPreview;
+  const marketingSiteUrl = resolveMarketingSiteUrl();
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
+  const inlineScriptHashes = new Set<string>(
+    getAllMarketingJsonLdInlineScripts(marketingSiteUrl).map((script) => toCspSha256Hash(script))
+  );
+  if (gaMeasurementId) {
+    inlineScriptHashes.add(toCspSha256Hash(buildGoogleAnalyticsInitInlineScript(gaMeasurementId)));
+  }
 
   const scriptSrc = [
     "'self'",
-    // TODO(security): replace with nonce-based CSP to remove unsafe-inline.
-    "'unsafe-inline'",
+    ...inlineScriptHashes,
     "https://www.googletagmanager.com",
     ...(allowVercelLive ? ["https://vercel.live"] : []),
     ...(isProduction ? [] : ["'unsafe-eval'"]),

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
+import { buildGoogleAnalyticsInitInlineScript } from "@/lib/google-analytics-inline";
 
 type GoogleAnalyticsProps = {
     measurementId: string;
@@ -32,13 +33,7 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
                 strategy="afterInteractive"
             />
             <Script id="ga-init" strategy="afterInteractive">
-                {`
-                    window.dataLayer = window.dataLayer || [];
-                    function gtag(){dataLayer.push(arguments);}
-                    window.gtag = gtag;
-                    gtag('js', new Date());
-                    gtag('config', '${measurementId}', { send_page_view: false });
-                `}
+                {buildGoogleAnalyticsInitInlineScript(measurementId)}
             </Script>
         </>
     );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { getRelatedSeoResources, getSeoResourceBySlug, seoResources } from "@/lib/seo-resources";
+import { buildResourceArticleJsonLd, serializeJsonLd } from "@/lib/marketing-jsonld";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 
@@ -54,43 +55,11 @@ export default async function ResourceArticlePage({ params }: ResourcePageProps)
 
     const related = getRelatedSeoResources(resource.slug, 3);
 
-    const articleJsonLd = {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "Article",
-                headline: resource.title,
-                description: resource.description,
-                dateModified: resource.updatedAt,
-                author: {
-                    "@type": "Organization",
-                    name: "Expanded Signage",
-                },
-                publisher: {
-                    "@type": "Organization",
-                    name: "Expanded Signage",
-                    url: siteUrl,
-                },
-                mainEntityOfPage: `${siteUrl}/recursos/${resource.slug}`,
-                keywords: resource.keywords.join(", "),
-            },
-            {
-                "@type": "FAQPage",
-                mainEntity: resource.faqs.map((faq) => ({
-                    "@type": "Question",
-                    name: faq.question,
-                    acceptedAnswer: {
-                        "@type": "Answer",
-                        text: faq.answer,
-                    },
-                })),
-            },
-        ],
-    };
+    const articleJsonLd = buildResourceArticleJsonLd(resource, siteUrl);
 
     return (
         <section className="container mx-auto px-4 py-20 md:px-6 md:py-28">
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(articleJsonLd) }} />
 
             <article className="mx-auto max-w-4xl space-y-8">
                 <div className="space-y-4">

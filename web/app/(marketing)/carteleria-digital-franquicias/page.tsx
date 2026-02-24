@@ -1,46 +1,10 @@
 import type { Metadata } from "next";
 import { IntentPage } from "@/components/marketing/intent-page";
+import { franquiciasIntentFaqs as faqs, buildFaqServiceJsonLd, serializeJsonLd } from "@/lib/marketing-jsonld";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
 const pagePath = "/carteleria-digital-franquicias";
 const pageUrl = `${siteUrl}${pagePath}`;
-
-const faqs = [
-    {
-        question: "Se puede controlar el contenido de todas las franquicias desde un solo lugar?",
-        answer: "Si. Puedes centralizar el contenido y definir que muestra cada sucursal segun zona, horario o tipo de pantalla.",
-    },
-    {
-        question: "Hay perfiles o permisos por equipo?",
-        answer: "Si. Podemos configurar distintos niveles de acceso para marketing, operaciones y responsables de cada local.",
-    },
-    {
-        question: "Sirve para lanzamientos y campanas temporales?",
-        answer: "Si. Puedes programar campanas por fechas y horarios para activarlas o retirarlas automaticamente.",
-    },
-];
-
-const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-        {
-            "@type": "Service",
-            name: "Carteleria digital para franquicias",
-            provider: { "@type": "Organization", name: "Expanded Signage", url: siteUrl },
-            areaServed: ["CABA", "GBA", "Buenos Aires"],
-            url: pageUrl,
-            serviceType: "Software y operacion de carteleria digital para franquicias",
-        },
-        {
-            "@type": "FAQPage",
-            mainEntity: faqs.map((faq) => ({
-                "@type": "Question",
-                name: faq.question,
-                acceptedAnswer: { "@type": "Answer", text: faq.answer },
-            })),
-        },
-    ],
-};
 
 export const metadata: Metadata = {
     title: "Carteleria Digital para Franquicias",
@@ -61,9 +25,16 @@ export const metadata: Metadata = {
 };
 
 export default function CarteleriaDigitalFranquiciasPage() {
+    const jsonLd = buildFaqServiceJsonLd({
+        serviceName: "Carteleria digital para franquicias",
+        siteUrl,
+        pageUrl,
+        serviceType: "Software y operacion de carteleria digital para franquicias",
+        faqs,
+    });
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
             <IntentPage
                 badge="Franquicias"
                 title="Carteleria digital para franquicias con control centralizado"

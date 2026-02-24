@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
-import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { extractSyncRuntimeFromFormData, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
 import { maybeQueueSyncRejoinPrepareOnHeartbeat } from "@/lib/sync-device-rejoin";
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 import { ACTIVE_SYNC_SESSION_STATUSES } from "@/lib/sync-session-service";
+import { MAX_DEVICE_PREVIEW_SIZE_BYTES } from "@/lib/device-preview";
 
 export const dynamic = "force-dynamic";
 
-const MAX_PREVIEW_SIZE_BYTES = 8 * 1024 * 1024;
 const MASTER_REELECTION_THROTTLE_MS = 10_000;
 const MASTER_REELECTION_RETENTION_MS = 5 * 60_000;
 const lastMasterReelectionBySession = new Map<string, number>();
+const DEFAULT_REJOIN_BUDGET_MS = 150;
+const DEFAULT_REELECTION_BUDGET_MS = 200;
 
 function parseOptionalFormNumber(value: FormDataEntryValue | null): number | null {
     if (typeof value !== "string" || value.trim() === "") {
@@ -40,6 +41,49 @@ function shouldRunMasterReelection(sessionId: string, nowMs: number) {
     }
 
     return true;
+}
+
+function parsePositiveIntegerEnv(name: string, fallback: number) {
+    const raw = process.env[name];
+    if (!raw) {
+        return fallback;
+    }
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+async function runBestEffortWithBudget<T>(
+    label: string,
+    budgetMs: number,
+    task: () => Promise<T>
+): Promise<{ completed: boolean; timedOut: boolean }> {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timedOut = false;
+    try {
+        await Promise.race([
+            task(),
+            new Promise<void>((resolve) => {
+                timer = setTimeout(() => {
+                    timedOut = true;
+                    resolve();
+                }, budgetMs);
+            }),
+        ]);
+    } catch (error) {
+        console.error(`[${label}]`, error);
+        return { completed: false, timedOut: false };
+    } finally {
+        if (timer) {
+            clearTimeout(timer);
+        }
+    }
+
+    if (timedOut) {
+        console.warn(`[${label}] timed out after ${budgetMs}ms (skipped for liveness path)`);
+        return { completed: false, timedOut: true };
+    }
+
+    return { completed: true, timedOut: false };
 }
 
 export async function POST(request: Request) {
@@ -118,30 +162,13 @@ export async function POST(request: Request) {
         }
 
         if (previewFile instanceof File) {
-            const isImageFile = previewFile.type.startsWith("image/");
-
-            if (!isImageFile) {
+            // Keep heartbeat/liveness deterministic: preview uploads belong to /api/device/preview.
+            if (!previewFile.type.startsWith("image/")) {
                 console.warn(`[DEVICE_HEARTBEAT_POST] Ignoring non-image preview (${previewFile.type}) for device ${device.id}`);
-            } else if (previewFile.size > MAX_PREVIEW_SIZE_BYTES) {
+            } else if (previewFile.size > MAX_DEVICE_PREVIEW_SIZE_BYTES) {
                 console.warn(`[DEVICE_HEARTBEAT_POST] Ignoring oversized preview (${previewFile.size} bytes) for device ${device.id}`);
             } else {
-                try {
-                    const blob = await put(
-                        `device-previews/${device.id}/latest.jpg`,
-                        previewFile,
-                        {
-                            access: "public",
-                            addRandomSuffix: false,
-                            contentType: "image/jpeg",
-                            cacheControlMaxAge: 5,
-                        }
-                    );
-
-                    updateData.previewImageUrl = blob.url;
-                    updateData.previewCapturedAt = new Date();
-                } catch (blobError) {
-                    console.error("[DEVICE_HEARTBEAT_UPLOAD]", blobError);
-                }
+                console.warn(`[DEVICE_HEARTBEAT_POST] Ignoring preview upload on heartbeat for device ${device.id}; use /api/device/preview`);
             }
         }
 
@@ -153,26 +180,33 @@ export async function POST(request: Request) {
         await persistDeviceSyncRuntime(device.id, syncRuntime);
         const hasActiveSyncAssignment =
             Array.isArray(device.syncSessionDevices) && device.syncSessionDevices.length > 0;
+        const rejoinBudgetMs = parsePositiveIntegerEnv("DEVICE_HEARTBEAT_REJOIN_BUDGET_MS", DEFAULT_REJOIN_BUDGET_MS);
+        const reelectionBudgetMs = parsePositiveIntegerEnv("DEVICE_HEARTBEAT_REELECTION_BUDGET_MS", DEFAULT_REELECTION_BUDGET_MS);
 
         if (!syncRuntime?.sessionId && hasActiveSyncAssignment) {
-            try {
-                await maybeQueueSyncRejoinPrepareOnHeartbeat(device.id);
-            } catch (error) {
-                console.error("[SYNC_DEVICE_REJOIN]", error);
-            }
+            await runBestEffortWithBudget(
+                "SYNC_DEVICE_REJOIN",
+                rejoinBudgetMs,
+                () => maybeQueueSyncRejoinPrepareOnHeartbeat(device.id)
+            );
         }
         if (syncRuntime?.sessionId) {
+            const sessionId = syncRuntime.sessionId;
             const nowMs = Date.now();
-            if (shouldRunMasterReelection(syncRuntime.sessionId, nowMs)) {
-                try {
-                    await maybeReelectMasterForSession(syncRuntime.sessionId);
-                } catch (error) {
-                    console.error("[SYNC_MASTER_FAILOVER]", error);
-                }
+            if (shouldRunMasterReelection(sessionId, nowMs)) {
+                await runBestEffortWithBudget(
+                    "SYNC_MASTER_FAILOVER",
+                    reelectionBudgetMs,
+                    () => maybeReelectMasterForSession(sessionId)
+                );
             }
         }
 
-        return NextResponse.json({ success: true });
+        const response = NextResponse.json({ success: true });
+        if (previewFile instanceof File) {
+            response.headers.set("X-Use-Preview-Endpoint", "/api/device/preview");
+        }
+        return response;
     } catch (error) {
         console.error("[DEVICE_HEARTBEAT_POST]", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

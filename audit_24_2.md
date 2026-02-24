@@ -1929,3 +1929,45 @@ Closed the main documentation drift for heartbeat semantics and device-log contr
 Validation:
 - `python -m py_compile player/player.py` -> PASS
 - Manual doc diff review of `PRD.md` and `agent_directives/context/project/PROJECT.md` -> PASS
+
+### Update 2026-02-24 (CSP marketing + heartbeat emitter + heartbeat path split)
+
+#### 6) CSP demasiado permisivo (XSS hardening insuficiente)
+
+Estado: RESUELTO parcialmente (script-src cerrado en marketing + rutas protegidas; `style-src 'unsafe-inline'` residual por compatibilidad de framework)
+
+- `web/next.config.ts` ahora elimina `script-src 'unsafe-inline'` tambien en marketing/publico mediante hashes `sha256-...` para scripts inline conocidos (JSON-LD de marketing + `ga-init`).
+- `web/proxy.ts` mantiene CSP con `nonce` para `/admin` y `/dashboard`.
+- Se centralizo la generacion de JSON-LD/GA init para evitar drift entre paginas y CSP:
+  - `web/lib/marketing-jsonld.ts`
+  - `web/lib/google-analytics-inline.ts`
+  - `web/lib/csp-inline-hash.ts`
+- Paginas de marketing y `GoogleAnalytics` ahora usan builders compartidos para que los hashes coincidan con el contenido real.
+
+Residual documentado:
+- `style-src 'unsafe-inline'` se mantiene por compatibilidad (App Router / estilos inline del framework).
+- Si se agrega un nuevo script inline en marketing, hay que actualizar los builders/hashes (CSP fail-closed).
+
+#### 33) Doble emisor de heartbeat durante Sync/VideoWall
+
+Estado: RESUELTO (opcion pragmatica)
+
+- `player/player.py` (`preview_report_loop`) ahora suspende el emisor general mientras `videowall_controller.is_active()` es `true`.
+- Durante Sync/VideoWall queda como emisor efectivo el `VideowallController`, que adjunta `sync_runtime`.
+- Se elimina la duplicacion de senales mezcladas durante la sesion Sync.
+
+#### 34) El endpoint `/api/device/heartbeat` mezcla demasiadas responsabilidades
+
+Estado: RESUELTO parcialmente (hot path de liveness desacoplado + budgets; sin queue dedicada para derivados)
+
+- `web/app/api/device/heartbeat/route.ts`
+  - ya no sube preview a Blob inline en el heartbeat.
+  - si llega `preview`, se ignora y se devuelve header `X-Use-Preview-Endpoint: /api/device/preview`.
+  - mantiene `liveness + telemetria minima + persistDeviceSyncRuntime` como ruta principal.
+  - `rejoin reconciliation` y `master reelection` siguen inline, pero con time budgets estrictos y degradacion controlada:
+    - `DEVICE_HEARTBEAT_REJOIN_BUDGET_MS`
+    - `DEVICE_HEARTBEAT_REELECTION_BUDGET_MS`
+- `web/app/api/device/preview/route.ts` vuelve como endpoint dedicado (ya no shim) para upload de preview, usando helper compartido `web/lib/device-preview.ts`.
+
+Nota:
+- `/api/device/preview` se reintroduce como endpoint especializado (intencional). `#30` sigue resuelto en el sentido de que ya no es un duplicado completo del heartbeat.

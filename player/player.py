@@ -201,11 +201,14 @@ class Player:
         """Send now-playing metadata every 5 seconds (without screenshots)."""
         while self.running:
             try:
-                self.sync_manager.report_playback_state(
-                    playing_playlist_id=self.current_playlist_id_for_preview,
-                    current_content_name=self.current_content_name_for_preview,
-                    preview_path=None,
-                )
+                # During Sync/VideoWall the controller emits richer heartbeats with
+                # sync_runtime; skip the generic emitter to avoid duplicate signals.
+                if not self.videowall_controller.is_active():
+                    self.sync_manager.report_playback_state(
+                        playing_playlist_id=self.current_playlist_id_for_preview,
+                        current_content_name=self.current_content_name_for_preview,
+                        preview_path=None,
+                    )
             except Exception as e:
                 logging.warning(f"[PREVIEW] Reporting failed: {e}")
 
