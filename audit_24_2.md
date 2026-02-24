@@ -388,6 +388,15 @@ Cambios necesarios:
 - Resolver preview por join/lookup más acotado (o cachear mapeo por filename).
 - Separar endpoint admin/diagnóstico si realmente necesitás devolver token.
 
+Estado (24/02): RESUELTO
+
+- `web/app/api/devices/route.ts` ahora usa `select` explicito en `prisma.device.findMany()` y excluye `token` (y otros campos no necesarios).
+- Se agrego sanitizacion defensiva en el mapeo de respuesta para no filtrar `token`/`userId` aunque el `select` se amplie en el futuro.
+- La resolucion de `contentPreview` ya no consulta todo el catalogo:
+  - si no hay `currentContentName` en devices, no ejecuta query a `mediaItem`
+  - si hay, consulta solo `name`/`filename` referenciados por esos devices
+- Test agregado: `web/__tests__/api/devices-route.test.ts` (401, no leak de token, query de media acotada).
+
 ### 13) `devices/[id]` y `playlists/[id]` devuelven mensajes internos de error al cliente
 
 Evidencia:

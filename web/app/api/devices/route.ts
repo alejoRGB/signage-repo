@@ -20,7 +20,22 @@ export async function GET(request: Request) {
         where: {
             userId: session.user.id,
         },
-        include: {
+        select: {
+            id: true,
+            name: true,
+            status: true,
+            activePlaylistId: true,
+            defaultPlaylistId: true,
+            scheduleId: true,
+            playingPlaylistId: true,
+            currentContentName: true,
+            previewImageUrl: true,
+            previewCapturedAt: true,
+            cpuTemp: true,
+            cpuTempUpdatedAt: true,
+            createdAt: true,
+            updatedAt: true,
+            lastSeenAt: true,
             activePlaylist: {
                 select: {
                     id: true,
@@ -60,20 +75,35 @@ export async function GET(request: Request) {
         },
     });
 
-    const mediaItems = await prisma.mediaItem.findMany({
-        where: {
-            userId: session.user.id,
-        },
-        select: {
-            name: true,
-            filename: true,
-            type: true,
-            url: true,
-        },
-        orderBy: {
-            createdAt: "desc",
-        },
-    });
+    const currentContentNames = Array.from(
+        new Set(
+            devices
+                .map((device) => device.currentContentName?.trim())
+                .filter((value): value is string => typeof value === "string" && value.length > 0)
+        )
+    );
+
+    const mediaItems =
+        currentContentNames.length > 0
+            ? await prisma.mediaItem.findMany({
+                  where: {
+                      userId: session.user.id,
+                      OR: [
+                          { name: { in: currentContentNames } },
+                          { filename: { in: currentContentNames } },
+                      ],
+                  },
+                  select: {
+                      name: true,
+                      filename: true,
+                      type: true,
+                      url: true,
+                  },
+                  orderBy: {
+                      createdAt: "desc",
+                  },
+              })
+            : [];
 
     const mediaByFilename = new Map<string, { type: string; url: string; name: string }>();
     const mediaByName = new Map<string, { type: string; url: string; name: string }>();
@@ -89,7 +119,13 @@ export async function GET(request: Request) {
 
     // Calculate dynamic status based on lastSeenAt
     const devicesWithStatus = devices.map(device => {
-        const { syncSessionDevices, ...deviceBase } = device;
+        const {
+            syncSessionDevices,
+            // Defense in depth: do not leak if Prisma select is widened in the future.
+            token: _token,
+            userId: _userId,
+            ...deviceBase
+        } = device as typeof device & { token?: string; userId?: string };
         const status = getDeviceConnectivityStatus(device.lastSeenAt);
 
         const latestRuntime = syncSessionDevices[0] ?? null;
