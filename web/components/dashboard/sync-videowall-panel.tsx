@@ -53,6 +53,7 @@ type ActiveSessionDevice = {
         id: string;
         name: string;
         status?: string | null;
+        lastSeenAt?: string | null;
     };
 };
 
@@ -142,15 +143,13 @@ function heartbeatAgeLabel(lastSeenAt?: string | null) {
 }
 
 function isSessionDeviceOnline(device: ActiveSessionDevice) {
-    const status = device.device.status?.toLowerCase();
-    if (status === "online") {
-        return true;
-    }
-    if (status === "offline") {
-        return false;
+    const heartbeatSource = device.lastSeenAt ?? device.device.lastSeenAt ?? null;
+    if (heartbeatSource) {
+        return isDeviceConsideredOnline(heartbeatSource);
     }
 
-    return isDeviceConsideredOnline(device.lastSeenAt);
+    const status = device.device.status?.toLowerCase();
+    return status === "online";
 }
 
 function getMediaDurationMs(media?: SyncMediaItem | null) {

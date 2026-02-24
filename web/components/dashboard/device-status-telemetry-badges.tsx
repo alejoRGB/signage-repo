@@ -35,7 +35,7 @@ function getDeviceCpuTempBadgeView({
 
     const title = cpuTempUpdatedAt
         ? `Ultima lectura: ${new Date(cpuTempUpdatedAt).toLocaleString()}`
-        : "Sin telemetria de temperatura";
+        : "Lectura de temperatura sin timestamp";
     const label = `${cpuTemp.toFixed(1)}\u00B0C`;
 
     if (cpuTemp >= 75) {
@@ -84,4 +84,3 @@ export function DeviceCpuTempBadge(props: DeviceCpuTempBadgeProps) {
         </span>
     );
 }
-
