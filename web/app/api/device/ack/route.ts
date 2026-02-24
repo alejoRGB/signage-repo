@@ -72,12 +72,14 @@ export async function POST(request: Request) {
                 ? {
                       session_id: command.sessionId,
                       status: fallbackSyncStatus,
+                      runtime_sent_at_ms: Date.now(),
                   }
                 : null);
         if (runtimePayload) {
             await persistDeviceSyncRuntime(device.id, {
                 sessionId: runtimePayload.session_id ?? command.sessionId,
                 status: runtimePayload.status,
+                runtimeSentAtMs: runtimePayload.runtime_sent_at_ms ?? null,
                 driftMs: runtimePayload.drift_ms ?? null,
                 resyncCount: runtimePayload.resync_count ?? null,
                 clockOffsetMs: runtimePayload.clock_offset_ms ?? null,

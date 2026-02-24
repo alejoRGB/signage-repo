@@ -233,6 +233,7 @@ model SyncSessionDevice {
   deviceId      String
   status        SyncSessionDeviceStatus @default(ASSIGNED)
   lastSeenAt    DateTime?
+  lastRuntimeSentAtMs BigInt?
   driftHistory  Json?
   resyncCount   Int                     @default(0)
   avgDriftMs    Float?
@@ -252,6 +253,7 @@ model SyncSessionDevice {
   @@unique([sessionId, deviceId])
   @@index([deviceId, status])
   @@index([status])
+  @@index([sessionId, lastRuntimeSentAtMs])
 }
 
 model SyncDeviceCommand {

@@ -125,6 +125,19 @@ function toOptionalBoolean(value: unknown): boolean | null {
     return null;
 }
 
+function toOptionalSafeInteger(value: unknown): number | null {
+    const parsed = toOptionalNumber(value);
+    if (parsed === null) {
+        return null;
+    }
+
+    if (!Number.isSafeInteger(parsed)) {
+        return null;
+    }
+
+    return parsed;
+}
+
 function toOptionalLanMode(value: unknown): string | null {
     if (typeof value !== "string") {
         return null;
@@ -249,9 +262,36 @@ export async function persistDeviceSyncRuntime(deviceId: string, runtime: SyncRu
         return;
     }
 
+    const incomingRuntimeSentAtMs = toOptionalSafeInteger(runtime.runtimeSentAtMs);
+    const storedRuntimeSentAtMs =
+        sessionDevice.lastRuntimeSentAtMs === null || sessionDevice.lastRuntimeSentAtMs === undefined
+            ? null
+            : Number(sessionDevice.lastRuntimeSentAtMs);
+    const hasStoredOrderedRuntime = Number.isSafeInteger(storedRuntimeSentAtMs);
+    const hasIncomingOrderedRuntime = Number.isSafeInteger(incomingRuntimeSentAtMs);
+
+    const isStaleOrderedRuntime =
+        hasStoredOrderedRuntime &&
+        hasIncomingOrderedRuntime &&
+        (incomingRuntimeSentAtMs as number) < (storedRuntimeSentAtMs as number);
+    const isUnorderedRuntimeAfterOrdered = hasStoredOrderedRuntime && !hasIncomingOrderedRuntime;
+
+    if (isStaleOrderedRuntime || isUnorderedRuntimeAfterOrdered) {
+        await prisma.syncSessionDevice.update({
+            where: { id: sessionDevice.id },
+            data: {
+                lastSeenAt: new Date(),
+            },
+        });
+        return;
+    }
+
     const updateData: Prisma.SyncSessionDeviceUpdateInput = {
         lastSeenAt: new Date(),
     };
+    if (hasIncomingOrderedRuntime) {
+        updateData.lastRuntimeSentAtMs = BigInt(incomingRuntimeSentAtMs as number);
+    }
 
     if (normalizedStatus && shouldApplyIncomingStatus(sessionDevice.status, normalizedStatus)) {
         updateData.status = normalizedStatus;

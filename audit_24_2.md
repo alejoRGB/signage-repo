@@ -1766,3 +1766,30 @@ Validation:
 - `python -m pytest player/tests/test_videowall_controller.py -q` -> PASS
 - `python -m pytest player/tests/test_sync.py -q` -> PASS
 - `python -m py_compile player/player.py player/videowall_controller.py` -> PASS
+
+## Update 2026-02-24 (sync_runtime monotonic ordering server-side)
+
+Implemented server-side monotonic ordering for Sync runtime persistence using `runtime_sent_at_ms` persisted on `SyncSessionDevice`.
+
+### Sync runtime ordering status update (#37)
+
+- Heartbeat / Sync runtime monotonicity (#37): RESOLVED (server-side ordering)
+  - Added `SyncSessionDevice.lastRuntimeSentAtMs` (`BIGINT`) and index in Prisma schema/migration.
+  - `web/lib/sync-runtime-service.ts` now enforces server-side monotonic ordering:
+    - rejects stale ordered runtime writes (`incoming runtime_sent_at_ms < stored`)
+    - rejects unordered runtime writes after an ordered stream has been established
+    - still refreshes `lastSeenAt` on rejected stale/unordered writes to preserve liveness bookkeeping
+  - Accepted ordered writes persist `lastRuntimeSentAtMs` and continue updating runtime metrics/status.
+
+- ACK compatibility hardening
+  - `web/app/api/device/ack/route.ts` now forwards `runtime_sent_at_ms` to `persistDeviceSyncRuntime`.
+  - ACK fallback runtime (when no `sync_runtime` payload is sent) now synthesizes `runtime_sent_at_ms = Date.now()` to avoid being dropped once ordered runtime is established.
+
+Notes:
+- This preserves monotonic runtime state/metrics while preventing late heartbeats/ACKs from overwriting newer runtime snapshots.
+- Ordering key remains timestamp-based (`runtime_sent_at_ms`); a future `runtime_seq` could tighten guarantees further if needed.
+
+Validation:
+- `npm --prefix web run test:api -- --runTestsByPath __tests__/api/sync-runtime-service.test.ts __tests__/api/device-commands.test.ts` -> PASS
+- `npm --prefix web run prisma:generate` -> PASS
+- `npm --prefix web run build` -> PASS

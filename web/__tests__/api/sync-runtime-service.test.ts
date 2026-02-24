@@ -79,6 +79,7 @@ describe("sync-runtime-service LAN runtime fields", () => {
             id: "session-device-1",
             sessionId: "session-1",
             status: "PLAYING",
+            lastRuntimeSentAtMs: BigInt(2000),
             driftHistory: null,
             session: { id: "session-1", status: "RUNNING" },
         });
@@ -93,7 +94,56 @@ describe("sync-runtime-service LAN runtime fields", () => {
         expect(prisma.syncSessionDevice.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 where: { id: "session-device-1" },
-                data: expect.not.objectContaining({
+                data: { lastSeenAt: expect.any(Date) },
+            })
+        );
+    });
+
+    it("ignores unordered runtime once ordered runtime has been recorded", async () => {
+        (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue({
+            id: "session-device-2",
+            sessionId: "session-1",
+            status: "PLAYING",
+            lastRuntimeSentAtMs: BigInt(5000),
+            driftHistory: null,
+            session: { id: "session-1", status: "RUNNING" },
+        });
+
+        await persistDeviceSyncRuntime("device-1", {
+            sessionId: "session-1",
+            status: "ERRORED",
+            driftMs: 999,
+        });
+
+        expect(prisma.syncSessionDevice.update).toHaveBeenCalledWith({
+            where: { id: "session-device-2" },
+            data: { lastSeenAt: expect.any(Date) },
+        });
+        expect(prisma.syncSession.update).not.toHaveBeenCalled();
+    });
+
+    it("stores lastRuntimeSentAtMs when ordered runtime is accepted", async () => {
+        (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue({
+            id: "session-device-3",
+            sessionId: "session-1",
+            status: "ASSIGNED",
+            lastRuntimeSentAtMs: null,
+            driftHistory: null,
+            session: { id: "session-1", status: "RUNNING" },
+        });
+
+        await persistDeviceSyncRuntime("device-1", {
+            sessionId: "session-1",
+            status: "READY",
+            runtimeSentAtMs: 1234567890,
+            driftMs: 10,
+        });
+
+        expect(prisma.syncSessionDevice.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: "session-device-3" },
+                data: expect.objectContaining({
+                    lastRuntimeSentAtMs: BigInt(1234567890),
                     status: "READY",
                 }),
             })
@@ -104,6 +154,7 @@ describe("sync-runtime-service LAN runtime fields", () => {
         (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue({
             id: "session-device-1",
             sessionId: "session-1",
+            lastRuntimeSentAtMs: null,
             driftHistory: null,
             session: { id: "session-1", status: "RUNNING" },
         });
@@ -175,6 +226,7 @@ describe("sync-runtime-service LAN runtime fields", () => {
         (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue({
             id: "session-device-1",
             sessionId: "session-1",
+            lastRuntimeSentAtMs: null,
             driftHistory: null,
             session: { id: "session-1", status: "STARTING" },
         });

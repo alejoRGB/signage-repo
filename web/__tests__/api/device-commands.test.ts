@@ -151,6 +151,7 @@ describe("Device commands API", () => {
             expect.objectContaining({
                 sessionId: "session-1",
                 status: "ERRORED",
+                runtimeSentAtMs: expect.any(Number),
             })
         );
     });
