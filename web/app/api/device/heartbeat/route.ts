@@ -3,6 +3,7 @@ import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { extractSyncRuntimeFromFormData, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
+import { maybeQueueSyncRejoinPrepareOnHeartbeat } from "@/lib/sync-device-rejoin";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +121,13 @@ export async function POST(request: Request) {
         });
 
         await persistDeviceSyncRuntime(device.id, syncRuntime);
+        if (!syncRuntime?.sessionId) {
+            try {
+                await maybeQueueSyncRejoinPrepareOnHeartbeat(device.id);
+            } catch (error) {
+                console.error("[SYNC_DEVICE_REJOIN]", error);
+            }
+        }
         if (syncRuntime?.sessionId) {
             const nowMs = Date.now();
             if (shouldRunMasterReelection(syncRuntime.sessionId, nowMs)) {

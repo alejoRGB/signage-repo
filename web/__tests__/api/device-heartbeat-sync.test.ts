@@ -10,6 +10,7 @@ import {
     persistDeviceSyncRuntime,
 } from "@/lib/sync-runtime-service";
 import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
+import { maybeQueueSyncRejoinPrepareOnHeartbeat } from "@/lib/sync-device-rejoin";
 
 jest.mock("@/lib/prisma", () => ({
     prisma: {
@@ -34,6 +35,10 @@ jest.mock("@/lib/sync-master-election", () => ({
     maybeReelectMasterForSession: jest.fn(),
 }));
 
+jest.mock("@/lib/sync-device-rejoin", () => ({
+    maybeQueueSyncRejoinPrepareOnHeartbeat: jest.fn(),
+}));
+
 describe("Device runtime sync persistence", () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -43,6 +48,10 @@ describe("Device runtime sync persistence", () => {
             user: { isActive: true },
         });
         (prisma.device.update as jest.Mock).mockResolvedValue({ id: "device-1" });
+        (maybeQueueSyncRejoinPrepareOnHeartbeat as jest.Mock).mockResolvedValue({
+            queued: false,
+            reason: "NO_ACTIVE_SESSION",
+        });
     });
 
     it("heartbeat persists extracted sync runtime", async () => {
@@ -71,6 +80,7 @@ describe("Device runtime sync persistence", () => {
                 sessionId: "session-1",
             })
         );
+        expect(maybeQueueSyncRejoinPrepareOnHeartbeat).not.toHaveBeenCalled();
         expect(maybeReelectMasterForSession).toHaveBeenCalledWith("session-1");
     });
 
@@ -108,9 +118,28 @@ describe("Device runtime sync persistence", () => {
             expect(maybeReelectMasterForSession).toHaveBeenCalledTimes(2);
             expect(maybeReelectMasterForSession).toHaveBeenNthCalledWith(1, "session-throttle");
             expect(maybeReelectMasterForSession).toHaveBeenNthCalledWith(2, "session-throttle");
+            expect(maybeQueueSyncRejoinPrepareOnHeartbeat).not.toHaveBeenCalled();
         } finally {
             nowSpy.mockRestore();
         }
+    });
+
+    it("heartbeat without sync runtime attempts sync rejoin reconciliation", async () => {
+        (extractSyncRuntimeFromFormData as jest.Mock).mockReturnValue(null);
+
+        const formData = new FormData();
+        formData.set("device_token", "token-1");
+
+        const response = await HEARTBEAT_POST(
+            new Request("http://localhost/api/device/heartbeat", {
+                method: "POST",
+                body: formData,
+            })
+        );
+
+        expect(response.status).toBe(200);
+        expect(maybeQueueSyncRejoinPrepareOnHeartbeat).toHaveBeenCalledWith("device-1");
+        expect(maybeReelectMasterForSession).not.toHaveBeenCalled();
     });
 
     it("device sync route persists extracted runtime payload", async () => {
