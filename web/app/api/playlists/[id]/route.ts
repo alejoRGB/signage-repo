@@ -69,11 +69,32 @@ export async function PUT(
 
         // VALIDATION: Check content compatibility
         if (items && Array.isArray(items) && items.length > 0) {
-            const mediaItemIds = items.map((i: any) => i.mediaItemId);
+            const mediaItemIds = Array.from(
+                new Set(
+                    items
+                        .map((i: any) => (typeof i?.mediaItemId === "string" ? i.mediaItemId : null))
+                        .filter((id: string | null): id is string => !!id)
+                )
+            );
+
+            if (mediaItemIds.length === 0 && items.length > 0) {
+                return NextResponse.json({ error: "Invalid playlist items payload" }, { status: 400 });
+            }
+
             const mediaItems = await prisma.mediaItem.findMany({
-                where: { id: { in: mediaItemIds } },
-                select: { id: true, type: true }
+                where: {
+                    id: { in: mediaItemIds },
+                    userId: session.user.id,
+                },
+                select: { id: true, type: true },
             });
+
+            if (mediaItems.length !== mediaItemIds.length) {
+                return NextResponse.json(
+                    { error: "One or more media items are invalid or unauthorized" },
+                    { status: 403 }
+                );
+            }
 
             const mediaMap = new Map(mediaItems.map(m => [m.id, m.type]));
 
