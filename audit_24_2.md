@@ -547,6 +547,13 @@ Cambios necesarios:
 
 - Usar URL pooled para `url` y unpooled solo en `directUrl` (si trabajás con Neon/Vercel/Prisma Migrate).
 
+Estado (24/02): RESUELTO (con paso operativo pendiente)
+
+- `web/prisma/schema.prisma` ahora usa `DATABASE_URL` para `url` (runtime) y reserva `DATABASE_URL_UNPOOLED` solo para `directUrl` (migraciones/introspeccion).
+- `web/.env.example` documenta ambas variables y el uso recomendado (pooled vs unpooled).
+- Esto reduce riesgo de agotamiento de conexiones en despliegues serverless/multi-instancia cuando se configura un pooler (Neon/Vercel Postgres).
+- Paso operativo pendiente fuera del repo: asegurar que en Vercel/produccion `DATABASE_URL` apunte al endpoint pooled y `DATABASE_URL_UNPOOLED` al direct endpoint.
+
 ## Hallazgos bajos / deuda operativa
 
 ### 19) `player` usa `--no-sandbox` en Chromium bajo ciertas condiciones

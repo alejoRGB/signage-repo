@@ -4,7 +4,9 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL_UNPOOLED") // User verified this var has no -pooler
+  // Runtime app traffic should use the pooled URL in serverless/multi-instance environments.
+  // Use the direct (unpooled) URL only for migrations/introspection via `directUrl`.
+  url       = env("DATABASE_URL")
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
