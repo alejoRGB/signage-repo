@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireDebugEndpointAccess } from "@/lib/debug-endpoint-access";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        if (process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        const denied = await requireDebugEndpointAccess();
+        if (denied) {
+            return denied;
         }
 
         const envCheck = {
-            DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED ? "Present (Starts with " + process.env.DATABASE_URL_UNPOOLED.substring(0, 10) + "...)" : "MISSING",
-            DATABASE_URL: process.env.DATABASE_URL ? "Present (Starts with " + process.env.DATABASE_URL.substring(0, 10) + "...)" : "MISSING",
+            DATABASE_URL_UNPOOLED: Boolean(process.env.DATABASE_URL_UNPOOLED),
+            DATABASE_URL: Boolean(process.env.DATABASE_URL),
             NODE_ENV: process.env.NODE_ENV,
         };
 
@@ -20,8 +22,8 @@ export async function GET() {
         try {
             await prisma.$connect();
             dbStatus = "Connected";
-        } catch (e: any) {
-            dbStatus = "Connection Failed: " + e.message;
+        } catch {
+            dbStatus = "Connection Failed";
         }
 
         return NextResponse.json({

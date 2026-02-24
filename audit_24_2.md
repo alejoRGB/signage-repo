@@ -214,6 +214,17 @@ Cambios necesarios:
 - Eliminar estas rutas del bundle de producción o proteger con auth+allowlist+flag secreto.
 - No devolver prefijos de secretos ni errores de DB al cliente.
 
+Estado (24/02): RESUELTO
+
+- `web/lib/debug-endpoint-access.ts` centraliza la política de acceso:
+  - `404` por defecto (endpoints ocultos si `ENABLE_DEBUG_API_ROUTES` no está habilitado)
+  - requiere sesión autenticada `ADMIN`
+  - bloquea cuentas inactivas
+- `web/app/api/debug-env/route.ts` y `web/app/api/debug/playlist/[id]/route.ts` usan la misma política (el check por `NODE_ENV` ya no es la única protección).
+- `web/app/api/debug-env/route.ts` ya no devuelve prefijos de `DATABASE_URL*` ni mensajes de error de DB al cliente (solo flags booleanos + estado genérico).
+- `web/.env.example` documenta `ENABLE_DEBUG_API_ROUTES` como flag temporal y solo para entornos privados/locales.
+- Test agregado: `web/__tests__/api/debug-endpoints.test.ts`.
+
 ### 8) `device/sync` mezcla código de debug con código de producción (logs excesivos + `eslint-disable`)
 
 Evidencia:

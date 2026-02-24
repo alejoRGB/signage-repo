@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireDebugEndpointAccess } from "@/lib/debug-endpoint-access";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,11 +10,12 @@ export async function GET(
 ) {
     const { id } = await context.params;
 
-    if (process.env.NODE_ENV === 'production') {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     try {
+        const denied = await requireDebugEndpointAccess();
+        if (denied) {
+            return denied;
+        }
+
         const playlist = await prisma.playlist.findUnique({
             where: { id },
             include: {
