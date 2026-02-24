@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import DeviceManager from "./device-manager";
 import { getDeviceConnectivityStatus } from "@/lib/device-connectivity";
+import { resolveLatestDeviceCpuTelemetry } from "@/lib/device-cpu-telemetry";
 
 export const metadata = {
     title: "Devices | Cloud Signage",
@@ -63,6 +64,7 @@ export default async function DevicesPage() {
         const status = getDeviceConnectivityStatus(d.lastSeenAt);
 
         const latestRuntime = syncSessionDevices[0] ?? null;
+        const telemetry = resolveLatestDeviceCpuTelemetry(d, latestRuntime);
         return {
             ...deviceBase,
             name: d.name || "Unknown Device",
@@ -71,8 +73,8 @@ export default async function DevicesPage() {
             lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
             createdAt: d.createdAt.toISOString(),
             updatedAt: d.updatedAt.toISOString(),
-            cpuTemp: latestRuntime?.cpuTemp ?? null,
-            cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
+            cpuTemp: telemetry.cpuTemp,
+            cpuTempUpdatedAt: telemetry.cpuTempUpdatedAt,
             activePlaylist: d.activePlaylist ? {
                 ...d.activePlaylist,
                 name: d.activePlaylist.name || "Unnamed Playlist"

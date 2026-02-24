@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDeviceConnectivityStatus } from "@/lib/device-connectivity";
+import { resolveLatestDeviceCpuTelemetry } from "@/lib/device-cpu-telemetry";
 
 export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
@@ -92,11 +93,12 @@ export async function GET(request: Request) {
         const status = getDeviceConnectivityStatus(device.lastSeenAt);
 
         const latestRuntime = syncSessionDevices[0] ?? null;
+        const telemetry = resolveLatestDeviceCpuTelemetry(device, latestRuntime);
         return {
             ...deviceBase,
             connectivityStatus: status,
-            cpuTemp: latestRuntime?.cpuTemp ?? null,
-            cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
+            cpuTemp: telemetry.cpuTemp,
+            cpuTempUpdatedAt: telemetry.cpuTempUpdatedAt,
             contentPreview: device.currentContentName
                 ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
                 : null,

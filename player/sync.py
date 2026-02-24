@@ -183,6 +183,13 @@ class SyncManager:
                 "playing_playlist_id": playing_playlist_id or "",
                 "current_content_name": current_content_name or "",
             }
+            heartbeat_cpu_temp = None
+            if sync_runtime and sync_runtime.get("cpu_temp") is not None:
+                heartbeat_cpu_temp = sync_runtime.get("cpu_temp")
+            else:
+                heartbeat_cpu_temp = self.get_cpu_temp()
+            if heartbeat_cpu_temp is not None:
+                data["cpu_temp"] = str(heartbeat_cpu_temp)
             if sync_runtime:
                 data["sync_session_id"] = str(sync_runtime.get("session_id", ""))
                 data["sync_status"] = str(sync_runtime.get("status", ""))
@@ -330,6 +337,27 @@ class SyncManager:
 
         return seconds_value * 1000.0
 
+    def get_cpu_temp(self) -> Optional[float]:
+        """Read CPU temperature from vcgencmd when available."""
+        try:
+            temp_result = subprocess.run(
+                ["vcgencmd", "measure_temp"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            if temp_result.returncode != 0:
+                return None
+
+            temp_match = re.search(r"temp=([-+]?\d+(?:\.\d+)?)", temp_result.stdout)
+            if not temp_match:
+                return None
+
+            return float(temp_match.group(1))
+        except Exception:
+            return None
+
     def get_clock_sync_health(self, max_offset_ms: float = 50.0) -> Dict[str, Any]:
         """
         Check local clock sync quality via chronyc tracking.
@@ -395,21 +423,7 @@ class SyncManager:
             except Exception:
                 throttled = False
 
-            cpu_temp = None
-            try:
-                temp_result = subprocess.run(
-                    ["vcgencmd", "measure_temp"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2,
-                    check=False,
-                )
-                if temp_result.returncode == 0:
-                    temp_match = re.search(r"temp=([-+]?\d+(?:\.\d+)?)", temp_result.stdout)
-                    if temp_match:
-                        cpu_temp = float(temp_match.group(1))
-            except Exception:
-                cpu_temp = None
+            cpu_temp = self.get_cpu_temp()
 
             healthy_leap = (leap_status or "").strip().lower() == "normal"
             healthy_offset = offset_ms is not None and abs(offset_ms) <= max_offset_ms

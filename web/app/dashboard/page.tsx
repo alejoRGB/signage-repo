@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Monitor, HardDrive, PlaySquare } from "lucide-react";
 import DevicePreviewGrid from "@/components/dashboard/device-preview-grid";
 import { getDeviceConnectivityStatus } from "@/lib/device-connectivity";
+import { resolveLatestDeviceCpuTelemetry } from "@/lib/device-cpu-telemetry";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -22,6 +23,8 @@ export default async function DashboardPage() {
                 createdAt: true,
                 lastSeenAt: true,
                 currentContentName: true,
+                cpuTemp: true,
+                cpuTempUpdatedAt: true,
                 activePlaylist: {
                     select: {
                         id: true,
@@ -124,13 +127,14 @@ export default async function DashboardPage() {
                 initialDevices={previewDevices.map((device) => {
                     const { syncSessionDevices, ...deviceBase } = device;
                     const latestRuntime = syncSessionDevices[0] ?? null;
+                    const telemetry = resolveLatestDeviceCpuTelemetry(device, latestRuntime);
                     return {
                         ...deviceBase,
                         createdAt: device.createdAt.toISOString(),
                         lastSeenAt: device.lastSeenAt ? device.lastSeenAt.toISOString() : null,
                         connectivityStatus: getDeviceConnectivityStatus(device.lastSeenAt),
-                        cpuTemp: latestRuntime?.cpuTemp ?? null,
-                        cpuTempUpdatedAt: latestRuntime?.updatedAt?.toISOString?.() ?? null,
+                        cpuTemp: telemetry.cpuTemp,
+                        cpuTempUpdatedAt: telemetry.cpuTempUpdatedAt,
                         contentPreview: device.currentContentName
                             ? mediaByFilename.get(device.currentContentName) ?? mediaByName.get(device.currentContentName) ?? null
                             : null,

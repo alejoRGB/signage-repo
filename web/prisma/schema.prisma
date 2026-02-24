@@ -45,6 +45,8 @@ model Device {
   currentContentName   String?
   previewImageUrl      String?
   previewCapturedAt    DateTime?
+  cpuTemp              Float?
+  cpuTempUpdatedAt     DateTime?
   activePlaylist       Playlist?           @relation(fields: [activePlaylistId], references: [id])
   defaultPlaylist      Playlist?           @relation("DefaultPlaylist", fields: [defaultPlaylistId], references: [id])
   playingPlaylist      Playlist?           @relation("PlayingPlaylist", fields: [playingPlaylistId], references: [id])

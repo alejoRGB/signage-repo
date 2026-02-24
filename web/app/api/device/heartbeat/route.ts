@@ -12,6 +12,15 @@ const MASTER_REELECTION_THROTTLE_MS = 10_000;
 const MASTER_REELECTION_RETENTION_MS = 5 * 60_000;
 const lastMasterReelectionBySession = new Map<string, number>();
 
+function parseOptionalFormNumber(value: FormDataEntryValue | null): number | null {
+    if (typeof value !== "string" || value.trim() === "") {
+        return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 function shouldRunMasterReelection(sessionId: string, nowMs: number) {
     const lastRunMs = lastMasterReelectionBySession.get(sessionId);
     if (typeof lastRunMs === "number" && nowMs - lastRunMs < MASTER_REELECTION_THROTTLE_MS) {
@@ -38,6 +47,7 @@ export async function POST(request: Request) {
         const playingPlaylistIdValue = formData.get("playing_playlist_id");
         const currentContentNameValue = formData.get("current_content_name");
         const previewFile = formData.get("preview");
+        const cpuTempValue = parseOptionalFormNumber(formData.get("cpu_temp"));
         const syncRuntime = extractSyncRuntimeFromFormData(formData);
 
         if (!deviceToken || typeof deviceToken !== "string") {
@@ -74,6 +84,8 @@ export async function POST(request: Request) {
             currentContentName?: string | null;
             previewImageUrl?: string;
             previewCapturedAt?: Date;
+            cpuTemp?: number;
+            cpuTempUpdatedAt?: Date;
         } = {
             status: "online",
             lastSeenAt: new Date(),
@@ -85,6 +97,11 @@ export async function POST(request: Request) {
 
         if (typeof currentContentNameValue === "string") {
             updateData.currentContentName = currentContentNameValue || null;
+        }
+
+        if (cpuTempValue !== null) {
+            updateData.cpuTemp = cpuTempValue;
+            updateData.cpuTempUpdatedAt = new Date();
         }
 
         if (previewFile instanceof File) {
