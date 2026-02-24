@@ -443,6 +443,16 @@ Cambios necesarios:
 - Validar `dayOfWeek`, formato HH:MM, `start < end`, y política para intervalos overnight.
 - Normalizar/sortear items antes de persistir.
 
+Estado (24/02): RESUELTO
+
+- `web/lib/validations.ts` ahora define `UpdateScheduleSchema` (Zod) y `ScheduleItemSchema` compartido con validacion fuerte y `.strict()`.
+- Se normalizan horarios a `HH:MM` (ej. `9:50` -> `09:50`) para evitar inconsistencias y errores de ordenamiento.
+- Se valida explicitamente `endTime > startTime` (politica actual: no se permiten intervalos overnight).
+- `web/app/api/schedules/[scheduleId]/route.ts` usa el schema de PATCH y reemplaza el overlap check lexicografico por comparacion numerica en minutos.
+- Tests de regresion en `web/__tests__/api/schedule-patch.test.ts`:
+  - `endTime <= startTime` rechaza `400`
+  - overlap con horas no padded (`9:50` vs `10:00`) ahora se detecta correctamente
+
 ### 15) `media/upload` no define límites de tamaño/cuota a nivel de token de subida
 
 Evidencia:

@@ -55,15 +55,51 @@ export const CreatePlaylistSchema = z.object({
 });
 
 // Schedule Schemas
+const ScheduleTimeSchema = z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)")
+    .transform((value) => {
+        const [hour, minute] = value.split(":");
+        return `${hour.padStart(2, "0")}:${minute}`;
+    });
+
+function scheduleTimeToMinutes(value: string) {
+    const [hour, minute] = value.split(":").map((part) => Number(part));
+    return hour * 60 + minute;
+}
+
+export const ScheduleItemSchema = z
+    .object({
+        dayOfWeek: z.number().int().min(0).max(6),
+        startTime: ScheduleTimeSchema,
+        endTime: ScheduleTimeSchema,
+        playlistId: z.string().min(1).transform(sanitize),
+    })
+    .strict()
+    .superRefine((item, ctx) => {
+        if (scheduleTimeToMinutes(item.endTime) <= scheduleTimeToMinutes(item.startTime)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["endTime"],
+                message: "endTime must be later than startTime",
+            });
+        }
+    });
+
 export const CreateScheduleSchema = z.object({
     name: z.string().min(1, "Schedule name is required").max(100).transform(sanitize),
-    items: z.array(z.object({
-        dayOfWeek: z.number().int().min(0).max(6),
-        startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
-        endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
-        playlistId: z.string().min(1).transform(sanitize),
-    })).optional(),
+    items: z.array(ScheduleItemSchema).optional(),
 });
+
+export const UpdateScheduleSchema = z
+    .object({
+        name: z.string().min(1, "Schedule name is required").max(100).transform(sanitize).optional(),
+        items: z.array(ScheduleItemSchema).optional(),
+    })
+    .strict()
+    .refine((value) => value.name !== undefined || value.items !== undefined, {
+        message: "At least one of name or items is required",
+    });
 
 // Device Schemas
 export const CreateDeviceSchema = z.object({

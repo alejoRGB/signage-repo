@@ -83,4 +83,54 @@ describe("PATCH /api/schedules/[scheduleId]", () => {
         expect(res.status).toBe(200);
         expect(prisma.schedule.update).toHaveBeenCalled();
     });
+
+    it("returns 400 when an item endTime is not later than startTime", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+        (prisma.schedule.findUnique as jest.Mock).mockResolvedValue({ userId: "user1" });
+
+        const req = new Request("http://localhost/api/schedules/s1", {
+            method: "PATCH",
+            body: JSON.stringify({
+                items: [
+                    { dayOfWeek: 1, startTime: "10:00", endTime: "10:00", playlistId: "pl1" },
+                ],
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await PATCH(req, { params: Promise.resolve({ scheduleId: "s1" }) });
+        const body = await res.json();
+
+        expect(res.status).toBe(400);
+        expect(body.error).toMatch(/endTime must be later than startTime/i);
+        expect(prisma.schedule.update).not.toHaveBeenCalled();
+        expect(prisma.playlist.findMany).not.toHaveBeenCalled();
+    });
+
+    it("detects overlaps correctly when hours are not zero-padded", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+        (prisma.schedule.findUnique as jest.Mock).mockResolvedValue({ userId: "user1" });
+        (prisma.playlist.findMany as jest.Mock).mockResolvedValue([
+            { id: "pl1", userId: "user1" },
+            { id: "pl2", userId: "user1" },
+        ]);
+
+        const req = new Request("http://localhost/api/schedules/s1", {
+            method: "PATCH",
+            body: JSON.stringify({
+                items: [
+                    { dayOfWeek: 1, startTime: "9:50", endTime: "10:10", playlistId: "pl1" },
+                    { dayOfWeek: 1, startTime: "10:00", endTime: "10:30", playlistId: "pl2" },
+                ],
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await PATCH(req, { params: Promise.resolve({ scheduleId: "s1" }) });
+        const body = await res.json();
+
+        expect(res.status).toBe(400);
+        expect(body.error).toContain("Schedule overlap detected");
+        expect(prisma.schedule.update).not.toHaveBeenCalled();
+    });
 });

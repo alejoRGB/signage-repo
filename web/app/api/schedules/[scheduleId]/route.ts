@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { UpdateScheduleSchema } from "@/lib/validations";
+
+function timeToMinutes(value: string) {
+    const [hour, minute] = value.split(":").map((part) => Number(part));
+    return hour * 60 + minute;
+}
 
 export async function GET(
     _req: Request,
@@ -79,7 +85,15 @@ export async function PATCH(
 
     try {
         const json = await req.json();
-        const { name, items } = json;
+        const parsed = UpdateScheduleSchema.safeParse(json);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+                { status: 400 }
+            );
+        }
+
+        const { name, items } = parsed.data;
 
         const existingSchedule = await prisma.schedule.findUnique({
             where: { id: scheduleId },
@@ -122,18 +136,23 @@ export async function PATCH(
             }
 
             // 2. Verify Overlaps
-            const byDay: Record<number, { start: string; end: string }[]> = {};
+            const byDay: Record<number, { start: string; end: string; startMinutes: number; endMinutes: number }[]> = {};
             for (const item of items) {
                 if (!byDay[item.dayOfWeek]) byDay[item.dayOfWeek] = [];
-                byDay[item.dayOfWeek].push({ start: item.startTime, end: item.endTime });
+                byDay[item.dayOfWeek].push({
+                    start: item.startTime,
+                    end: item.endTime,
+                    startMinutes: timeToMinutes(item.startTime),
+                    endMinutes: timeToMinutes(item.endTime),
+                });
             }
 
             for (const day in byDay) {
-                const dayItems = byDay[day].sort((a, b) => a.start.localeCompare(b.start));
+                const dayItems = byDay[day].sort((a, b) => a.startMinutes - b.startMinutes);
                 for (let i = 0; i < dayItems.length - 1; i++) {
                     const current = dayItems[i];
                     const next = dayItems[i + 1];
-                    if (next.start < current.end) {
+                    if (next.startMinutes < current.endMinutes) {
                         return NextResponse.json({
                             error: `Schedule overlap detected on day ${day} between ${current.start}-${current.end} and ${next.start}-${next.end}`
                         }, { status: 400 });
@@ -151,7 +170,7 @@ export async function PATCH(
                 name: name,
                 items: items ? {
                     deleteMany: {},
-                    create: items.map((item: any) => ({
+                    create: items.map((item) => ({
                         dayOfWeek: item.dayOfWeek,
                         startTime: item.startTime,
                         endTime: item.endTime,
