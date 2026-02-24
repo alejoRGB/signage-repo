@@ -1,0 +1,5 @@
+# Digital Signage Player runtime Python dependencies (pinned for reproducibility)
+# Update intentionally and validate on Raspberry Pi target images before bumping.
+requests==2.32.3
+python-socketio==5.11.4
+Pillow==10.4.0

@@ -60,7 +60,7 @@ fi
 echo "[INSTALLER] Downloading player files directly..."
 
 BASE_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REPO_REF}/player"
-FILES="player.py hwaccel.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py lan_sync.py videowall_controller.py state_machine.py videowall_drift.py mpv-videowall.conf lua/videowall_sync.lua fix_rotation_boot.sh setup_timezone.sh"
+FILES="player.py hwaccel.py setup_wallpaper.py logger_service.py rotation_utils.py sync.py lan_sync.py videowall_controller.py state_machine.py videowall_drift.py mpv-videowall.conf lua/videowall_sync.lua fix_rotation_boot.sh setup_timezone.sh requirements-runtime.txt"
 
 echo "[INSTALLER] Source repo: ${REPO_OWNER}/${REPO_NAME}@${REPO_REF}"
 echo "[INSTALLER] Default server_url: ${SERVER_URL}"
@@ -111,7 +111,12 @@ fi
 
 # 6. Python Deps
 echo "[INSTALLER] Installing Python libs..."
-pip3 install requests python-socketio "Pillow" --break-system-packages || pip3 install requests python-socketio "Pillow"
+if [ ! -f "$APP_DIR/requirements-runtime.txt" ]; then
+    echo "[INSTALLER] ERROR: Missing Python requirements file in install directory."
+    exit 1
+fi
+pip3 install -r "$APP_DIR/requirements-runtime.txt" --break-system-packages || \
+pip3 install -r "$APP_DIR/requirements-runtime.txt"
 
 # 6.1 Chrony service
 echo "[INSTALLER] Enabling chrony..."

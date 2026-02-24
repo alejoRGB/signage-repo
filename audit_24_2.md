@@ -884,6 +884,14 @@ Cambios necesarios:
 - Definir versiones mínimas/pinneadas para runtime Python.
 - Considerar imagen base o script de provisioning versionado.
 
+Estado (24/02): RESUELTO parcialmente
+
+- Se agrego `player/requirements-runtime.txt` con versiones pinneadas para las dependencias Python de runtime del player (`requests`, `python-socketio`, `Pillow`).
+- `player/install_dependencies.sh` ahora instala desde ese archivo (`pip3 install -r ...`) y falla explicitamente si falta el requirements file.
+- `player/setup_device.sh` ahora descarga `requirements-runtime.txt` junto con el resto de archivos del player e instala Python deps desde ese archivo pinneado.
+- Validacion: sintaxis shell OK (`bash -n`) en `player/install_dependencies.sh` y `player/setup_device.sh`.
+- Riesgo residual: paquetes `apt` del host (incluyendo `chromium`, `mpv`, etc.) siguen sin pinning estricto; para reproducibilidad completa de imagen conviene provisioning versionado / imagen base.
+
 ## Higiene de secretos (workspace local)
 
 Hallazgo verificado:

@@ -32,10 +32,18 @@ fi
 
 # 2. Python Dependencies (pip)
 # Using --break-system-packages because on recent Raspbian versions pip is managed externally
-# verified requirements: requests, python-socketio, Pillow
+# Runtime package versions are pinned in requirements-runtime.txt for reproducibility.
 echo "[INSTALLER] Installing Python libs..."
-pip3 install requests python-socketio Pillow --break-system-packages || \
-pip3 install requests python-socketio Pillow
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY_REQS_FILE="$SCRIPT_DIR/requirements-runtime.txt"
+
+if [ ! -f "$PY_REQS_FILE" ]; then
+    echo "[INSTALLER] ERROR: Missing Python requirements file: $PY_REQS_FILE"
+    exit 1
+fi
+
+pip3 install -r "$PY_REQS_FILE" --break-system-packages || \
+pip3 install -r "$PY_REQS_FILE"
 
 echo "[INSTALLER] Dependencies installed successfully."
 sudo systemctl enable chrony
