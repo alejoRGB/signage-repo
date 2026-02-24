@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+import hashlib
 import logging
 import os
 import time
@@ -72,6 +73,7 @@ class VideowallController:
         self.lan_auth_key = os.getenv("SYNC_LAN_AUTH_KEY") or None
         self.status_interval_playing_lan_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_PLAYING_LAN_S", 10.0, 1.0)
         self.command_poll_playing_lan_s = self._resolve_interval_env("SYNC_COMMAND_POLL_PLAYING_LAN_S", 5.0, 1.0)
+        self.interval_jitter_ratio = self._resolve_jitter_ratio_env("SYNC_INTERVAL_JITTER_RATIO", 0.15)
         self.lan_sync = lan_sync or LanSyncService(
             enabled=self.lan_enabled,
             beacon_hz=self.lan_beacon_hz,
@@ -109,6 +111,8 @@ class VideowallController:
             "throttled": False,
             "health_score": 0.0,
         }
+        self._command_poll_interval_jitter_factor = self._stable_interval_jitter_factor("command-poll")
+        self._status_interval_jitter_factor = self._stable_interval_jitter_factor("status-report")
 
     @staticmethod
     def _resolve_interval_env(name: str, default_value: float, minimum: float = 0.2) -> float:
@@ -140,6 +144,38 @@ class VideowallController:
         return raw.strip().lower() in {"1", "true", "yes", "on"}
 
     @staticmethod
+    def _resolve_jitter_ratio_env(name: str, default_value: float) -> float:
+        raw = os.getenv(name)
+        if raw is None:
+            return default_value
+        try:
+            parsed = float(raw)
+        except ValueError:
+            return default_value
+        return max(0.0, min(0.4, parsed))
+
+    def _stable_interval_jitter_factor(self, label: str) -> float:
+        ratio = self.interval_jitter_ratio
+        if ratio <= 0:
+            return 1.0
+
+        identity_parts = [
+            str(self._resolve_local_device_id() or ""),
+            str(getattr(self.sync_manager, "device_token", "") or ""),
+            str(getattr(self.sync_manager, "server_url", "") or ""),
+            label,
+        ]
+        digest = hashlib.sha256("|".join(identity_parts).encode("utf-8")).digest()
+        value01 = int.from_bytes(digest[:8], "big") / float(2 ** 64 - 1)
+        delta = (value01 * 2.0 - 1.0) * ratio
+        return max(0.5, 1.0 + delta)
+
+    def _apply_interval_jitter(self, seconds: float, factor: float) -> float:
+        if factor == 1.0:
+            return seconds
+        return max(0.2, seconds * factor)
+
+    @staticmethod
     def _coerce_bool(value: object, default: bool) -> bool:
         if value is None:
             return default
@@ -156,27 +192,38 @@ class VideowallController:
         return default
 
     def _current_command_poll_interval_s(self) -> float:
+        base_interval = self.command_poll_idle_interval_s
         if not self.state_machine.is_active():
-            return self.command_poll_idle_interval_s
+            base_interval = self.command_poll_idle_interval_s
+            return self._apply_interval_jitter(base_interval, self._command_poll_interval_jitter_factor)
 
         state = self.state_machine.state
         if state in {SYNC_STATE_PRELOADING, SYNC_STATE_READY, SYNC_STATE_WARMING_UP}:
-            return self.command_poll_critical_interval_s
+            base_interval = self.command_poll_critical_interval_s
+            return self._apply_interval_jitter(base_interval, self._command_poll_interval_jitter_factor)
         if state == SYNC_STATE_PLAYING:
             if self._lan_mode == "follower":
-                return max(self.command_poll_active_interval_s, self.command_poll_playing_lan_s)
-            return self.command_poll_active_interval_s
-        return self.command_poll_idle_interval_s
+                base_interval = max(self.command_poll_active_interval_s, self.command_poll_playing_lan_s)
+            else:
+                base_interval = self.command_poll_active_interval_s
+            return self._apply_interval_jitter(base_interval, self._command_poll_interval_jitter_factor)
+        base_interval = self.command_poll_idle_interval_s
+        return self._apply_interval_jitter(base_interval, self._command_poll_interval_jitter_factor)
 
     def _current_status_interval_s(self) -> float:
+        base_interval = self.status_interval_critical_s
         state = self.state_machine.state
         if state in {SYNC_STATE_READY, SYNC_STATE_WARMING_UP}:
-            return self.status_interval_critical_s
+            base_interval = self.status_interval_critical_s
+            return self._apply_interval_jitter(base_interval, self._status_interval_jitter_factor)
         if state == SYNC_STATE_PLAYING:
             if self._lan_mode == "follower":
-                return max(self.status_interval_playing_s, self.status_interval_playing_lan_s)
-            return self.status_interval_playing_s
-        return self.status_interval_critical_s
+                base_interval = max(self.status_interval_playing_s, self.status_interval_playing_lan_s)
+            else:
+                base_interval = self.status_interval_playing_s
+            return self._apply_interval_jitter(base_interval, self._status_interval_jitter_factor)
+        base_interval = self.status_interval_critical_s
+        return self._apply_interval_jitter(base_interval, self._status_interval_jitter_factor)
 
     def _reset_runtime_metrics(self) -> None:
         self._resync_count = 0

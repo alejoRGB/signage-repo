@@ -1741,3 +1741,28 @@ Residual to fully close #15:
 Validation:
 - `npm --prefix web run test:api -- --runTestsByPath __tests__/api/media-upload-route.test.ts __tests__/api/create-media.test.ts` -> PASS
 - `npm --prefix web run build` -> PASS
+
+## Update 2026-02-24 (player-side heartbeat jitter)
+
+Implemented stable per-device jitter on player-side periodic loops to reduce synchronized bursts across fleets.
+
+### Heartbeat jitter status update (#35)
+
+- Heartbeat interval jitter / thundering-herd mitigation (#35): RESOLVED (implementation scope)
+  - `player/videowall_controller.py`
+    - Added stable per-device jitter factors for command polling and sync status reporting (`SYNC_INTERVAL_JITTER_RATIO`, default 0.15).
+    - Jitter is deterministic per device/server and bounded (clamped), so cadence remains stable per node while avoiding herd alignment.
+  - `player/player.py`
+    - Added stable jitter for preview heartbeat/report loop interval (`PLAYER_HEARTBEAT_JITTER_RATIO`, default 0.15).
+    - Switched sleep loop to deadline-based sleeping to respect fractional jittered intervals.
+  - `player/tests/test_videowall_controller.py`
+    - Tests that depend on exact interval counts now force jitter factor = 1.0 to keep deterministic assertions.
+
+Notes:
+- Jitter is intentionally stable (not random on every tick) to avoid burst alignment while preserving predictable load per device.
+- Ratios are clamped to avoid extreme intervals (`0.0 .. 0.4`).
+
+Validation:
+- `python -m pytest player/tests/test_videowall_controller.py -q` -> PASS
+- `python -m pytest player/tests/test_sync.py -q` -> PASS
+- `python -m py_compile player/player.py player/videowall_controller.py` -> PASS

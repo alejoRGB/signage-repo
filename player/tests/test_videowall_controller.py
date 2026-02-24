@@ -557,6 +557,7 @@ def test_tick_uses_idle_command_poll_interval_when_no_active_session(mocker):
     )
 
     controller.command_poll_idle_interval_s = 10.0
+    controller._command_poll_interval_jitter_factor = 1.0
     controller._last_poll_ts = -100.0
     controller._advance_runtime_state = lambda: None
 
@@ -606,6 +607,7 @@ def test_tick_uses_slower_status_interval_in_playing_state(mocker):
     )
 
     controller.status_interval_playing_s = 5.0
+    controller._status_interval_jitter_factor = 1.0
     controller._last_status_ts = -100.0
     controller._poll_commands = lambda: None
     controller._advance_runtime_state = lambda: None

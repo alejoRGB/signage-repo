@@ -6,6 +6,7 @@ Uses MPV playlist mode to avoid black screens between items.
 
 import os
 import json
+import hashlib
 import subprocess
 import time
 import threading
@@ -76,6 +77,8 @@ class Player:
         self.running = True
         self.preview_path = os.path.join(os.path.dirname(config_path), "preview.jpg")
         self.preview_interval = 5
+        self.preview_interval_jitter_ratio = self._resolve_jitter_ratio_env("PLAYER_HEARTBEAT_JITTER_RATIO", 0.15)
+        self.preview_interval_jitter_factor = self._stable_interval_jitter_factor("preview-heartbeat")
         self.current_playlist_id_for_preview = None
         self.current_content_name_for_preview = None
         self.preview_thread = None
@@ -106,6 +109,36 @@ class Player:
         except ValueError:
             self.videowall_controller.clock_max_offset_ms = 50.0
         self.log_clock_health_on_startup()
+
+    @staticmethod
+    def _resolve_jitter_ratio_env(name: str, default_value: float) -> float:
+        raw = os.getenv(name)
+        if raw is None:
+            return default_value
+        try:
+            parsed = float(raw)
+        except ValueError:
+            return default_value
+        return max(0.0, min(0.4, parsed))
+
+    def _stable_interval_jitter_factor(self, label: str) -> float:
+        ratio = self.preview_interval_jitter_ratio
+        if ratio <= 0:
+            return 1.0
+
+        identity = "|".join([
+            str(self.sync_manager.get_current_device_id() or ""),
+            str(self.sync_manager.device_token or ""),
+            str(self.sync_manager.server_url or ""),
+            label,
+        ])
+        digest = hashlib.sha256(identity.encode("utf-8")).digest()
+        value01 = int.from_bytes(digest[:8], "big") / float(2 ** 64 - 1)
+        delta = (value01 * 2.0 - 1.0) * ratio
+        return max(0.5, 1.0 + delta)
+
+    def _current_preview_report_interval_s(self) -> float:
+        return max(1.0, float(self.preview_interval) * self.preview_interval_jitter_factor)
 
     def log_clock_health_on_startup(self):
         """Log chrony tracking status during startup for sync diagnostics."""
@@ -176,10 +209,12 @@ class Player:
             except Exception as e:
                 logging.warning(f"[PREVIEW] Reporting failed: {e}")
 
-            for _ in range(self.preview_interval):
-                if not self.running:
+            sleep_until = time.time() + self._current_preview_report_interval_s()
+            while self.running:
+                remaining = sleep_until - time.time()
+                if remaining <= 0:
                     break
-                time.sleep(1)
+                time.sleep(min(1.0, max(0.1, remaining)))
 
     def start_unclutter(self):
         """Start unclutter to hide mouse cursor"""
