@@ -40,14 +40,18 @@ export const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
 
 export const DialogTrigger = ({ asChild, children, onClick }: { asChild?: boolean; children: React.ReactNode; onClick?: () => void }) => {
     const { onOpenChange } = React.useContext(DialogContext);
+    type TriggerChildProps = {
+        onClick?: (e: React.MouseEvent) => void;
+    };
 
     // Clone element to inject onClick if asChild
-    if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<any>, {
+    if (asChild && React.isValidElement<TriggerChildProps>(children)) {
+        const child = children as React.ReactElement<TriggerChildProps>;
+        return React.cloneElement(child, {
             onClick: (e: React.MouseEvent) => {
                 onOpenChange(true);
                 onClick?.();
-                (children as any).props.onClick?.(e);
+                child.props.onClick?.(e);
             }
         });
     }

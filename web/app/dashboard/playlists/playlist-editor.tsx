@@ -115,9 +115,9 @@ export default function PlaylistEditor({
 
             router.refresh();
             showToast("Playlist saved successfully!", "success");
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            showToast(error.message, "error");
+            showToast(error instanceof Error ? error.message : "Failed to save", "error");
         } finally {
             setSaving(false);
         }

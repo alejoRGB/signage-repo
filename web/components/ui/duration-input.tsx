@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 
 // Helper: 70 -> "01:10"
 export const formatTime = (seconds: number): string => {
@@ -35,29 +35,24 @@ interface DurationInputProps {
 }
 
 export default function DurationInput({ value, onChange, disabled }: DurationInputProps) {
-    const inputRef = useRef<HTMLInputElement>(null); // Added inputRef
+    const inputRef = useRef<HTMLInputElement>(null);
     const [text, setText] = useState(formatTime(value));
-
-    // Update text when value changes externally, BUT ONLY if not focused
-    // This prevents the cursor from jumping while typing
-    useEffect(() => {
-        if (document.activeElement !== inputRef.current) {
-            setText(formatTime(value));
-        }
-    }, [value]);
+    const [isFocused, setIsFocused] = useState(false);
+    const displayText = isFocused ? text : formatTime(value);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newText = e.target.value;
-        setText(newText);
+        const nextText = e.target.value;
+        setText(nextText);
 
         // Optimistically update parent state if valid
         // This fixes the race condition where clicking "Save" immediately after typing
         // would use the old value because onBlur hasn't finished updating state.
-        const seconds = parseTime(newText);
+        const seconds = parseTime(nextText);
         onChange(seconds);
     };
 
     const handleBlur = () => {
+        setIsFocused(false);
         const seconds = parseTime(text);
         setText(formatTime(seconds)); // normalize text on blur (e.g. 70 -> 01:10)
         onChange(seconds);
@@ -67,17 +62,21 @@ export default function DurationInput({ value, onChange, disabled }: DurationInp
         <input // Changed to 'input' as per original, assuming 'Input' was a typo or external component not provided.
             ref={inputRef}
             type="text"
-            value={text}
+            value={displayText}
             onChange={handleChange}
+            onFocus={() => {
+                setIsFocused(true);
+                setText(formatTime(value));
+            }}
             onBlur={handleBlur}
             onKeyDown={(e) => {
                 if (e.key === "Enter") {
                     e.currentTarget.blur();
                 }
             }}
-            disabled={disabled} // Re-added disabled prop
+            disabled={disabled}
             placeholder="MM:SS"
-            className="w-20 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-center font-mono disabled:bg-gray-100 disabled:text-gray-500 text-gray-900" // Merged new and old classNames
+            className="w-20 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1 text-center font-mono disabled:bg-gray-100 disabled:text-gray-500 text-gray-900"
         />
     );
 }

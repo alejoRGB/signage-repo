@@ -817,6 +817,13 @@ Cambios necesarios:
 - Ajustar ESLint config/overrides para scripts CommonJS y archivos de test config.
 - Hacer `lint` gating obligatorio en CI.
 
+Estado actual (2026-02-24): RESUELTO parcialmente (lint ejecuta sin errores)
+
+- npm --prefix web run lint ahora termina con 0 errors (quedan 23 warnings).
+- Se corrigieron errores reales de tipado (any), hooks (set-state-in-effect / refs), strings JSX no escapados y tipos UI base (Input/Textarea).
+- Se agrego override de ESLint para archivos CommonJS (*.js, *.cjs) y se elimino el ruido de no-require-imports en scripts/ y jest*.js.
+- Warnings residuales: no-unused-vars, algunos no-img-element en UI interna y un exhaustive-deps en device-logs-modal (no bloqueantes para build).
+
 ### Build de producción
 
 Observación verificada:

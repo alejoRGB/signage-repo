@@ -39,8 +39,8 @@ export default function AddUserModal() {
             setCreatedUser({ email, password });
             showToast("User created successfully", "success");
             router.refresh();
-        } catch (error: any) {
-            showToast(error.message, "error");
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : "Failed to create user", "error");
         } finally {
             setLoading(false);
         }

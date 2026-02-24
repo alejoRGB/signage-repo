@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -10,13 +10,9 @@ function LoginForm() {
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
-
-    useEffect(() => {
-        if (searchParams.get("registered") === "true") {
-            setSuccess("Account created successfully. Please sign in.");
-        }
-    }, [searchParams]);
+    const success = searchParams.get("registered") === "true"
+        ? "Account created successfully. Please sign in."
+        : "";
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

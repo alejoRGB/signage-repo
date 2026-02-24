@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { GET as getDebugEnv } from "@/app/api/debug-env/route";
 import { GET as getDebugPlaylist } from "@/app/api/debug/playlist/[id]/route";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +32,16 @@ const mockedPrisma = prisma as unknown as {
 
 describe("debug API endpoints", () => {
     const originalEnv = process.env;
+    const makeSession = (role: "USER" | "ADMIN", isActive = true): Session => ({
+        expires: "2099-01-01T00:00:00.000Z",
+        user: {
+            id: "u1",
+            name: "Test User",
+            email: "test@example.com",
+            role,
+            isActive,
+        },
+    });
 
     beforeEach(() => {
         process.env = { ...originalEnv };
@@ -60,9 +71,7 @@ describe("debug API endpoints", () => {
         const noSession = await getDebugEnv();
         expect(noSession.status).toBe(401);
 
-        mockedGetServerSession.mockResolvedValue({
-            user: { role: "USER", isActive: true },
-        } as any);
+        mockedGetServerSession.mockResolvedValue(makeSession("USER"));
         const nonAdmin = await getDebugEnv();
         expect(nonAdmin.status).toBe(403);
     });
@@ -71,9 +80,7 @@ describe("debug API endpoints", () => {
         process.env.ENABLE_DEBUG_API_ROUTES = "true";
         process.env.DATABASE_URL = "postgres://secret-connection-string";
         process.env.DATABASE_URL_UNPOOLED = "postgres://another-secret";
-        mockedGetServerSession.mockResolvedValue({
-            user: { role: "ADMIN", isActive: true },
-        } as any);
+        mockedGetServerSession.mockResolvedValue(makeSession("ADMIN"));
         mockedPrisma.$connect.mockRejectedValue(new Error("password authentication failed"));
 
         const response = await getDebugEnv();
@@ -94,9 +101,7 @@ describe("debug API endpoints", () => {
         expect(disabled.status).toBe(404);
 
         process.env.ENABLE_DEBUG_API_ROUTES = "true";
-        mockedGetServerSession.mockResolvedValue({
-            user: { role: "ADMIN", isActive: true },
-        } as any);
+        mockedGetServerSession.mockResolvedValue(makeSession("ADMIN"));
 
         const enabled = await getDebugPlaylist(new Request("http://localhost"), {
             params: Promise.resolve({ id: "p1" }),

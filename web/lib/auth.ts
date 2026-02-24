@@ -107,7 +107,7 @@ export const authOptions: NextAuthOptions = {
             // Check for explicit expiry error from JWT callback
             if (isAdminSessionExpiredToken(token)) {
                 // Return an empty/invalid session to force sign-out
-                return {} as any;
+                return {} as typeof session;
             }
 
             if (token && session.user) {

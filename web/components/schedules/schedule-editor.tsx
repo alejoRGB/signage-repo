@@ -11,10 +11,18 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 
 // Fetcher
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+type ScheduleResponse = {
+    name: string;
+    items: ScheduleItem[];
+};
+type PlaylistOption = {
+    id: string;
+    name: string;
+};
 
 export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
-    const { data: schedule, error } = useSWR(`/api/schedules/${scheduleId}`, fetcher);
-    const { data: playlists } = useSWR("/api/playlists", fetcher);
+    const { data: schedule, error } = useSWR<ScheduleResponse>(`/api/schedules/${scheduleId}`, fetcher);
+    const { data: playlists } = useSWR<PlaylistOption[]>("/api/playlists", fetcher);
     const { mutate } = useSWRConfig();
     const { showToast } = useToast();
 
@@ -112,7 +120,11 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
         setIsDirty(true);
     };
 
-    const updateItem = (index: number, field: keyof ScheduleItem, value: any) => {
+    const updateItem = (
+        index: number,
+        field: "startTime" | "endTime" | "playlistId",
+        value: string
+    ) => {
         const currentItem = items[index];
 
         // If changing time, check for overlap
@@ -298,7 +310,7 @@ export default function ScheduleEditor({ scheduleId }: { scheduleId: string }) {
                                                             className="w-full text-xs p-2 border border-gray-300 rounded bg-gray-50 focus:bg-white focus:ring-1 focus:ring-indigo-500 outline-none appearance-none text-gray-900"
                                                         >
                                                             <option value="">Select Playlist...</option>
-                                                            {playlists.map((p: any) => (
+                                                            {playlists.map((p) => (
                                                                 <option key={p.id} value={p.id}>{p.name}</option>
                                                             ))}
                                                         </select>

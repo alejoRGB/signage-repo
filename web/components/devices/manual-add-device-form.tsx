@@ -87,7 +87,7 @@ export default function ManualAddDeviceForm({ isOpen, onClose, showToast }: Manu
                                 Device Created Successfully!
                             </h3>
                             <p className="text-sm text-green-700 mb-4">
-                                Copy this token and save it in your device's config.json file. You won't be able to see it again.
+                                Copy this token and save it in your device config.json file. You will not be able to see it again.
                             </p>
                             <div className="bg-white p-4 rounded border border-green-300">
                                 <p className="text-xs text-gray-600 mb-1">Device Token:</p>

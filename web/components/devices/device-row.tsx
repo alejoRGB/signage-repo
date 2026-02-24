@@ -39,12 +39,19 @@ export default function DeviceRow({
     const prevSynced = useRef(isSynced);
 
     useEffect(() => {
+        let showTimer: ReturnType<typeof setTimeout> | null = null;
+        let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
         if (!prevSynced.current && isSynced && hasActivePlaylist) {
-            setShowReady(true);
-            const timer = setTimeout(() => setShowReady(false), 3000);
-            return () => clearTimeout(timer);
+            showTimer = setTimeout(() => setShowReady(true), 0);
+            hideTimer = setTimeout(() => setShowReady(false), 3000);
         }
         prevSynced.current = isSynced;
+
+        return () => {
+            if (showTimer) clearTimeout(showTimer);
+            if (hideTimer) clearTimeout(hideTimer);
+        };
     }, [isSynced, hasActivePlaylist]);
 
     useEffect(() => {

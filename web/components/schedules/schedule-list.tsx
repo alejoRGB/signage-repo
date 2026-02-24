@@ -9,9 +9,15 @@ import ConfirmModal from "@/components/confirm-modal";
 import { useToast } from "@/components/ui/toast-context";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+type ScheduleListItem = {
+    id: string;
+    name: string;
+    updatedAt: string;
+    _count?: { devices?: number };
+};
 
 export default function ScheduleList() {
-    const { data: schedules, error, mutate } = useSWR("/api/schedules", fetcher);
+    const { data: schedules, error, mutate } = useSWR<ScheduleListItem[]>("/api/schedules", fetcher);
     const { showToast } = useToast();
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -21,7 +27,7 @@ export default function ScheduleList() {
     if (schedules.length === 0) {
         return (
             <div className="text-center py-10">
-                <p className="text-gray-500 mb-4">You haven't created any schedules yet.</p>
+                <p className="text-gray-500 mb-4">You have not created any schedules yet.</p>
             </div>
         );
     }
@@ -65,7 +71,7 @@ export default function ScheduleList() {
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                    {schedules.map((schedule: any) => (
+                    {schedules.map((schedule) => (
                         <tr key={schedule.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                                 <Link

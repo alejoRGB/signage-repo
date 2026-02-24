@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -51,8 +52,13 @@ export async function PUT(
 
     try {
         const { id } = await context.params;
-        const json = await request.json();
-        const { name, items, orientation } = json;
+        const payload = await request.json() as {
+            name?: unknown;
+            items?: unknown;
+            orientation?: unknown;
+        };
+        const { name, items, orientation } = payload;
+        type PlaylistItemInput = { mediaItemId: string; duration?: number };
 
         // Debug logging removed
 
@@ -67,17 +73,32 @@ export async function PUT(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
+        const normalizedItems = Array.isArray(items)
+            ? items.filter((item): item is PlaylistItemInput => {
+                if (typeof item !== "object" || item === null) return false;
+                const candidate = item as { mediaItemId?: unknown; duration?: unknown };
+                return (
+                    typeof candidate.mediaItemId === "string"
+                    && (candidate.duration === undefined || typeof candidate.duration === "number")
+                );
+            })
+            : null;
+
+        if (Array.isArray(items) && normalizedItems && normalizedItems.length !== items.length) {
+            return NextResponse.json({ error: "Invalid playlist items payload" }, { status: 400 });
+        }
+
         // VALIDATION: Check content compatibility
-        if (items && Array.isArray(items) && items.length > 0) {
+        if (normalizedItems && normalizedItems.length > 0) {
             const mediaItemIds = Array.from(
                 new Set(
-                    items
-                        .map((i: any) => (typeof i?.mediaItemId === "string" ? i.mediaItemId : null))
+                    normalizedItems
+                        .map((i) => (typeof i.mediaItemId === "string" ? i.mediaItemId : null))
                         .filter((id: string | null): id is string => !!id)
                 )
             );
 
-            if (mediaItemIds.length === 0 && items.length > 0) {
+            if (mediaItemIds.length === 0 && normalizedItems.length > 0) {
                 return NextResponse.json({ error: "Invalid playlist items payload" }, { status: 400 });
             }
 
@@ -98,7 +119,7 @@ export async function PUT(
 
             const mediaMap = new Map(mediaItems.map(m => [m.id, m.type]));
 
-            for (const item of items) {
+            for (const item of normalizedItems) {
                 const type = mediaMap.get(item.mediaItemId);
                 if (!type) continue;
 
@@ -112,13 +133,13 @@ export async function PUT(
         }
 
         // Transaction to update
-        await prisma.$transaction(async (tx: any) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // 1. Update details
-            const updateData: any = {};
-            if (name) updateData.name = name;
+            const updateData: Prisma.PlaylistUncheckedUpdateInput = {};
+            if (typeof name === "string" && name.trim().length > 0) updateData.name = name;
 
             // Allow updating orientation for all playlists
-            if (orientation) {
+            if (typeof orientation === "string" && orientation.length > 0) {
                 updateData.orientation = orientation;
             }
 
@@ -130,18 +151,18 @@ export async function PUT(
             }
 
             // 2. Update items (Replace all)
-            if (items && Array.isArray(items)) {
+            if (normalizedItems) {
                 // Delete existing
                 await tx.playlistItem.deleteMany({
                     where: { playlistId: playlistId },
                 });
 
                 // Create new
-                const createData = items.map((item: any, index: number) => ({
+                const createData = normalizedItems.map((item, index: number) => ({
                     playlistId: playlistId,
                     mediaItemId: item.mediaItemId,
                     order: index,
-                    duration: item.duration || 10,
+                    duration: typeof item.duration === "number" ? item.duration : 10,
                 }));
 
                 if (createData.length > 0) {

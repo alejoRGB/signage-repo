@@ -46,8 +46,8 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
             onSuccess();
             onClose();
             showToast("Playlist created successfully", "success");
-        } catch (error: any) {
-            showToast(error.message, "error");
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : "Failed to create playlist", "error");
         } finally {
             setLoading(false);
         }
@@ -115,15 +115,11 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
                         <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
                             <label className="text-sm font-medium text-gray-700">Screen Orientation</label>
                             <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { id: "landscape", label: "Landscape", icon: Layout },
-                                    { id: "portrait", label: "Portrait", icon: Monitor, className: "-rotate-90" },
-                                    { id: "portrait-270", label: "Portrait 270", icon: Monitor, className: "rotate-90" },
-                                ].map((opt) => (
+                                {orientationOptions.map((opt) => (
                                     <button
                                         key={opt.id}
                                         type="button"
-                                        onClick={() => setOrientation(opt.id as any)}
+                                        onClick={() => setOrientation(opt.id)}
                                         className={`flex flex-col items-center justify-center p-3 border rounded-lg text-center transition-all ${orientation === opt.id
                                             ? "border-indigo-600 bg-indigo-50 text-indigo-700"
                                             : "border-gray-200 hover:border-gray-300 text-gray-600"
@@ -162,3 +158,13 @@ export default function CreatePlaylistDialog({ isOpen, onClose, onSuccess }: Cre
         </div>
     );
 }
+    const orientationOptions: Array<{
+        id: "landscape" | "portrait" | "portrait-270";
+        label: string;
+        icon: typeof Layout;
+        className?: string;
+    }> = [
+        { id: "landscape", label: "Landscape", icon: Layout },
+        { id: "portrait", label: "Portrait", icon: Monitor, className: "-rotate-90" },
+        { id: "portrait-270", label: "Portrait 270", icon: Monitor, className: "rotate-90" },
+    ];

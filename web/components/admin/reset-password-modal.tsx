@@ -32,8 +32,8 @@ export default function ResetPasswordModal({ userId, userName }: { userId: strin
             // Success
             setNewPassword(password);
             showToast("Password reset successfully", "success");
-        } catch (error: any) {
-            showToast(error.message, "error");
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : "Failed to reset password", "error");
         } finally {
             setLoading(false);
         }
@@ -119,7 +119,7 @@ export default function ResetPasswordModal({ userId, userName }: { userId: strin
                                 <div className="ml-3">
                                     <h3 className="text-sm font-medium text-amber-800">Warning</h3>
                                     <div className="mt-2 text-sm text-amber-700">
-                                        <p>This will maintain the user's data but invalidate their old password immediately.</p>
+                                        <p>This will maintain the user data but invalidate the old password immediately.</p>
                                     </div>
                                 </div>
                             </div>

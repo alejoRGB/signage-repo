@@ -110,7 +110,13 @@ export async function PATCH(
 
         // Verify ownership of all playlists and check for overlaps if items are provided
         if (items && Array.isArray(items)) {
-            const playlistIds = [...new Set(items.map((i: any) => i.playlistId).filter(Boolean))];
+            const playlistIds = [
+                ...new Set(
+                    items
+                        .map((i) => i.playlistId)
+                        .filter((playlistId): playlistId is string => Boolean(playlistId))
+                ),
+            ];
 
             if (playlistIds.length > 0) {
                 const playlists = await prisma.playlist.findMany({

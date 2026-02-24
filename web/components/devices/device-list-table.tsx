@@ -56,7 +56,7 @@ export default function DeviceListTable({
                         {devices.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                                    No devices yet. Click "Add Device" to get started.
+                                    No devices yet. Click Add Device to get started.
                                 </td>
                             </tr>
                         ) : (
