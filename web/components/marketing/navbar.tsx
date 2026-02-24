@@ -59,7 +59,13 @@ export function Navbar() {
 function AuthButton() {
     const { data: session, status } = useSession()
 
-    if (status === "loading") return null
+    if (status === "loading") {
+        return (
+            <Button asChild variant="ghost" className="text-slate-300 hover:text-white">
+                <Link href="/login">Login</Link>
+            </Button>
+        )
+    }
 
     if (session) {
         if (session.user?.role === "ADMIN") {
