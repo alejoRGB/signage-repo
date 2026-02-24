@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-function LoginForm() {
+export default function LoginPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const success = searchParams.get("registered") === "true"
+    const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
+    const success = isRegisteredSuccess
         ? "Account created successfully. Please sign in."
         : "";
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        setIsRegisteredSuccess(params.get("registered") === "true");
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -111,13 +116,5 @@ function LoginForm() {
                 {/* Registration Link Removed */}
             </div>
         </div>
-    );
-}
-
-export default function LoginPage() {
-    return (
-        <Suspense fallback={<div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>}>
-            <LoginForm />
-        </Suspense>
     );
 }
