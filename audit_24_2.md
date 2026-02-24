@@ -860,6 +860,14 @@ Cambios necesarios:
 
 - Actualizar a `next@16.1.6` (mínimo) y validar regresiones.
 
+Estado (24/02): RESUELTO
+
+- `web/package.json` actualizado a `next@16.1.6` y `eslint-config-next@16.1.6`.
+- `web/package-lock.json` regenerado con las versiones nuevas.
+- `npm --prefix web audit --omit=dev`: `found 0 vulnerabilities` (se elimina el advisory de `next` que figuraba en el informe original).
+- `npm --prefix web run lint` y `npm --prefix web run build` verificados OK con Next 16.1.6.
+- `vercel build --yes` local sigue con el problema conocido del CLI en Windows (packaging/lambda), no con el upgrade de `next`.
+
 ### Dependencias Python del player no pinneadas
 
 Evidencia:
