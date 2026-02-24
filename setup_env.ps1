@@ -9,7 +9,8 @@ if (-not (Test-Path $WebEnvPath)) {
     if (Test-Path $WebExamplePath) {
         Copy-Item $WebExamplePath $WebEnvPath
         Write-Host "Created web/.env from example." -ForegroundColor Green
-        Write-Host "⚠️  IMPORTANT: Please update web/.env with your real secrets (Database, NextAuth)." -ForegroundColor Yellow
+        # Keep CLI output ASCII-only to avoid mojibake on legacy Windows consoles.
+        Write-Host "WARNING: Please update web/.env with your real secrets (Database, NextAuth)." -ForegroundColor Yellow
     }
     else {
         Write-Host "Error: web/.env.example not found!" -ForegroundColor Red

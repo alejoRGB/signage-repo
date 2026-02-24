@@ -763,7 +763,7 @@ Estado actual (2026-02-24): RESUELTO
 
 - web/public/sync.py eliminado del arbol publico (web/public).
 - Se elimina la copia divergente/legacy del cliente Python y con eso se corta el drift funcional y la exposicion publica accidental.
-- No se encontraron referencias activas al archivo fuera del propio udit_24_2.md (busqueda repo).
+- No se encontraron referencias activas al archivo fuera del propio audit_24_2.md (busqueda repo).
 
 Impacto operativo:
 
@@ -784,6 +784,16 @@ Cambios necesarios:
 
 - Estandarizar UTF-8 (preferentemente UTF-8 with BOM para PowerShell si el entorno lo requiere).
 - Evitar emojis en scripts CLI si el entorno objetivo no lo soporta bien.
+
+Estado actual (2026-02-24): RESUELTO
+
+- setup_env.ps1 ya no usa emoji/no-ASCII en mensajes de consola (se reemplazo por WARNING: ASCII) para evitar mojibake en PowerShell/terminales Windows.
+- Se agrego comentario en el script indicando politica de salida ASCII para CLI operativa.
+- Escaneo de scripts PowerShell propios (*.ps1, excluyendo node_modules) sin caracteres no-ASCII: OK.
+
+Nota:
+
+- El mojibake visible en audit_24_2.md/otros archivos historicos responde a encoding heredado del documento (CP1252/UTF-8 mixed), no a runtime del script corregido.
 
 ## Estado de calidad del frontend (`web`) y build pipeline
 
