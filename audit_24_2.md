@@ -248,6 +248,17 @@ Cambios necesarios:
 - Restaurar ESLint y tipar el endpoint.
 - Si se requiere tracing, usar logger estructurado con niveles y redacción.
 
+Estado (24/02): RESUELTO
+
+- `web/app/api/device/sync/route.ts` fue refactorizado:
+  - se eliminó `/* eslint-disable */`
+  - se eliminó comentario de debug/operativo ("Force redeploy...")
+  - se eliminaron `console.log(...)` de formateo de playlists/items (spam por poll)
+  - se eliminó `_debug_version` del response
+  - se reemplazaron `any` por tipos explícitos/estructurales y `Prisma.DeviceUncheckedUpdateInput`
+- Test actualizado en `web/__tests__/api/device-heartbeat-sync.test.ts` para asegurar que `_debug_version` no se expone.
+- Nota: la URL de media con `?token=` sigue presente a propósito en este patch porque corresponde al hallazgo `#9` (token en query params).
+
 ### 9) Token de device en query params (status/media download) expuesto a logs/caches
 
 Evidencia:

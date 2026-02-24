@@ -336,4 +336,29 @@ describe("Device runtime sync persistence", () => {
             }
         }
     });
+
+    it("device sync route does not expose debug version metadata", async () => {
+        (extractSyncRuntimeFromJson as jest.Mock).mockReturnValue(null);
+        (prisma.device.findUnique as jest.Mock).mockResolvedValue({
+            id: "device-1",
+            token: "token-1",
+            name: "Device 1",
+            user: { isActive: true, activeDirectiveTab: "SCHEDULES" },
+            schedule: null,
+            defaultPlaylist: null,
+            activePlaylist: null,
+        });
+
+        const response = await DEVICE_SYNC_POST(
+            new Request("http://localhost/api/device/sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ device_token: "token-1" }),
+            })
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body._debug_version).toBeUndefined();
+    });
 });

@@ -1,110 +1,205 @@
-/* eslint-disable */
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { extractSyncRuntimeFromJson, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
+import { extractSyncRuntimeFromJson, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-// Force redeploy for sync fix
+type SyncRequestPayload = Record<string, unknown>;
+
+type MediaItemRecord = {
+    id: string;
+    type: string;
+    url: string;
+    name: string;
+    filename: string | null;
+    duration: number | null;
+};
+
+type PlaylistItemRecord = {
+    id: string;
+    order: number;
+    duration: number | null;
+    mediaItem: MediaItemRecord;
+};
+
+type PlaylistRecord = {
+    id: string;
+    name: string;
+    orientation: string | null;
+    items: PlaylistItemRecord[];
+};
+
+type ScheduleItemRecord = {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    playlist: PlaylistRecord | null;
+};
+
+type ScheduleRecord = {
+    id: string;
+    name: string;
+    items: ScheduleItemRecord[];
+};
+
+type FormattedPlaylistItem = {
+    id: string;
+    type: string;
+    filename: string;
+    url: string;
+    order: number;
+    duration: number;
+    orientation: string;
+    name: string;
+};
+
+type FormattedPlaylist = {
+    id: string;
+    name: string;
+    orientation: string | null;
+    items: FormattedPlaylistItem[];
+};
+
+type DeviceSyncResponse = {
+    device_id: string;
+    device_name: string;
+    playlist: FormattedPlaylist | null;
+    schedule:
+        | {
+              id: string;
+              name: string;
+              items: Array<{
+                  dayOfWeek: number;
+                  startTime: string;
+                  endTime: string;
+                  playlist: FormattedPlaylist | null;
+              }>;
+          }
+        | null;
+    default_playlist: FormattedPlaylist | null;
+};
+
+const deviceSyncInclude = {
+    user: {
+        select: { isActive: true, activeDirectiveTab: true },
+    },
+    schedule: {
+        include: {
+            items: {
+                include: {
+                    playlist: {
+                        include: {
+                            items: {
+                                include: { mediaItem: true },
+                                orderBy: { order: "asc" },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    defaultPlaylist: {
+        include: {
+            items: {
+                include: { mediaItem: true },
+                orderBy: { order: "asc" },
+            },
+        },
+    },
+    activePlaylist: {
+        include: {
+            items: {
+                include: { mediaItem: true },
+                orderBy: { order: "asc" },
+            },
+        },
+    },
+} satisfies Prisma.DeviceInclude;
+
+function isRecord(value: unknown): value is SyncRequestPayload {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatPlaylist(
+    playlist: PlaylistRecord | null,
+    baseUrl: string,
+    deviceToken: string
+): FormattedPlaylist | null {
+    if (!playlist) {
+        return null;
+    }
+
+    return {
+        id: playlist.id,
+        name: playlist.name,
+        orientation: playlist.orientation,
+        items: playlist.items.map((item) => {
+            const rawDuration = item.duration;
+            const mediaDuration = item.mediaItem.duration;
+            const finalDuration =
+                item.mediaItem.type === "video" ? (mediaDuration ?? 0) : (rawDuration ?? 10);
+
+            return {
+                id: item.id,
+                type: item.mediaItem.type,
+                filename: item.mediaItem.filename ?? `file-${item.mediaItem.id}`,
+                url: item.mediaItem.url.startsWith("http")
+                    ? item.mediaItem.url
+                    : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${deviceToken}`,
+                order: item.order,
+                duration: finalDuration,
+                orientation: playlist.orientation ?? "landscape",
+                name: item.mediaItem.name,
+            };
+        }),
+    };
+}
+
 export async function POST(request: Request) {
     try {
-        const json = await request.json();
-        const { device_token, playing_playlist_id } = json;
-        const syncRuntime = extractSyncRuntimeFromJson(json);
-
-        if (!device_token || typeof device_token !== "string") {
-            return NextResponse.json(
-                { error: "device_token is required" },
-                { status: 400 }
-            );
+        const rawPayload: unknown = await request.json();
+        if (!isRecord(rawPayload)) {
+            return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
         }
 
-        // Rate Limit Check
+        const deviceToken = rawPayload.device_token;
+        const playingPlaylistId = rawPayload.playing_playlist_id;
+        const syncRuntime = extractSyncRuntimeFromJson(rawPayload);
+
+        if (typeof deviceToken !== "string" || !deviceToken) {
+            return NextResponse.json({ error: "device_token is required" }, { status: 400 });
+        }
+
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(device_token), "device_sync");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(deviceToken), "device_sync");
         if (!isAllowed) {
-            return NextResponse.json(
-                { error: "Too many requests" },
-                { status: 429 }
-            );
+            return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }
 
-
-
-        // Find device by token
         const device = await prisma.device.findUnique({
-            where: { token: device_token },
-            include: {
-                user: {
-                    select: { isActive: true, activeDirectiveTab: true }
-                },
-                // Include Schedule and its relations
-                schedule: {
-                    include: {
-                        items: {
-                            include: {
-                                playlist: {
-                                    include: {
-                                        items: {
-                                            include: { mediaItem: true },
-                                            orderBy: { order: "asc" },
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                // Include Default Playlist
-                defaultPlaylist: {
-                    include: {
-                        items: {
-                            include: { mediaItem: true },
-                            orderBy: { order: "asc" },
-                        }
-                    }
-                },
-                // Keep legacy Active Playlist for now
-                activePlaylist: {
-                    include: {
-                        items: {
-                            include: { mediaItem: true },
-                            orderBy: { order: "asc" },
-                        }
-                    }
-                }
-            },
+            where: { token: deviceToken },
+            include: deviceSyncInclude,
         });
 
-
-
         if (!device) {
-            return NextResponse.json(
-                { error: "Invalid device token" },
-                { status: 401 }
-            );
+            return NextResponse.json({ error: "Invalid device token" }, { status: 401 });
         }
 
-        // Check if user is active
         if (device.user && !device.user.isActive) {
             console.warn(`[SYNC API] Blocked sync for device ${device.id} (User Inactive)`);
-            return NextResponse.json(
-                { error: "Account suspended" },
-                { status: 403 }
-            );
+            return NextResponse.json({ error: "Account suspended" }, { status: 403 });
         }
 
-        // Sync fetch should not update liveness. Heartbeat is the single source of device connectivity.
-        // Force cast to any to avoid Prisma type errors during build.
-        const updateData: any = {
-            playingPlaylistId: playing_playlist_id ?? undefined,
-        };
-        const hasDeviceUpdate =
-            Object.values(updateData).some((value) => value !== undefined);
+        const nextPlayingPlaylistId =
+            typeof playingPlaylistId === "string" ? (playingPlaylistId || null) : undefined;
+        const updateData: Prisma.DeviceUncheckedUpdateInput | null =
+            nextPlayingPlaylistId === undefined ? null : { playingPlaylistId: nextPlayingPlaylistId };
 
-        if (hasDeviceUpdate) {
+        if (updateData) {
             await prisma.device.update({
                 where: { id: device.id },
                 data: updateData,
@@ -113,93 +208,50 @@ export async function POST(request: Request) {
 
         await persistDeviceSyncRuntime(device.id, syncRuntime);
 
-        // Helper to format a playlist
         const requestOrigin = new URL(request.url).origin;
         const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || requestOrigin).replace(/\/$/, "");
-
-        const formatPlaylist = (playlist: any) => {
-            if (!playlist) return null;
-            console.log(`[SYNC API] Formatting Playlist ${playlist.id} (${playlist.name})`);
-            console.log(`[SYNC API] Playlist Orientation: ${playlist.orientation}`);
-            return {
-                id: playlist.id,
-                name: playlist.name,
-                orientation: playlist.orientation, // Include top-level orientation
-                items: playlist.items.map((item: any) => {
-                    const rawDuration = item.duration;
-                    const mediaDuration = item.mediaItem.duration;
-                    const finalDuration = item.mediaItem.type === 'video' ? (mediaDuration || 0) : (rawDuration || 10);
-
-                    console.log(`[SYNC API] Item ${item.id} (${item.mediaItem.type}):`);
-                    console.log(`  - PlaylistItem.duration (from DB): ${rawDuration}`);
-                    console.log(`  - MediaItem.duration: ${mediaDuration}`);
-                    console.log(`  - Final duration sent to player: ${finalDuration}`);
-
-                    return {
-                        id: item.id,
-                        type: item.mediaItem.type,
-                        filename: item.mediaItem.filename || `file-${item.mediaItem.id}`,
-                        url: item.mediaItem.url.startsWith("http")
-                            ? item.mediaItem.url
-                            : `${baseUrl}/api/media/download/${item.mediaItem.id}?token=${device_token}`,
-                        order: item.order,
-                        duration: finalDuration,
-                        // Always use playlist orientation default
-                        orientation: playlist.orientation || 'landscape',
-                        name: item.mediaItem.name,
-                    };
-                }),
-            };
-        };
 
         const isSyncVideowallDirectiveActive =
             device.user?.activeDirectiveTab === DIRECTIVE_TAB.SYNC_VIDEOWALL;
 
-        const schedulePayload = isSyncVideowallDirectiveActive
+        const scheduleRecord = device.schedule as ScheduleRecord | null;
+        const defaultPlaylistRecord = device.defaultPlaylist as PlaylistRecord | null;
+        const activePlaylistRecord = device.activePlaylist as PlaylistRecord | null;
+
+        const schedulePayload: DeviceSyncResponse["schedule"] = isSyncVideowallDirectiveActive
             ? null
-            : device.schedule
-                ? {
-                    id: device.schedule.id,
-                    name: device.schedule.name,
-                    items: device.schedule.items.map((item) => ({
+            : scheduleRecord
+              ? {
+                    id: scheduleRecord.id,
+                    name: scheduleRecord.name,
+                    items: scheduleRecord.items.map((item) => ({
                         dayOfWeek: item.dayOfWeek,
                         startTime: item.startTime,
                         endTime: item.endTime,
-                        playlist: formatPlaylist(item.playlist)
-                    }))
+                        playlist: formatPlaylist(item.playlist, baseUrl, deviceToken),
+                    })),
                 }
-                : null;
+              : null;
 
         const defaultPlaylistPayload = isSyncVideowallDirectiveActive
             ? null
-            : formatPlaylist(device.defaultPlaylist);
+            : formatPlaylist(defaultPlaylistRecord, baseUrl, deviceToken);
 
         const legacyPlaylistPayload = isSyncVideowallDirectiveActive
             ? null
-            : formatPlaylist(device.activePlaylist || device.defaultPlaylist);
+            : formatPlaylist(activePlaylistRecord ?? defaultPlaylistRecord, baseUrl, deviceToken);
 
-        // Construct Response
-        const responsePayload = {
-            _debug_version: "1.0.4",
+        const responsePayload: DeviceSyncResponse = {
             device_id: device.id,
-            device_name: device.name,
-            // Legacy field (deprecated but useful for fallback)
+            device_name: device.name ?? "Unnamed Device",
             playlist: legacyPlaylistPayload,
-
-            // New Scheduling Fields
             schedule: schedulePayload,
-
-            default_playlist: defaultPlaylistPayload
+            default_playlist: defaultPlaylistPayload,
         };
 
         return NextResponse.json(responsePayload);
     } catch (error) {
         console.error("Sync API error:", error);
-        return NextResponse.json(
-            {
-                error: "Internal server error",
-            },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
