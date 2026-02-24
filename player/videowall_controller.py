@@ -476,6 +476,7 @@ class VideowallController:
 
         existing_context = self.state_machine.context
         if existing_context and existing_context.session_id == session_id:
+            previous_duration_ms = existing_context.duration_ms
             existing_context.start_at_ms = start_at_ms
             existing_context.duration_ms = duration_ms
             existing_context.local_path = resolved_local_path
@@ -484,7 +485,24 @@ class VideowallController:
             # No need to restart if already running and process is healthy.
             if self.state_machine.state in {SYNC_STATE_READY, SYNC_STATE_WARMING_UP, SYNC_STATE_PLAYING}:
                 if self.is_playback_alive():
+                    # Preserve real runtime media duration on re-prepare. Rejoin/failover prepares
+                    # can resend the nominal payload duration (e.g. 11000ms) after startup has
+                    # already corrected it using MPV (e.g. 10950ms). Reverting here can poison
+                    # drift math and hide a real desync behind endless soft corrections.
+                    existing_context.duration_ms = self._read_runtime_duration_ms(existing_context.duration_ms)
+                    if existing_context.duration_ms != previous_duration_ms:
+                        logging.info(
+                            "[VIDEOWALL] same-session prepare refreshed runtime duration %sms -> %sms",
+                            previous_duration_ms,
+                            existing_context.duration_ms,
+                        )
                     self._configure_lan_role(existing_context)
+                    if self.state_machine.state in {SYNC_STATE_WARMING_UP, SYNC_STATE_PLAYING}:
+                        self._apply_runtime_correction(int(time.time() * 1000), existing_context)
+                        logging.info(
+                            "[VIDEOWALL] same-session prepare applied immediate correction (state=%s)",
+                            self.state_machine.state,
+                        )
                     return True, None
 
         if self.state_machine.is_active() and (

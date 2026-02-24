@@ -265,6 +265,73 @@ def test_crash_recovery_rejoins_with_seek_and_resets_attempts():
     assert controller._restart_attempts == 0
 
 
+def test_same_session_prepare_preserves_runtime_duration_and_realigns(tmp_path, mocker):
+    media_file = tmp_path / "sync.mp4"
+    media_file.write_bytes(b"test")
+
+    manager = DummySyncManager(
+        command_batches=[],
+        clock_health={
+            "healthy": True,
+            "critical": False,
+            "offset_ms": 2.0,
+            "health_score": 1.0,
+            "throttled": False,
+        },
+    )
+
+    machine = SyncStateMachine()
+    machine.activate(
+        SyncSessionContext(
+            session_id="session-same",
+            start_at_ms=1,
+            duration_ms=10_950,
+            local_path=str(media_file),
+            master_device_id="device-master",
+            device_id="device-local",
+        )
+    )
+    machine.transition("PRELOADING")
+    machine.transition("READY")
+    machine.transition("WARMING_UP")
+    machine.transition("PLAYING")
+
+    seeks = []
+    controller = VideowallController(
+        sync_manager=manager,
+        state_machine=machine,
+        start_sync_playback=lambda _context: True,
+        stop_playback=lambda: None,
+        seek_to_phase_ms=lambda phase_ms: seeks.append(phase_ms) or True,
+        set_pause=lambda _paused: True,
+        is_playback_alive=lambda: True,
+        set_playback_speed=lambda _speed: True,
+        get_playback_time_ms=lambda: 1_000.0,   # large drift against target below -> hard resync
+        get_playback_duration_ms=lambda: 10_950.0,  # preserve runtime duration instead of payload
+    )
+
+    mocker.patch("videowall_controller.time.time", return_value=10.0)  # now_ms=10000
+
+    ok, error = controller._handle_prepare(
+        {
+                "session_id": "session-same",
+                "start_at_ms": 1,
+            "duration_ms": 11_000,  # nominal payload duration, should not overwrite runtime duration
+            "master_device_id": "device-master",
+            "target_device_id": "device-local",
+            "media": {"local_path": str(media_file)},
+        },
+        None,
+    )
+
+    assert ok is True
+    assert error is None
+    assert machine.context is not None
+    assert machine.context.duration_ms == 10_950
+    assert len(seeks) == 1
+    assert controller._resync_count == 1
+
+
 def test_ready_transition_aligns_phase_before_unpause(mocker):
     now_ms = 1_000_000
     manager = DummySyncManager(
