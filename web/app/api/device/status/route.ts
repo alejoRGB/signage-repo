@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 export async function GET(request: Request) {
     try {
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
 
         // Rate Limit Check
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(token, "device_status");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(token), "device_status");
         if (!isAllowed) {
             return NextResponse.json(
                 { error: "Too many requests" },

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DeviceCommandsPollSchema } from "@/lib/validations";
 import { getDeviceByTokenForCommandFlow } from "@/lib/sync-command-service";
 import { toJsonSafe } from "@/lib/sync-session-service";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
         }
 
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(result.data.device_token, "device_commands");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(result.data.device_token), "device_commands");
         if (!isAllowed) {
             return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractSyncRuntimeFromJson, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 import { DIRECTIVE_TAB } from "@/lib/directive-tabs";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
         // Rate Limit Check
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(device_token, "device_sync");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(device_token), "device_sync");
         if (!isAllowed) {
             return NextResponse.json(
                 { error: "Too many requests" },

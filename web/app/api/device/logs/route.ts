@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SYNC_LOG_EVENT, type SyncLogEvent } from "@/types/sync";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 const ALLOWED_SYNC_LOG_EVENTS = new Set<string>(Object.values(SYNC_LOG_EVENT));
 
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
 
         // Rate Limit Check
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(device_token, "device_logs");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(device_token), "device_logs");
         if (!isAllowed) {
             return NextResponse.json(
                 { error: "Too many requests" },

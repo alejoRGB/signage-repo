@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
         }
 
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(deviceToken, "device_preview");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(deviceToken), "device_preview");
         if (!isAllowed) {
             return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }

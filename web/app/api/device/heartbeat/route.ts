@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { extractSyncRuntimeFromFormData, persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
 import { maybeReelectMasterForSession } from "@/lib/sync-master-election";
 import { maybeQueueSyncRejoinPrepareOnHeartbeat } from "@/lib/sync-device-rejoin";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
         }
 
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(deviceToken, "device_heartbeat");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(deviceToken), "device_heartbeat");
         if (!isAllowed) {
             return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DeviceCommandAckSchema } from "@/lib/validations";
 import { getDeviceByTokenForCommandFlow } from "@/lib/sync-command-service";
 import { persistDeviceSyncRuntime } from "@/lib/sync-runtime-service";
+import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
         }
 
         const { checkRateLimit } = await import("@/lib/rate-limit");
-        const isAllowed = await checkRateLimit(result.data.device_token, "device_ack");
+        const isAllowed = await checkRateLimit(rateLimitKeyForDeviceToken(result.data.device_token), "device_ack");
         if (!isAllowed) {
             return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }

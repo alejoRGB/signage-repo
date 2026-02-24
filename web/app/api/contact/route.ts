@@ -3,20 +3,12 @@ import nodemailer from "nodemailer";
 import type { z } from "zod";
 import { ContactLeadSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { rateLimitKeyForIp } from "@/lib/rate-limit-key";
 
 export const runtime = "nodejs";
 
 type ContactLead = z.infer<typeof ContactLeadSchema>;
 const DEFAULT_CONTACT_EMAIL = "info.senaldigital@gmail.com";
-
-function getClientIp(request: NextRequest) {
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    if (forwardedFor) {
-        return forwardedFor.split(",")[0]?.trim() ?? "unknown";
-    }
-
-    return request.headers.get("x-real-ip") ?? "unknown";
-}
 
 function getSmtpConfig() {
     const host = (process.env.CONTACT_SMTP_HOST ?? "smtp.gmail.com").trim();
@@ -136,8 +128,7 @@ async function forwardLeadToWebhook(lead: ContactLead, webhookUrl: string) {
 }
 
 export async function POST(request: NextRequest) {
-    const ip = getClientIp(request);
-    const isAllowed = await checkRateLimit(`contact:${ip}`, "contact");
+    const isAllowed = await checkRateLimit(rateLimitKeyForIp(request), "contact");
 
     if (!isAllowed) {
         return NextResponse.json(

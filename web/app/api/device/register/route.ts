@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { rateLimitKeyForIp } from "@/lib/rate-limit-key";
 
 // Remove old limiter definition
 // const limiter = ...
@@ -9,8 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 export async function POST(request: Request) {
     try {
         // Rate Limiting
-        const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-        const isAllowed = await checkRateLimit(ip, "device_register");
+        const isAllowed = await checkRateLimit(rateLimitKeyForIp(request), "device_register");
 
         if (!isAllowed) {
             return NextResponse.json(
