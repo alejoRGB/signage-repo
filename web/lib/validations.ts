@@ -162,6 +162,10 @@ const SyncDeviceCommandStatusValues = [
     SYNC_DEVICE_COMMAND_STATUS.ACKED,
     SYNC_DEVICE_COMMAND_STATUS.FAILED,
 ] as const;
+const DeviceCommandAckStatusValues = [
+    SYNC_DEVICE_COMMAND_STATUS.ACKED,
+    SYNC_DEVICE_COMMAND_STATUS.FAILED,
+] as const;
 
 export const SyncPresetDeviceAssignmentSchema = z.object({
     deviceId: z.string().min(1, "Device ID is required").transform(sanitize),
@@ -239,7 +243,7 @@ export const DeviceCommandsPollSchema = z.object({
 export const DeviceCommandAckSchema = z.object({
     device_token: z.string().min(1, "device_token is required").transform(sanitize),
     command_id: z.string().min(1, "command_id is required").transform(sanitize),
-    status: z.enum(SyncDeviceCommandStatusValues).optional().default(SYNC_DEVICE_COMMAND_STATUS.ACKED),
+    status: z.enum(DeviceCommandAckStatusValues).optional().default(SYNC_DEVICE_COMMAND_STATUS.ACKED),
     error: z.string().max(1000).optional(),
     sync_status: z.enum(SyncSessionDeviceStatusValues).optional(),
     sync_runtime: z

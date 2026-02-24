@@ -58,7 +58,7 @@ export async function POST(request: Request) {
             data: {
                 status: result.data.status,
                 error: result.data.error,
-                ackedAt: result.data.status === "PENDING" ? null : new Date(),
+                ackedAt: new Date(),
             },
         });
 

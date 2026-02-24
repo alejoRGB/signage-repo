@@ -154,4 +154,24 @@ describe("Device commands API", () => {
             })
         );
     });
+
+    it("POST /ack rejects PENDING status to preserve ACK semantics", async () => {
+        const response = await ACK_COMMAND(
+            new Request("http://localhost/api/device/ack", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    device_token: "token-1",
+                    command_id: "cmd-1",
+                    status: "PENDING",
+                }),
+            })
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toBeTruthy();
+        expect(prisma.syncDeviceCommand.findFirst).not.toHaveBeenCalled();
+        expect(prisma.syncDeviceCommand.update).not.toHaveBeenCalled();
+    });
 });
