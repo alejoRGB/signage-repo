@@ -759,6 +759,16 @@ Cambios necesarios:
 - Eliminar o reemplazar por artefacto versionado/documentado.
 - Si se mantiene, generar desde fuente canónica y revisar seguridad.
 
+Estado actual (2026-02-24): RESUELTO
+
+- web/public/sync.py eliminado del arbol publico (web/public).
+- Se elimina la copia divergente/legacy del cliente Python y con eso se corta el drift funcional y la exposicion publica accidental.
+- No se encontraron referencias activas al archivo fuera del propio udit_24_2.md (busqueda repo).
+
+Impacto operativo:
+
+- Si algun procedimiento externo estaba descargando /sync.py desde el dashboard, deja de funcionar y debe migrar al instalador/documentacion canonica (player/setup_device.sh, deploy.ps1).
+
 ### 27) Problemas de encoding / mojibake en scripts operativos (UX / soporte)
 
 Evidencia:
