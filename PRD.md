@@ -65,14 +65,14 @@ The system consists of two main components:
 
 **Pairing Flow:**
 1. Raspberry Pi player starts unpaired
-2. Player calls `/api/device/register` to generate a unique pairing code (6-digit alphanumeric)
+2. Player calls `/api/device/register` to generate a unique pairing code (6-digit numeric)
 3. Player displays pairing code on screen (black background with white text using PIL/feh)
 4. User enters pairing code in web dashboard
 5. Dashboard validates code and pairs device to user account
 6. Player receives confirmation and saves device token to `config.json`
 
 **Pairing Code:**
-- 6-character alphanumeric code
+- 6-digit numeric code
 - Expires after a configurable time period
 - Unique per device registration attempt
 - Displayed fullscreen on device until paired
@@ -84,8 +84,8 @@ Each device has:
 - **Token:** Unique authentication token (auto-generated, immutable)
 - **Status:** `unpaired` or `paired`
 - **Owner:** Single user (devices cannot be shared between users)
-- **Last Seen:** Timestamp of last heartbeat/sync (updates every 60 seconds)
-- **Online Status:** Calculated as online if `lastSeenAt` < 5 minutes ago
+- **Last Seen:** Timestamp of last device heartbeat (`/api/device/heartbeat` is liveness source of truth; nominal cadence ~5s)
+- **Online Status (UI general):** Calculated as online if `lastSeenAt` is fresh (current implementation uses ~15s window)
 - **Active Playlist:** Currently playing playlist (optional)
 - **Default Playlist:** Fallback playlist when no schedule matches (optional)
 - **Schedule:** Assigned weekly schedule (optional)
@@ -101,7 +101,7 @@ Each device has:
 - Change device name
 - Assign default playlist
 - Assign schedule
-- Changes sync to device within 60 seconds (on next heartbeat)
+- Changes sync to device on the next sync/heartbeat cycle (nominally a few seconds, depending on mode/state)
 
 **Delete Device:**
 - Permanently removes device from account
@@ -122,10 +122,15 @@ Each device has:
 
 **Sync Endpoint:** `/api/device/sync`
 
-**Sync Frequency:**
-- Player sends heartbeat every 60 seconds
-- Updates `lastSeenAt` timestamp
-- Downloads playlist/schedule changes
+**Sync / Heartbeat Frequency (current implementation):**
+- Generic heartbeat (`/api/device/heartbeat`) runs nominally every ~5 seconds and updates `lastSeenAt`
+- `/api/device/sync` fetches playlists/schedules and does **not** own liveness timestamps
+- During Sync/VideoWall, additional runtime heartbeats/status reports are emitted with state-dependent intervals (with jitter)
+
+**Dual liveness semantics (important):**
+- **UI device connectivity:** tolerant freshness window (~15s)
+- **Sync master failover liveness:** stricter master-heartbeat freshness (~5s)
+- A Sync master can still appear "online" in the general UI while failover logic already considers it stale (expected behavior)
 
 **Sync Payload Sent to Player:**
 ```json
@@ -444,11 +449,11 @@ bash /tmp/signage-setup_device.sh
 
 ### 7.6 Logging
 
-**Log Levels:** INFO, WARNING, ERROR
+**Log Levels (server-side normalized):** `debug`, `info`, `warning`, `error`, `critical`
 
 **Log Destinations:**
 - Console output (stdout)
-- Remote logging to dashboard via `/api/device/logs` POST
+- Remote logging to dashboard via `/api/device/logs` POST (batch payload, versioned contract)
 
 **Log Viewer:**
 - Available in dashboard via device actions menu
@@ -461,10 +466,12 @@ bash /tmp/signage-setup_device.sh
 - Automatically adapts to display resolution
 - Fullscreen mode via MPV and Chromium kiosk mode
 
-### 7.8 Multi-Device Sync
+### 7.8 Multi-Device Sync (Sync/VideoWall)
 
-- **NOT SUPPORTED:** No synchronized playback between multiple devices
-- Each device plays independently based on its own schedule
+- **SUPPORTED (feature-flagged):** synchronized playback is available when `SYNC_VIDEOWALL_ENABLED=true`
+- Control plane uses cloud APIs (`/api/sync/*`, `/api/device/commands`, `/api/device/ack`, `/api/device/heartbeat`)
+- Timing can use cloud timing plus optional LAN beacons (master -> followers) with cloud fallback
+- When disabled, devices continue independent schedule playback
 
 ---
 
@@ -484,12 +491,18 @@ bash /tmp/signage-setup_device.sh
 **GET** `/api/device/status?token={token}`
 - Check if device has been paired
 - Returns: `{ status: "paired" | "unpaired" }`
+- Note: current hardened transport also supports device token via headers (`X-Device-Token` / `Authorization: Bearer`)
 
 **POST** `/api/device/sync`
 - Fetch playlists and schedule for device
 - Body: `{ device_token, playing_playlist_id }`
 - Returns: `{ device_name, default_playlist, schedule, playlist }`
-- Updates `lastSeenAt` timestamp (heartbeat)
+- Does **not** update `lastSeenAt` (heartbeat endpoint is the liveness source of truth)
+
+**POST** `/api/device/heartbeat`
+- Device heartbeat/liveness + now-playing metadata + optional preview image + optional sync runtime payload
+- Updates `lastSeenAt` timestamp (liveness source of truth)
+- During active Sync/VideoWall may trigger rejoin reconciliation and master failover checks
 
 **POST** `/api/device/pair`
 - Pair device using pairing code
@@ -497,8 +510,9 @@ bash /tmp/signage-setup_device.sh
 - Returns: paired device object
 
 **POST** `/api/device/logs`
-- Submit log entry from player
-- Body: `{ device_token, level, message }`
+- Submit **batch** of device logs from player
+- Body (current contract): `{ device_token, schema_version?, sync_event_contract_version?, logs: [{ level, message, event?, session_id?, data?, timestamp? }] }`
+- Unknown sync events must not invalidate the whole batch; backend stores `event = null` and preserves raw event metadata in `data`
 
 **GET** `/api/devices`
 - List all devices for current user
@@ -710,7 +724,7 @@ updatedAt: DateTime
 2. User creates playlist(s) and adds media items
 3. User creates schedule (optional) with time-based rules
 4. User assigns default playlist and/or schedule to device
-5. Changes sync to device within 60 seconds
+5. Changes sync to device on the next sync/heartbeat cycle (nominally a few seconds)
 6. Device begins playing updated content
 
 ### 10.3 Schedule-Based Playback Flow
@@ -785,9 +799,9 @@ updatedAt: DateTime
 - ✅ User can pair device using valid pairing code
 - ✅ Pairing with invalid code fails with error
 - ✅ Device status updates to "paired" after pairing
-- ✅ Device heartbeat updates `lastSeenAt` every 60 seconds
-- ✅ Device shows as "online" when lastSeenAt < 5 minutes
-- ✅ Device shows as "offline" when lastSeenAt > 5 minutes
+- ✅ Device heartbeat updates `lastSeenAt` nominally every ~5 seconds
+- ✅ Device shows as "online" in general UI when `lastSeenAt` is fresh (current implementation ~15s window)
+- ✅ Sync master failover uses a stricter freshness window (~5s) than general UI connectivity (expected dual-liveness behavior)
 - ✅ User can edit device name
 - ✅ User can assign default playlist to device
 - ✅ User can assign schedule to device
@@ -878,3 +892,4 @@ updatedAt: DateTime
 ## End of Document
 
 This PRD documents all features and functionalities of the Digital Signage System as of February 2026. It is intended for use by automated testing services and development teams to understand system behavior comprehensively.
+

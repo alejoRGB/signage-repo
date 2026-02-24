@@ -990,7 +990,7 @@ class Player:
                 # HEARTBEAT CHECK
                 if time.time() - last_sync_time > sync_interval:
                     logging.debug("[MIXED_PLAYER] Sending Heartbeat (Sync)...")
-                    self.sync_manager.sync(playlist_id) # This updates lastSeenAt on server
+                    self.sync_manager.sync(playlist_id) # Fetches config; liveness is reported by /api/device/heartbeat
                     last_sync_time = time.time()
                 
                 # Check for playlist change

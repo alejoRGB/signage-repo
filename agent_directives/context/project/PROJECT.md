@@ -184,6 +184,12 @@
   - Current server-accepted versions are `1` / `1`.
   - Backend must not reject the whole batch for unknown Sync events; unknown events are stored with `event = null` and preserved in `data.raw_event` plus contract metadata for diagnostics/forward compatibility.
   - Player logger sends contract versions with each batch and may ship unknown Sync events as raw metadata instead of dropping them.
+- **Heartbeat contract (canonicalized):**
+  - `/api/device/heartbeat` is the liveness source of truth (`Device.lastSeenAt`).
+  - Generic device heartbeat cadence is nominally ~5s (player-side jitter may shift per-device intervals).
+  - General UI connectivity ("online/offline") intentionally uses a more tolerant freshness window (~15s).
+  - Sync master failover liveness intentionally uses a stricter freshness window (~5s) than general UI connectivity.
+  - `/api/device/sync` fetches config/playlists but must not be treated as heartbeat for liveness semantics.
 
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.

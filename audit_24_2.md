@@ -1895,3 +1895,37 @@ Validation:
 - `npm --prefix web run test:api -- --runTestsByPath __tests__/lib/contact-delivery.test.ts __tests__/lib/media-upload-receipts.test.ts __tests__/api/contact.test.ts __tests__/api/media-upload-route.test.ts __tests__/api/create-media.test.ts` -> PASS
 - `npm --prefix web run lint` -> PASS
 - `npm --prefix web run build` -> PASS
+
+## Update 2026-02-24 (heartbeat/logs documentation alignment closure)
+
+Closed the main documentation drift for heartbeat semantics and device-log contract by aligning PRD, canonical context, and code comments with the current implementation.
+
+### Heartbeat documentation status update (#38 / #39)
+
+- #38 (dual timeout semantics UI vs failover): RESOLVED (documentation)
+  - `PRD.md` now documents explicit dual-liveness semantics:
+    - general UI connectivity freshness (~15s)
+    - Sync master failover freshness (~5s)
+  - PRD clarifies that a Sync master can appear online in general UI while failover logic treats it as stale (expected behavior).
+  - `PROJECT.md` now includes a canonical "Heartbeat contract" note with source-of-truth endpoint, nominal cadence, and timeout roles.
+
+- #39 (legacy heartbeat documentation/comments): RESOLVED
+  - PRD removed legacy heartbeat claims such as "every 60s" and "online < 5 minutes" for device liveness.
+  - PRD now clarifies `/api/device/sync` does not update liveness (`/api/device/heartbeat` is source of truth).
+  - Added `/api/device/heartbeat` endpoint description in PRD API section.
+  - Corrected legacy code comment in `player/player.py` that incorrectly implied `sync()` updates `lastSeenAt`.
+
+### Logs documentation status update (#49)
+
+- #49 (PRD legacy logs contract mismatch): RESOLVED
+  - `PRD.md` now documents `/api/device/logs` as a batch endpoint with versioned contract fields:
+    - `schema_version`
+    - `sync_event_contract_version`
+    - `logs: [...]`
+  - PRD documents unknown Sync-event compatibility behavior (`event = null` + raw metadata preserved in `data`).
+  - PRD logging section now reflects canonical normalized severities and versioned batch transport.
+  - `PROJECT.md` already carries canonical log-contract note (added in previous batch).
+
+Validation:
+- `python -m py_compile player/player.py` -> PASS
+- Manual doc diff review of `PRD.md` and `agent_directives/context/project/PROJECT.md` -> PASS
