@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Suspense } from "react";
 import "./globals.css";
 import { AuthProvider } from "./providers";
 import { ToastProvider } from "@/components/ui/toast-context";
-import { GoogleAnalytics } from "@/components/analytics/google-analytics";
-import { AnalyticsEventTracker } from "@/components/analytics/analytics-event-tracker";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -21,7 +18,6 @@ function resolveSiteUrl() {
 }
 
 const siteUrl = resolveSiteUrl();
-const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
 const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
 
 export const metadata: Metadata = {
@@ -51,12 +47,6 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </AuthProvider>
-        {gaMeasurementId ? (
-          <Suspense fallback={null}>
-            <GoogleAnalytics measurementId={gaMeasurementId} />
-            <AnalyticsEventTracker />
-          </Suspense>
-        ) : null}
       </body>
     </html>
   );

@@ -54,7 +54,8 @@ const nextConfig: NextConfig = {
 
     return [
       {
-        source: '/(.*)',
+        // Keep static CSP for public/marketing pages. Protected app surfaces receive nonce-based CSP from `proxy.ts`.
+        source: "/((?!admin(?:/|$)|dashboard(?:/|$)).*)",
         headers: [
           {
             key: 'Content-Security-Policy',

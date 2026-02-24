@@ -1,8 +1,12 @@
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { AnalyticsEventTracker } from "@/components/analytics/analytics-event-tracker";
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://senaldigital.xyz").replace(/\/$/, "");
+const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
 
 export const metadata: Metadata = {
     title: "Carteleria Digital para Comercios y Pymes",
@@ -51,6 +55,12 @@ export default function MarketingLayout({
                 {children}
             </main>
             <Footer />
+            {gaMeasurementId ? (
+                <Suspense fallback={null}>
+                    <GoogleAnalytics measurementId={gaMeasurementId} />
+                    <AnalyticsEventTracker />
+                </Suspense>
+            ) : null}
         </div>
     );
 }

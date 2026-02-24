@@ -1,11 +1,59 @@
 
 import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isAdminSessionExpiredToken } from "@/lib/admin-session";
+
+function generateCspNonce() {
+    return crypto.randomUUID().replace(/-/g, "");
+}
+
+function buildProtectedRouteCsp(nonce: string) {
+    const isProduction = process.env.NODE_ENV === "production";
+    const directives = [
+        `default-src 'self'`,
+        `base-uri 'self'`,
+        `object-src 'none'`,
+        `frame-ancestors 'none'`,
+        `form-action 'self'`,
+        `script-src 'self' 'nonce-${nonce}'${isProduction ? "" : " 'unsafe-eval'"}`,
+        `script-src-attr 'none'`,
+        // Next App Router still injects inline styles in multiple flows.
+        `style-src 'self' 'unsafe-inline'`,
+        `img-src 'self' blob: data: https:`,
+        `media-src 'self' blob: data: https:`,
+        `connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://stats.g.doubleclick.net`,
+        `font-src 'self' data:`,
+        `frame-src 'self'`,
+        `worker-src 'self' blob:`,
+        ...(isProduction ? ["upgrade-insecure-requests"] : []),
+    ];
+
+    return directives.join("; ");
+}
+
+function nextWithProtectedCsp(req: NextRequest, nonce: string) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-csp-nonce", nonce);
+
+    const response = NextResponse.next({
+        request: {
+            headers: requestHeaders,
+        },
+    });
+    response.headers.set("Content-Security-Policy", buildProtectedRouteCsp(nonce));
+    return response;
+}
+
+function redirectWithProtectedCsp(url: URL, nonce: string) {
+    const response = NextResponse.redirect(url);
+    response.headers.set("Content-Security-Policy", buildProtectedRouteCsp(nonce));
+    return response;
+}
 
 export default withAuth(
     // `withAuth` augments your `Request` with the user's token.
     function middleware(req) {
+        const nonce = generateCspNonce();
         const token = req.nextauth.token;
         const isAdminPath = req.nextUrl.pathname.startsWith("/admin");
         const isDashboardPath = req.nextUrl.pathname.startsWith("/dashboard");
@@ -17,40 +65,42 @@ export default withAuth(
         if (!token || isExpiredAdminSession) {
             // Allow access to login pages (Prevent Loop)
             if (isLoginPage || isAdminLoginPage) {
-                return NextResponse.next();
+                return nextWithProtectedCsp(req, nonce);
             }
 
             if (isAdminPath || (isDashboardPath && token?.role === "ADMIN")) {
-                return NextResponse.redirect(new URL("/admin/login", req.url));
+                return redirectWithProtectedCsp(new URL("/admin/login", req.url), nonce);
             }
             if (isDashboardPath) {
-                return NextResponse.redirect(new URL("/login", req.url));
+                return redirectWithProtectedCsp(new URL("/login", req.url), nonce);
             }
             // For other public routes, do nothing (allow access)
-            return NextResponse.next();
+            return nextWithProtectedCsp(req, nonce);
         }
 
         // 2. Authenticated But Wrong Role Handling
         if (isAdminPath && token.role !== "ADMIN") {
-            return NextResponse.redirect(new URL("/dashboard", req.url));
+            return redirectWithProtectedCsp(new URL("/dashboard", req.url), nonce);
         }
 
         if (isDashboardPath && token.role === "ADMIN") {
-            return NextResponse.redirect(new URL("/admin", req.url));
+            return redirectWithProtectedCsp(new URL("/admin", req.url), nonce);
         }
 
         // 3. Authenticated Users Accessing Login Pages (Redirect to their respective home)
         if (isLoginPage) {
             // If User, send to dashboard.
-            if (token.role !== 'ADMIN') {
-                return NextResponse.redirect(new URL("/dashboard", req.url));
+            if (token.role !== "ADMIN") {
+                return redirectWithProtectedCsp(new URL("/dashboard", req.url), nonce);
             }
             // If Admin, ALLOW access to /login so they can switch accounts
-            return NextResponse.next();
+            return nextWithProtectedCsp(req, nonce);
         }
         if (isAdminLoginPage && token.role === "ADMIN") {
-            return NextResponse.redirect(new URL("/admin", req.url));
+            return redirectWithProtectedCsp(new URL("/admin", req.url), nonce);
         }
+
+        return nextWithProtectedCsp(req, nonce);
     },
     {
         callbacks: {

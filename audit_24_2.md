@@ -1686,3 +1686,26 @@ Additional hardening implemented for heartbeat/runtime consistency and contact d
 - `npm --prefix web run lint` -> PASS
 - `npm --prefix web run build` -> PASS
 - `vercel build --yes` -> FAIL (same known local Windows Vercel CLI packaging bug: `Unable to find lambda for route: /recursos/costos-carteleria-digital-pymes`)
+
+## Update 2026-02-24 (CSP nonce on protected routes)
+
+Implemented nonce-based CSP for authenticated application surfaces while preserving static marketing SSG pages.
+
+### CSP status update (#6)
+
+- `web/proxy.ts` now generates a per-request nonce for `/admin` and `/dashboard` routes and applies a nonce-based CSP (no `unsafe-inline` in `script-src` on those protected pages).
+- `proxy.ts` injects `x-csp-nonce` into request headers (future-proofing for components/scripts that need explicit nonce propagation).
+- `web/next.config.ts` static CSP header now excludes `/admin` and `/dashboard` so it does not conflict with the nonce-based policy.
+- Google Analytics scripts were moved out of `web/app/layout.tsx` and into `web/app/(marketing)/layout.tsx`, so protected routes no longer depend on the GA inline init script.
+
+Current result:
+- Protected app surfaces (`/admin`, `/dashboard`) use nonce-based CSP for scripts.
+- Public marketing/SSG pages keep the static CSP policy (still using `unsafe-inline` for scripts/styles due static rendering + JSON-LD inline scripts).
+
+Residual to fully close #6 globally:
+- Migrate marketing inline JSON-LD scripts (and any remaining inline scripts) to hash-based CSP or route-specific nonce strategy compatible with SSG.
+- Remove `style-src 'unsafe-inline'` if/when Next/App Router style injection path is replaced by nonce/hash-compatible approach.
+
+Validation:
+- `npm --prefix web run lint` -> PASS
+- `npm --prefix web run build` -> PASS
