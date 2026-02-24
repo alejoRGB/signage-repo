@@ -1,4 +1,5 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import crypto from "crypto";
 
 type RateLimitScope =
     | "default"
@@ -26,7 +27,7 @@ const RATE_LIMIT_CONFIG: Record<RateLimitScope, { points: number; duration: numb
 };
 
 type RateLimitBackend = {
-    kind: "memory" | "upstash";
+    kind: "memory" | "upstash" | "postgres";
     consume: (key: string, scope: RateLimitScope) => Promise<boolean>;
 };
 
@@ -36,6 +37,8 @@ type UpstashLimiter = { limit: (identifier: string) => Promise<UpstashLimiterRes
 let backendPromise: Promise<RateLimitBackend> | null = null;
 let initWarningShown = false;
 let runtimeWarningShown = false;
+let postgresCleanupInFlight = false;
+let lastPostgresCleanupAtMs = 0;
 
 const memoryScopedLimiters = new Map<RateLimitScope, RateLimiterMemory>();
 
@@ -88,6 +91,10 @@ function hasUpstashRedisConfig() {
     return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 }
 
+function hasDatabaseConfig() {
+    return Boolean(process.env.DATABASE_URL);
+}
+
 async function createUpstashBackend(): Promise<RateLimitBackend> {
     const [{ Ratelimit }, { Redis }] = await Promise.all([
         import("@upstash/ratelimit"),
@@ -130,18 +137,144 @@ async function createUpstashBackend(): Promise<RateLimitBackend> {
     };
 }
 
+function hashRateLimitKey(rawKey: string) {
+    return crypto.createHash("sha256").update(rawKey, "utf8").digest("hex");
+}
+
+async function createPostgresBackend(): Promise<RateLimitBackend> {
+    const { prisma } = await import("@/lib/prisma");
+
+    async function maybeCleanupExpiredBuckets(nowMs: number) {
+        if (postgresCleanupInFlight) {
+            return;
+        }
+        // Throttle cleanup to at most once per 5 minutes per process.
+        if (nowMs - lastPostgresCleanupAtMs < 5 * 60_000) {
+            return;
+        }
+        lastPostgresCleanupAtMs = nowMs;
+        postgresCleanupInFlight = true;
+        try {
+            await prisma.rateLimitBucket.deleteMany({
+                where: {
+                    expiresAt: {
+                        lt: new Date(nowMs),
+                    },
+                },
+            });
+        } catch (error) {
+            warnOnce("runtime", "Postgres rate-limit cleanup failed", error);
+        } finally {
+            postgresCleanupInFlight = false;
+        }
+    }
+
+    return {
+        kind: "postgres",
+        async consume(key, scope) {
+            const config = RATE_LIMIT_CONFIG[scope];
+            const nowMs = Date.now();
+            const windowMs = config.duration * 1000;
+            const windowStartMs = Math.floor(nowMs / windowMs) * windowMs;
+            const windowStartAt = new Date(windowStartMs);
+            const expiresAt = new Date(windowStartMs + (windowMs * 2));
+            const keyHash = hashRateLimitKey(key);
+
+            try {
+                const bucket = await prisma.rateLimitBucket.upsert({
+                    where: {
+                        scope_keyHash_windowStartAt: {
+                            scope,
+                            keyHash,
+                            windowStartAt,
+                        },
+                    },
+                    create: {
+                        scope,
+                        keyHash,
+                        windowStartAt,
+                        count: 1,
+                        expiresAt,
+                    },
+                    update: {
+                        count: {
+                            increment: 1,
+                        },
+                        expiresAt,
+                    },
+                    select: {
+                        count: true,
+                    },
+                });
+
+                void maybeCleanupExpiredBuckets(nowMs);
+                return bucket.count <= config.points;
+            } catch (error) {
+                warnOnce("runtime", "Postgres rate-limit call failed, degrading to local memory limiter", error);
+                return createMemoryBackend().consume(key, scope);
+            }
+        },
+    };
+}
+
 async function getBackend(): Promise<RateLimitBackend> {
     if (!backendPromise) {
         backendPromise = (async () => {
-            const forceMemory = process.env.RATE_LIMIT_BACKEND?.toLowerCase() === "memory";
-            if (forceMemory || !hasUpstashRedisConfig()) {
+            const requestedBackend = process.env.RATE_LIMIT_BACKEND?.trim().toLowerCase();
+            const forceMemory = requestedBackend === "memory";
+            const forcePostgres = requestedBackend === "postgres";
+            const forceUpstash = requestedBackend === "upstash";
+
+            if (forceMemory) {
                 return createMemoryBackend();
             }
 
+            if (forceUpstash) {
+                if (!hasUpstashRedisConfig()) {
+                    warnOnce("init", "RATE_LIMIT_BACKEND=upstash but Upstash env vars are missing, using local memory fallback");
+                    return createMemoryBackend();
+                }
+                try {
+                    return await createUpstashBackend();
+                } catch (error) {
+                    warnOnce("init", "Failed to initialize Upstash rate limiter, using local memory fallback", error);
+                    return createMemoryBackend();
+                }
+            }
+
+            if (forcePostgres) {
+                if (!hasDatabaseConfig()) {
+                    warnOnce("init", "RATE_LIMIT_BACKEND=postgres but DATABASE_URL is missing, using local memory fallback");
+                    return createMemoryBackend();
+                }
+                try {
+                    return await createPostgresBackend();
+                } catch (error) {
+                    warnOnce("init", "Failed to initialize Postgres rate limiter, using local memory fallback", error);
+                    return createMemoryBackend();
+                }
+            }
+
+            if (hasUpstashRedisConfig()) {
+                try {
+                    return await createUpstashBackend();
+                } catch (error) {
+                    warnOnce("init", "Failed to initialize Upstash rate limiter, trying Postgres backend", error);
+                }
+            }
+
+            if (hasDatabaseConfig() && process.env.NODE_ENV === "production") {
+                try {
+                    return await createPostgresBackend();
+                } catch (error) {
+                    warnOnce("init", "Failed to initialize Postgres rate limiter, using local memory fallback", error);
+                    return createMemoryBackend();
+                }
+            }
+
             try {
-                return await createUpstashBackend();
-            } catch (error) {
-                warnOnce("init", "Failed to initialize Upstash rate limiter, using local memory fallback", error);
+                return createMemoryBackend();
+            } catch {
                 return createMemoryBackend();
             }
         })();
@@ -163,5 +296,7 @@ export function __resetRateLimitForTests() {
     backendPromise = null;
     initWarningShown = false;
     runtimeWarningShown = false;
+    postgresCleanupInFlight = false;
+    lastPostgresCleanupAtMs = 0;
     memoryScopedLimiters.clear();
 }

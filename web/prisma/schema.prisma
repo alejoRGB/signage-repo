@@ -321,6 +321,19 @@ model SyncDeviceCommand {
   @@index([sessionId, status])
 }
 
+model RateLimitBucket {
+  scope         String
+  keyHash       String
+  windowStartAt DateTime
+  count         Int      @default(1)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@id([scope, keyHash, windowStartAt])
+  @@index([expiresAt])
+}
+
 enum Role {
   USER
   ADMIN

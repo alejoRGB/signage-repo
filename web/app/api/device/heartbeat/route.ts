@@ -6,6 +6,7 @@ import { maybeQueueSyncRejoinPrepareOnHeartbeat } from "@/lib/sync-device-rejoin
 import { rateLimitKeyForDeviceToken } from "@/lib/rate-limit-key";
 import { ACTIVE_SYNC_SESSION_STATUSES } from "@/lib/sync-session-service";
 import { MAX_DEVICE_PREVIEW_SIZE_BYTES } from "@/lib/device-preview";
+import { schedulePostResponseTask } from "@/lib/post-response-task";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,7 @@ async function runBestEffortWithBudget<T>(
 
 export async function POST(request: Request) {
     try {
+        const testScheduledTasks: Promise<void>[] = [];
         const formData = await request.formData();
         const deviceToken = formData.get("device_token");
         const playingPlaylistIdValue = formData.get("playing_playlist_id");
@@ -184,22 +186,36 @@ export async function POST(request: Request) {
         const reelectionBudgetMs = parsePositiveIntegerEnv("DEVICE_HEARTBEAT_REELECTION_BUDGET_MS", DEFAULT_REELECTION_BUDGET_MS);
 
         if (!syncRuntime?.sessionId && hasActiveSyncAssignment) {
-            await runBestEffortWithBudget(
-                "SYNC_DEVICE_REJOIN",
-                rejoinBudgetMs,
-                () => maybeQueueSyncRejoinPrepareOnHeartbeat(device.id)
-            );
+            const scheduled = schedulePostResponseTask("SYNC_DEVICE_REJOIN", async () => {
+                await runBestEffortWithBudget(
+                    "SYNC_DEVICE_REJOIN",
+                    rejoinBudgetMs,
+                    () => maybeQueueSyncRejoinPrepareOnHeartbeat(device.id)
+                );
+            });
+            if (scheduled) {
+                testScheduledTasks.push(scheduled);
+            }
         }
         if (syncRuntime?.sessionId) {
             const sessionId = syncRuntime.sessionId;
             const nowMs = Date.now();
             if (shouldRunMasterReelection(sessionId, nowMs)) {
-                await runBestEffortWithBudget(
-                    "SYNC_MASTER_FAILOVER",
-                    reelectionBudgetMs,
-                    () => maybeReelectMasterForSession(sessionId)
-                );
+                const scheduled = schedulePostResponseTask("SYNC_MASTER_FAILOVER", async () => {
+                    await runBestEffortWithBudget(
+                        "SYNC_MASTER_FAILOVER",
+                        reelectionBudgetMs,
+                        () => maybeReelectMasterForSession(sessionId)
+                    );
+                });
+                if (scheduled) {
+                    testScheduledTasks.push(scheduled);
+                }
             }
+        }
+
+        if (testScheduledTasks.length > 0) {
+            await Promise.all(testScheduledTasks);
         }
 
         const response = NextResponse.json({ success: true });

@@ -1982,3 +1982,41 @@ Estado: RESUELTO (refuerzo arquitectonico)
   - `player/videowall_controller.py` ya no depende directamente de `sync_manager.report_playback_state` cuando se inyecta callback.
   - `player/player.py` ahora provee `emit_sync_heartbeat` y centraliza el envio en `_emit_heartbeat(...)` con lock de serializacion.
 - Resultado: un solo sender/logica de transporte desde `Player` para heartbeats genericos y heartbeats Sync (el controller queda mas enfocado en estado/cadencia).
+
+### Update 2026-02-24 (Final closure: #34, #5, #18)
+
+#### 34) El endpoint `/api/device/heartbeat` mezcla demasiadas responsabilidades
+
+Estado: RESUELTO
+
+- `web/app/api/device/heartbeat/route.ts` ya no ejecuta `rejoin reconciliation` ni `master reelection` en el hot path de liveness.
+- Ambas tareas se programan post-response usando `next/server.after(...)` via `web/lib/post-response-task.ts`.
+- El heartbeat responde despues de persistir liveness/telemetria minima y `sync_runtime`, sin bloquear por rejoin/failover.
+- En tests (`NODE_ENV=test`) la ejecucion post-response se vuelve deterministica para mantener regresiones confiables.
+
+Nota:
+- Se mantienen time budgets sobre las tareas derivadas como capa de control adicional, pero ya no afectan el `200` del heartbeat.
+
+#### 5) Rate limiting distribuido para produccion (`serverless` / multi-instancia)
+
+Estado: RESUELTO
+
+- Se agrego backend distribuido adicional por PostgreSQL (`RateLimitBucket`) en `web/lib/rate-limit.ts` para cuando Upstash no esta configurado.
+- Seleccion de backend actual:
+  - `upstash` si existen `UPSTASH_*`
+  - `postgres` en produccion con `DATABASE_URL` (o forzado con `RATE_LIMIT_BACKEND=postgres`)
+  - `memory` en local/test/fallback
+- Migracion aplicada en produccion:
+  - `web/prisma/migrations/20260224234500_add_rate_limit_bucket/migration.sql`
+- Vercel produccion configurado con `RATE_LIMIT_BACKEND=postgres` (valor verificado limpio, sin newline).
+- Resultado: el sistema ya no depende de limiter en memoria en produccion aunque no haya credenciales Upstash.
+
+#### 18) Prisma datasource pooled/direct (`url` vs `directUrl`)
+
+Estado: RESUELTO (operativo confirmado)
+
+- Codigo ya estaba corregido (`DATABASE_URL` runtime pooled, `DATABASE_URL_UNPOOLED` direct).
+- Verificacion en Vercel produccion completada:
+  - `DATABASE_URL` apunta a host Neon pooler (`...-pooler...`)
+  - `DATABASE_URL_UNPOOLED` apunta a host Neon directo (sin `-pooler`)
+- No se requirieron cambios adicionales de codigo para este punto.
