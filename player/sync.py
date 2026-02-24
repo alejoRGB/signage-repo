@@ -549,6 +549,7 @@ class SyncManager:
         if os.path.exists(filepath):
             return True
         
+        temp_path = f"{filepath}.part"
         try:
             logging.info(f"[DOWNLOAD] Downloading {filename}...")
             request_kwargs: Dict[str, Any] = {
@@ -560,9 +561,14 @@ class SyncManager:
             response = requests.get(url, **request_kwargs)
             
             if response.status_code == 200:
-                with open(filepath, 'wb') as f:
+                bytes_written = 0
+                with open(temp_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
+                        if not chunk:
+                            continue
                         f.write(chunk)
+                        bytes_written += len(chunk)
+                os.replace(temp_path, filepath)
                 logging.info(f"[DOWNLOAD] ✓ {filename} downloaded")
                 return True
             else:
@@ -572,6 +578,12 @@ class SyncManager:
         except Exception as e:
             logging.error(f"[DOWNLOAD] ✗ Error downloading {filename}: {e}")
             return False
+        finally:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
     
     def ensure_sync_media_available(
         self,

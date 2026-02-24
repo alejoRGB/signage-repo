@@ -625,6 +625,15 @@ Cambios necesarios:
 
 - Reusar la estrategia `.part` + `os.replace` que ya existe en `ensure_sync_media_available`.
 
+Estado (24/02): RESUELTO
+
+- `player/sync.py` (`download_media`) ahora descarga a `*.part` y hace `os.replace(...)` al finalizar (escritura atomica).
+- Ante error de red/stream, limpia el temporal y no deja archivo parcial con nombre final.
+- Esto alinea el flujo legacy con la estrategia ya usada en `ensure_sync_media_available(...)`.
+- Tests agregados en `player/tests/test_sync.py`:
+  - commit atomico exitoso (`.part` -> final)
+  - cleanup de `*.part` ante error de stream
+
 ### 22) `player/sync.py` usa read timeout infinito en descarga sync
 
 Evidencia:

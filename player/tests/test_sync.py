@@ -164,3 +164,53 @@ def test_ensure_sync_media_available_rejects_absolute_path_outside_media_dir(tmp
 
     resolved = manager.ensure_sync_media_available("media-1", str(external_file))
     assert resolved is None
+
+
+def test_download_media_uses_temp_file_and_commits_atomically(tmp_path, mocker):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"server_url": "http://test.com"}))
+    manager = SyncManager(config_path=str(config_file))
+
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.iter_content.return_value = [b"abc", b"def"]
+    mocker.patch("requests.get", return_value=mock_response)
+
+    ok = manager.download_media({
+        "filename": "video.mp4",
+        "url": "http://test.com/file.mp4",
+        "type": "video",
+    })
+
+    target = tmp_path / "media" / "video.mp4"
+    temp = tmp_path / "media" / "video.mp4.part"
+    assert ok is True
+    assert target.read_bytes() == b"abcdef"
+    assert not temp.exists()
+
+
+def test_download_media_cleans_temp_file_on_stream_error(tmp_path, mocker):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"server_url": "http://test.com"}))
+    manager = SyncManager(config_path=str(config_file))
+
+    def broken_iter_content(chunk_size=8192):  # noqa: ARG001
+        yield b"partial"
+        raise RuntimeError("stream broke")
+
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.iter_content.side_effect = broken_iter_content
+    mocker.patch("requests.get", return_value=mock_response)
+
+    ok = manager.download_media({
+        "filename": "broken.mp4",
+        "url": "http://test.com/file.mp4",
+        "type": "video",
+    })
+
+    target = tmp_path / "media" / "broken.mp4"
+    temp = tmp_path / "media" / "broken.mp4.part"
+    assert ok is False
+    assert not target.exists()
+    assert not temp.exists()
