@@ -105,7 +105,7 @@ def main():
         print(f"\n--- Running {name} ---")
         print(f"Command: {' '.join(full_cmd)}")
 
-        exit_code = run_command(full_cmd, cwd=cwd, shell=True)
+        exit_code = run_command(full_cmd, cwd=cwd, shell=False)
         if exit_code != 0:
             print(f"[FAIL] {name} FAILED with exit code {exit_code}")
             failed = True

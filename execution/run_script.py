@@ -1,6 +1,9 @@
 import sys
 import os
+import re
 from utils import run_command, get_project_root
+
+SAFE_COMMAND_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h"]:
@@ -31,8 +34,13 @@ def main():
     else:
         # Fallback for other shell commands
         print(f"Executing command: {script_name} {' '.join(args)}")
+        if not SAFE_COMMAND_RE.fullmatch(script_name):
+            print(
+                "Error: Invalid command name. Use a simple executable name without shell metacharacters."
+            )
+            sys.exit(1)
         cmd = [script_name] + args
-        sys.exit(run_command(cmd, cwd=project_root, shell=True))
+        sys.exit(run_command(cmd, cwd=project_root, shell=False))
 
 if __name__ == "__main__":
     main()

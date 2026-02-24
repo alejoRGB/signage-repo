@@ -674,6 +674,13 @@ Cambios necesarios:
 - Usar `shell=False` con listas de argumentos.
 - Sanitizar/whitelistear comandos permitidos.
 
+Estado (24/02): RESUELTO
+
+- `execution/run_script.py`, `execution/run_tests.py` y `execution/web_ops.py` ahora ejecutan comandos con `shell=False` usando listas de argumentos.
+- `execution/run_script.py` agrega validacion basica del nombre de comando (sin metacaracteres de shell) para reducir riesgo de inyeccion/quoting ambiguo.
+- Esto mejora consistencia cross-platform y elimina la superficie de `shell=True` en wrappers locales.
+- Validacion: `python -m py_compile execution/*.py` y busqueda `rg` sin ocurrencias de `shell=True` en `execution/`.
+
 ### 24) Defaults de QA apuntan a producción
 
 Evidencia:

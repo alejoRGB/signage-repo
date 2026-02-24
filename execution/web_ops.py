@@ -30,8 +30,8 @@ def main():
         # So we'll run all of them sequentially or error out.
         # For now, let's default to unit tests (test:api) if no specific one is given
         print("Running all web tests...")
-        run_command(npm_cmd + ["test:api"], cwd=web_dir, shell=True)
-        run_command(npm_cmd + ["test:ui"], cwd=web_dir, shell=True)
+        run_command(npm_cmd + ["test:api"], cwd=web_dir, shell=False)
+        run_command(npm_cmd + ["test:ui"], cwd=web_dir, shell=False)
         sys.exit(0)
     elif command in ["test:api", "test:ui", "test:e2e"]:
         start_cmd = npm_cmd + [command]
@@ -49,7 +49,7 @@ def main():
 
     full_cmd = start_cmd + extra_args
     print(f"Executing Web Command: {' '.join(full_cmd)}")
-    sys.exit(run_command(full_cmd, cwd=web_dir, shell=True))
+    sys.exit(run_command(full_cmd, cwd=web_dir, shell=False))
 
 if __name__ == "__main__":
     main()
