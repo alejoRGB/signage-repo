@@ -153,12 +153,10 @@ export async function PUT(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-
-
+    } catch (error) {
         console.error("Update playlist error details:", error);
         return NextResponse.json(
-            { error: "Failed to update playlist", details: error.message || String(error) },
+            { error: "Failed to update playlist" },
             { status: 500 }
         );
     }

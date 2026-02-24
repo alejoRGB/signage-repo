@@ -98,9 +98,12 @@ export async function PUT(
         });
 
         return NextResponse.json(device);
-    } catch (error: any) {
+    } catch (error) {
         console.error("[DEVICE_PATCH]", error);
-        return NextResponse.json({ error: error.message || String(error) || "Internal Server Error" }, { status: 500 });
+        return NextResponse.json(
+            { error: "Failed to update device" },
+            { status: 500 }
+        );
     }
 }
 

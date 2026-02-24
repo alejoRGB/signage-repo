@@ -413,6 +413,15 @@ Cambios necesarios:
 - Responder mensajes genéricos.
 - Loggear detalle solo en servidor (con correlation id).
 
+Estado (24/02): RESUELTO
+
+- `web/app/api/devices/[id]/route.ts` (PUT) ya no devuelve `error.message` en `500`; responde `{ error: "Failed to update device" }`.
+- `web/app/api/playlists/[id]/route.ts` (PUT) ya no expone `details`; responde `{ error: "Failed to update playlist" }`.
+- Se conserva logging detallado en servidor (`console.error(...)`) para diagnostico.
+- Tests de regresion:
+  - `web/__tests__/api/device-update-route.test.ts`
+  - `web/__tests__/api/update-playlist-route.test.ts` (caso nuevo de sanitizacion)
+
 ### 14) `schedules/[scheduleId]` PATCH sin schema fuerte y validación temporal incompleta
 
 Evidencia:

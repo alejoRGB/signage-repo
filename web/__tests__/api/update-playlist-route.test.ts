@@ -104,5 +104,28 @@ describe("PUT /api/playlists/[id]", () => {
         expect(response.status).toBe(200);
         expect(prisma.$transaction).toHaveBeenCalled();
     });
-});
 
+    it("does not expose internal error details on unexpected failures", async () => {
+        (prisma.mediaItem.findMany as jest.Mock).mockResolvedValue([
+            { id: "media-1", type: "video" },
+        ]);
+        (prisma.$transaction as jest.Mock).mockRejectedValue(new Error("Prisma exploded"));
+
+        const response = await PUT(
+            new Request("http://localhost/api/playlists/playlist-1", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: "Updated",
+                    items: [{ mediaItemId: "media-1", duration: 10 }],
+                }),
+            }),
+            { params: Promise.resolve({ id: "playlist-1" }) }
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(body).toEqual({ error: "Failed to update playlist" });
+        expect(body.details).toBeUndefined();
+    });
+});
