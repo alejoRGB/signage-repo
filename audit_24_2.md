@@ -598,6 +598,18 @@ Cambios necesarios:
 - Firmar beacons (HMAC con secreto efímero por sesión) o encapsular en canal autenticado.
 - Al menos agregar nonce/versión y validación temporal estricta.
 
+Estado (24/02): RESUELTO (con config recomendada)
+
+- `player/lan_sync.py` ahora firma beacons UDP con HMAC-SHA256 cuando hay `auth_key` configurada y el follower verifica firma antes de aceptar el beacon.
+- Se agrego endurecimiento adicional anti-replay/spoof: rechazo de `seq` no creciente y rechazo de beacons stale/futuros fuera de ventana temporal estricta.
+- `web/lib/sync-command-service.ts` agrega `lan.auth_key` (clave efimera derivada por sesion) y `lan.auth_alg` en `sync.prepare`, derivada de `SYNC_LAN_BEACON_SECRET` o fallback `NEXTAUTH_SECRET`.
+- `player/videowall_controller.py` propaga `lan.auth_key` desde `sync.prepare` hacia `LanSyncService`.
+- `.env.example` documenta `SYNC_LAN_BEACON_SECRET` (recomendado explicito en produccion).
+- Tests agregados:
+  - `player/tests/test_lan_sync_auth.py` (firma/verificacion HMAC)
+  - `web/__tests__/lib/sync-command-service.test.ts` (auth key por sesion en payload `sync.prepare`)
+- Nota operativa: si no hay `SYNC_LAN_BEACON_SECRET` ni `NEXTAUTH_SECRET`, los beacons quedan sin autenticacion (compatibilidad/dev). En produccion debe configurarse al menos uno.
+
 ### 21) `player/sync.py` descarga legacy sin archivo temporal (puede dejar archivos corruptos)
 
 Evidencia:

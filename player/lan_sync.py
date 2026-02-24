@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hmac
+import hashlib
 import logging
 import socket
 import threading
@@ -18,6 +20,7 @@ class LanSyncService:
         timeout_ms: int,
         broadcast_addr: str = "255.255.255.255",
         bind_host: str = "0.0.0.0",
+        auth_key: Optional[str] = None,
     ):
         self.enabled = bool(enabled)
         self.beacon_hz = max(1.0, float(beacon_hz))
@@ -25,6 +28,7 @@ class LanSyncService:
         self.timeout_ms = max(250, int(timeout_ms))
         self.broadcast_addr = broadcast_addr
         self.bind_host = bind_host
+        self.auth_key = str(auth_key).strip() if auth_key else None
 
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
@@ -40,6 +44,7 @@ class LanSyncService:
         self._get_speed: Optional[Callable[[], float]] = None
         self._last_beacon: Optional[dict] = None
         self._last_receive_at_ms: Optional[int] = None
+        self._last_seq_seen: Optional[int] = None
 
     def update_settings(
         self,
@@ -50,6 +55,7 @@ class LanSyncService:
         timeout_ms: Optional[int] = None,
         broadcast_addr: Optional[str] = None,
         bind_host: Optional[str] = None,
+        auth_key: Optional[str] = None,
     ) -> None:
         with self._lock:
             if enabled is not None:
@@ -64,6 +70,9 @@ class LanSyncService:
                 self.broadcast_addr = str(broadcast_addr)
             if bind_host is not None:
                 self.bind_host = str(bind_host)
+            if auth_key is not None:
+                normalized_auth_key = str(auth_key).strip()
+                self.auth_key = normalized_auth_key or None
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -88,6 +97,7 @@ class LanSyncService:
             self._get_speed = None
             self._last_beacon = None
             self._last_receive_at_ms = None
+            self._last_seq_seen = None
 
     def start_master(
         self,
@@ -120,6 +130,7 @@ class LanSyncService:
             self._seq = 0
             self._last_beacon = None
             self._last_receive_at_ms = None
+            self._last_seq_seen = None
             self._stop_event.clear()
             self._thread = threading.Thread(target=self._master_loop, daemon=True)
             self._thread.start()
@@ -157,6 +168,7 @@ class LanSyncService:
             self._seq = 0
             self._last_beacon = None
             self._last_receive_at_ms = None
+            self._last_seq_seen = None
             self._stop_event.clear()
             self._thread = threading.Thread(target=self._follower_loop, daemon=True)
             self._thread.start()
@@ -193,6 +205,44 @@ class LanSyncService:
                 return None
             return max(0, int(now_ms - self._last_receive_at_ms))
 
+    @staticmethod
+    def _canonical_beacon_bytes(payload: dict) -> bytes:
+        return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+    @staticmethod
+    def _normalize_auth_key(auth_key: Optional[str]) -> Optional[bytes]:
+        if auth_key is None:
+            return None
+        normalized = str(auth_key).strip()
+        if not normalized:
+            return None
+        return normalized.encode("utf-8")
+
+    @classmethod
+    def sign_beacon_payload(cls, payload: dict, auth_key: Optional[str]) -> Optional[str]:
+        key = cls._normalize_auth_key(auth_key)
+        if key is None:
+            return None
+        return hmac.new(key, cls._canonical_beacon_bytes(payload), hashlib.sha256).hexdigest()
+
+    @classmethod
+    def verify_beacon_payload_signature(cls, beacon: dict, auth_key: Optional[str]) -> bool:
+        key = cls._normalize_auth_key(auth_key)
+        if key is None:
+            return True
+
+        signature = beacon.get("sig")
+        if not isinstance(signature, str) or not signature:
+            return False
+        if beacon.get("sig_alg") not in {None, "hmac-sha256"}:
+            return False
+
+        unsigned = dict(beacon)
+        unsigned.pop("sig", None)
+        unsigned.pop("sig_alg", None)
+        expected = hmac.new(key, cls._canonical_beacon_bytes(unsigned), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(signature, expected)
+
     def _master_loop(self) -> None:
         interval_s = 1.0 / max(1.0, self.beacon_hz)
         next_tick = time.monotonic()
@@ -206,6 +256,7 @@ class LanSyncService:
                 get_phase_ms = self._get_phase_ms
                 get_speed = self._get_speed
                 seq = self._seq
+                auth_key = self.auth_key
                 self._seq += 1
 
             if (
@@ -229,6 +280,10 @@ class LanSyncService:
                             "duration_ms": duration_ms,
                             "playback_speed": float(get_speed()),
                         }
+                        signature = self.sign_beacon_payload(payload, auth_key)
+                        if signature:
+                            payload["sig_alg"] = "hmac-sha256"
+                            payload["sig"] = signature
                         raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
                         sock.sendto(raw, (self.broadcast_addr, self.beacon_port))
                 except OSError:
@@ -246,6 +301,8 @@ class LanSyncService:
                 sock = self._socket
                 session_id = self._session_id
                 master_device_id = self._master_device_id
+                auth_key = self.auth_key
+                last_seq_seen = self._last_seq_seen
 
             if sock is None or not session_id or not master_device_id:
                 self._stop_event.wait(0.2)
@@ -270,13 +327,27 @@ class LanSyncService:
 
             if not isinstance(beacon, dict):
                 continue
+            if not self.verify_beacon_payload_signature(beacon, auth_key):
+                continue
             if str(beacon.get("session_id") or "") != session_id:
                 continue
             if str(beacon.get("master_device_id") or "") != master_device_id:
                 continue
+            try:
+                seq = int(beacon.get("seq"))
+            except (TypeError, ValueError):
+                continue
+            if last_seq_seen is not None and seq <= last_seq_seen:
+                continue
+            try:
+                sent_at_ms = int(beacon.get("sent_at_ms"))
+            except (TypeError, ValueError):
+                continue
 
             received_at_ms = int(time.time() * 1000)
+            if abs(received_at_ms - sent_at_ms) > max(10_000, self.timeout_ms * 4):
+                continue
             with self._lock:
                 self._last_beacon = beacon
                 self._last_receive_at_ms = received_at_ms
-
+                self._last_seq_seen = seq

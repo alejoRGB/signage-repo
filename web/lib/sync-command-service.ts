@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import crypto from "crypto";
 
 type PrepareMedia = {
     mediaId: string;
@@ -61,12 +62,25 @@ function envNumber(name: string, defaultValue: number, minimum: number) {
     return Math.max(minimum, parsed);
 }
 
+function deriveLanBeaconAuthKey(sessionId: string) {
+    const rootSecret = process.env.SYNC_LAN_BEACON_SECRET || process.env.NEXTAUTH_SECRET;
+    if (!rootSecret || !sessionId) {
+        return null;
+    }
+
+    return crypto
+        .createHmac("sha256", rootSecret)
+        .update(`lan-beacon:${sessionId}`)
+        .digest("base64url");
+}
+
 export function buildPreparePayload(input: PrepareCommandInput) {
     const lanEnabled = envBoolean("SYNC_LAN_ENABLED", false);
     const lanBeaconHz = envNumber("SYNC_LAN_BEACON_HZ", 20, 1);
     const lanBeaconPort = envNumber("SYNC_LAN_BEACON_PORT", 39051, 1024);
     const lanTimeoutMs = envNumber("SYNC_LAN_TIMEOUT_MS", 1500, 250);
     const lanFallbackToCloud = envBoolean("SYNC_LAN_FALLBACK_TO_CLOUD", true);
+    const lanAuthKey = deriveLanBeaconAuthKey(input.sessionId);
 
     return JSON.parse(
         JSON.stringify({
@@ -102,6 +116,8 @@ export function buildPreparePayload(input: PrepareCommandInput) {
                 beacon_port: lanBeaconPort,
                 timeout_ms: lanTimeoutMs,
                 fallback_to_cloud: lanFallbackToCloud,
+                auth_key: lanAuthKey ?? undefined,
+                auth_alg: lanAuthKey ? "hmac-sha256" : undefined,
             },
         },
         })

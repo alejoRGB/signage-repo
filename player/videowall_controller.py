@@ -69,6 +69,7 @@ class VideowallController:
         self.lan_fallback_to_cloud = self._resolve_bool_env("SYNC_LAN_FALLBACK_TO_CLOUD", True)
         self.lan_bind_host = os.getenv("SYNC_LAN_BIND_HOST", "0.0.0.0")
         self.lan_broadcast_addr = os.getenv("SYNC_LAN_BROADCAST_ADDR", "255.255.255.255")
+        self.lan_auth_key = os.getenv("SYNC_LAN_AUTH_KEY") or None
         self.status_interval_playing_lan_s = self._resolve_interval_env("SYNC_STATUS_INTERVAL_PLAYING_LAN_S", 10.0, 1.0)
         self.command_poll_playing_lan_s = self._resolve_interval_env("SYNC_COMMAND_POLL_PLAYING_LAN_S", 5.0, 1.0)
         self.lan_sync = lan_sync or LanSyncService(
@@ -78,6 +79,7 @@ class VideowallController:
             timeout_ms=self.lan_timeout_ms,
             broadcast_addr=self.lan_broadcast_addr,
             bind_host=self.lan_bind_host,
+            auth_key=self.lan_auth_key,
         )
 
         self._last_poll_ts = 0.0
@@ -281,6 +283,9 @@ class VideowallController:
         broadcast_addr = lan.get("broadcast_addr") or lan.get("broadcastAddr")
         if isinstance(broadcast_addr, str) and broadcast_addr:
             self.lan_broadcast_addr = broadcast_addr
+        auth_key = lan.get("auth_key") or lan.get("authKey")
+        if isinstance(auth_key, str):
+            self.lan_auth_key = auth_key.strip() or None
 
         self.lan_sync.update_settings(
             enabled=self.lan_enabled,
@@ -289,6 +294,7 @@ class VideowallController:
             timeout_ms=self.lan_timeout_ms,
             bind_host=self.lan_bind_host,
             broadcast_addr=self.lan_broadcast_addr,
+            auth_key=self.lan_auth_key,
         )
 
     def _configure_lan_role(self, context: SyncSessionContext) -> None:
