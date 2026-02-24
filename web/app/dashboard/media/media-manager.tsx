@@ -157,6 +157,11 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             const newBlob = await upload(uniqueFilename, file, {
                 access: 'public',
                 handleUploadUrl: '/api/media/upload',
+                clientPayload: JSON.stringify({
+                    size: file.size,
+                    contentType: file.type,
+                    originalName: file.name,
+                }),
             });
 
             // 3. Determine type

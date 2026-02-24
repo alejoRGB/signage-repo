@@ -1709,3 +1709,35 @@ Residual to fully close #6 globally:
 Validation:
 - `npm --prefix web run lint` -> PASS
 - `npm --prefix web run build` -> PASS
+
+## Update 2026-02-24 (media upload quota + upload-complete verification)
+
+Implemented quota and post-upload verification hardening for `/api/media/upload` and `/api/media`.
+
+### Media upload status update (#15)
+
+- User cumulative quota: PARTIALLY RESOLVED -> substantially improved
+  - Added configurable per-user cumulative media quota (`MEDIA_UPLOAD_USER_QUOTA_BYTES`, default 20 GiB) via:
+    - `web/lib/media-upload-policy.ts`
+    - `web/lib/media-upload-quota.ts`
+  - Quota enforced during upload token generation (`/api/media/upload`) using declared client file size.
+  - Quota re-checked during metadata persistence (`POST /api/media`) to prevent bypass.
+
+- Upload completion verification (`onUploadCompleted`): PARTIALLY RESOLVED -> implemented verification + cleanup
+  - `web/app/api/media/upload/route.ts` now verifies completed uploads using Vercel Blob callback + `head(blob.url)`:
+    - owner exists and is active
+    - size <= per-file max
+    - pathname/content-type match token expectations (when declared)
+    - quota still available (unless metadata already exists for same blob)
+  - On verification failure, blob is deleted (`del(blob.url)`) to reduce orphan/risk.
+
+- Frontend upload metadata declaration
+  - `web/app/dashboard/media/media-manager.tsx` now sends `clientPayload` (size/contentType/originalName) to support token-time validation and callback verification.
+
+Residual to fully close #15:
+- Durable upload receipt / reconciliation table for orphan detection across races/retries (currently verification is callback-based and defensive, but not fully auditable).
+- Plan-aware quotas / per-user configurable limits (current quota is global env default + override).
+
+Validation:
+- `npm --prefix web run test:api -- --runTestsByPath __tests__/api/media-upload-route.test.ts __tests__/api/create-media.test.ts` -> PASS
+- `npm --prefix web run build` -> PASS

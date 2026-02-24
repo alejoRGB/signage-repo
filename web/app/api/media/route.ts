@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { CreateMediaItemSchema } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
+import { assertUserMediaQuotaAvailable } from "@/lib/media-upload-quota";
 
 
 export async function GET() {
@@ -115,6 +116,19 @@ export async function POST(request: Request) {
             data.type === "video"
                 ? data.durationMs ?? Math.max(1, Math.round(normalizedDuration * 1000))
                 : null;
+        const incomingSize = Math.max(0, Math.round(data.size ?? 0));
+
+        try {
+            await assertUserMediaQuotaAvailable(session.user.id, incomingSize);
+        } catch (quotaError) {
+            if (data.url && data.url.includes("public.blob.vercel-storage.com")) {
+                await del(data.url).catch(() => undefined);
+            }
+            return NextResponse.json(
+                { error: quotaError instanceof Error ? quotaError.message : "Media quota exceeded" },
+                { status: 409 }
+            );
+        }
 
         const mediaItem = await prisma.mediaItem.create({
             data: {
@@ -125,7 +139,7 @@ export async function POST(request: Request) {
                 width: data.width ?? undefined,
                 height: data.height ?? undefined,
                 fps: data.fps ?? undefined,
-                size: data.size ?? 0,
+                size: incomingSize,
                 duration: normalizedDuration,
                 durationMs: normalizedDurationMs,
                 cacheForOffline: data.cacheForOffline ?? false,

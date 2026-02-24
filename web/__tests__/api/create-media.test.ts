@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import { POST } from "@/app/api/media/route";
+import { del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 
@@ -9,8 +10,13 @@ jest.mock("@/lib/prisma", () => ({
     prisma: {
         mediaItem: {
             create: jest.fn(),
+            aggregate: jest.fn(),
         },
     },
+}));
+
+jest.mock("@vercel/blob", () => ({
+    del: jest.fn(),
 }));
 
 jest.mock("next-auth", () => ({
@@ -22,8 +28,17 @@ jest.mock("@/lib/auth", () => ({
 }));
 
 describe("POST /api/media", () => {
+    const originalEnv = { ...process.env };
+
     beforeEach(() => {
         jest.clearAllMocks();
+        process.env = { ...originalEnv };
+        (prisma.mediaItem.aggregate as jest.Mock).mockResolvedValue({ _sum: { size: 0 } });
+        (del as jest.Mock).mockResolvedValue(undefined);
+    });
+
+    afterAll(() => {
+        process.env = originalEnv;
     });
 
     it("returns 401 when unauthenticated", async () => {
@@ -152,6 +167,35 @@ describe("POST /api/media", () => {
                 userId: "user1",
             }),
         });
+    });
+
+    it("returns 409 when user media quota is exceeded and cleans up uploaded blob", async () => {
+        process.env.MEDIA_UPLOAD_USER_QUOTA_BYTES = String(2 * 1024 * 1024 * 1024);
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+        (prisma.mediaItem.aggregate as jest.Mock).mockResolvedValue({
+            _sum: { size: 2 * 1024 * 1024 * 1024 - 100 },
+        });
+
+        const req = new Request("http://localhost/api/media", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Blob Video",
+                url: "https://public.blob.vercel-storage.com/uploads/blob-video.mp4",
+                type: "video",
+                filename: "blob-video.mp4",
+                size: 200,
+                duration: 10,
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await POST(req);
+        const body = await res.json();
+
+        expect(res.status).toBe(409);
+        expect(body.error).toMatch(/quota/i);
+        expect(prisma.mediaItem.create).not.toHaveBeenCalled();
+        expect(del).toHaveBeenCalledWith("https://public.blob.vercel-storage.com/uploads/blob-video.mp4");
     });
 
     it("persists durationMs for valid video item", async () => {
