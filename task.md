@@ -1,5 +1,9 @@
 ## Issue Log
 
+- 2026-02-24: Closed - Sync device did not rejoin active session after reconnect/reboot.
+  - Root cause: active sessions only enqueued `SYNC_PREPARE` at session start, ready barrier, or master failover; a reconnecting device with no pending command did not receive a new prepare command.
+  - Resolution: backend heartbeat path now attempts sync rejoin reconciliation and requeues `SYNC_PREPARE` for assigned devices in active sessions when the session-specific heartbeat is stale/disconnected (with throttle + dedupe guards).
+  - Validation: targeted API tests passed for heartbeat route and rejoin helper (`device-heartbeat-sync`, `sync-device-rejoin`).
 - 2026-02-20: Closed - Session Health panel was stale for drift metrics.
   - Root cause: heartbeat/runtime persistence and polling path were not reflecting drift updates reliably.
   - Resolution: enabled no-cache health polling, fixed heartbeat/rate-limit interaction, and persisted real runtime drift fields (`avgDriftMs`, `maxDriftMs`, `resyncCount`).

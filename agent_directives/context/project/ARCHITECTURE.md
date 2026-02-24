@@ -88,6 +88,10 @@
      - Initial master selected on session start.
      - Automatic re-election when master heartbeat expires.
      - Re-election re-queues `SYNC_PREPARE` for all non-errored devices, including the new master.
+   - Device reconnect rejoin:
+     - A device assigned to an active session can be re-prepared after reconnect/reboot through heartbeat-triggered reconciliation on the backend.
+     - Backend may enqueue a new `SYNC_PREPARE` for the reconnecting device when its session-specific heartbeat is stale/disconnected and no pending prepare exists.
+     - Rejoin enqueue is throttled/deduped to avoid repeated command spam from frequent heartbeats.
 13. **Sync Observability Architecture (implemented):**
    - Structured sync logs are persisted in `DeviceLog` (`event`, `sessionId`, `data`).
    - Runtime health in `SyncSessionDevice` includes drift history, resync count/rate, clock offset, thermal/throttled flags.

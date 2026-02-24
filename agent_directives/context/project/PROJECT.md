@@ -166,6 +166,12 @@
     - managed Chromium policy installed on Raspberry Pi (`/etc/chromium*/policies/managed/signage-policy.json`) blocking translate + capture/permission prompts
   - Goal: prevent browser translation bars and permission prompts (camera/mic/geolocation/notifications/popups) regardless of page language.
 
+## Canonical Notes (2026-02-24)
+- **Sync device reconnect rejoin (implemented):**
+  - If a device assigned to an active Sync/VideoWall session reconnects/reboots and resumes heartbeats without active `sync_runtime`, backend heartbeat reconciliation may enqueue a fresh `SYNC_PREPARE` for that device.
+  - Rejoin enqueue is guarded by session-device heartbeat staleness/disconnected state plus throttle/dedupe protections to avoid command spam.
+  - Rejoin uses the existing cloud control plane (`/api/device/heartbeat` + `/api/device/commands`), then the player resumes normal sync timing (including LAN beacons when enabled).
+
 ## Key Workflows
 1. **Pairing:** Device generates code -> User enters on Dashboard -> Token issued.
 2. **Schedule Sync:** Device polls `/api/device/sync` -> Downloads media -> Reports `playingPlaylistId` -> Plays.
