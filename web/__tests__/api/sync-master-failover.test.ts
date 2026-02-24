@@ -33,6 +33,10 @@ jest.mock("@/lib/auth", () => ({
     authOptions: {},
 }));
 
+jest.mock("@/lib/sync-start-timeout-service", () => ({
+    abortExpiredSyncStartSessionsForUser: jest.fn().mockResolvedValue({ abortedSessionIds: [] }),
+}));
+
 describe("SYNC-014 master election and failover", () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -203,14 +207,17 @@ describe("SYNC-014 master election and failover", () => {
                     expect.objectContaining({
                         deviceId: "device-next-master",
                         type: "SYNC_PREPARE",
+                        dedupeKey: `session-1:MASTER_FAILOVER:${nowMs}:device-old-master:device-next-master:device-next-master`,
                     }),
                     expect.objectContaining({
                         deviceId: "device-old-master",
                         type: "SYNC_PREPARE",
+                        dedupeKey: `session-1:MASTER_FAILOVER:${nowMs}:device-old-master:device-next-master:device-old-master`,
                     }),
                     expect.objectContaining({
                         deviceId: "device-other",
                         type: "SYNC_PREPARE",
+                        dedupeKey: `session-1:MASTER_FAILOVER:${nowMs}:device-old-master:device-next-master:device-other`,
                     }),
                 ]),
             })

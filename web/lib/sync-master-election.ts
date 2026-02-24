@@ -329,7 +329,7 @@ export async function maybeReelectMasterForSession(
                                 failoverFromDeviceId: session.masterDeviceId ?? null,
                                 electionAtMs: nowMs,
                             }),
-                            dedupeKey: `${session.id}:MASTER_FAILOVER:${nextMaster.deviceId}:${device.deviceId}`,
+                            dedupeKey: `${session.id}:MASTER_FAILOVER:${nowMs}:${session.masterDeviceId ?? "none"}:${nextMaster.deviceId}:${device.deviceId}`,
                             status: "PENDING" as const,
                         },
                     ];

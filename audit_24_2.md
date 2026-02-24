@@ -525,6 +525,13 @@ Cambios necesarios:
 
 - Incluir `electionAtMs` (o contador de elección) en `dedupeKey` de `MASTER_FAILOVER`.
 
+Estado (24/02): RESUELTO
+
+- `web/lib/sync-master-election.ts` ahora versiona el `dedupeKey` de `MASTER_FAILOVER` por evento incluyendo `electionAtMs` (`nowMs`) y transicion `from->to`.
+- Esto evita que un failover posterior dentro de la misma sesion (mismo master destino) quede deduplicado por error.
+- Se mantiene deduplicacion util dentro del mismo evento de eleccion.
+- Test actualizado: `web/__tests__/api/sync-master-failover.test.ts` verifica `dedupeKey` con timestamp y `from/to`.
+
 ### 18) Prisma datasource usa URL unpooled tanto para `url` como para `directUrl`
 
 Evidencia:
