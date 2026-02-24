@@ -572,6 +572,14 @@ Cambios necesarios:
 - Garantizar ejecución como usuario no-root (ya está en `setup_service.sh`) y dejar `ALLOW_CHROMIUM_NO_SANDBOX` deshabilitado.
 - Agregar log/telemetría explícita para detectar si se activa en campo.
 
+Estado (24/02): RESUELTO (hardening)
+
+- `player/player.py` ya no habilita `--no-sandbox` automaticamente por correr como root.
+- Ahora `--no-sandbox` solo se activa con override explicito `ALLOW_CHROMIUM_NO_SANDBOX=1`.
+- Si el player corre como root sin override, se rechaza el launch de Chromium y se loguea remediacion explicita (fail-closed en vez de degradar seguridad en silencio).
+- Test agregado: `player/tests/test_chromium_sandbox_policy.py` (sandbox por defecto, bloqueo en root sin override, override explicito).
+- Riesgo residual intencional: si se fuerza `ALLOW_CHROMIUM_NO_SANDBOX`, Chromium seguira lanzando sin sandbox (operacion conscientemente degradada).
+
 ### 20) LAN beacons de sync no están autenticados (spoofing en LAN)
 
 Evidencia:

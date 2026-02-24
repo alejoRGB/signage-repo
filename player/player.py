@@ -9,7 +9,7 @@ import json
 import subprocess
 import time
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from hwaccel import probe_and_select_mpv_hwaccel
 from sync import SyncManager
 from state_machine import SyncSessionContext, SyncStateMachine
@@ -32,6 +32,29 @@ logging.basicConfig(
 # See .agents/skills/mpv-playback/SKILL.md
 ENABLE_AUDIO = False 
 # -------------------------------
+
+
+def resolve_chromium_sandbox_policy() -> Tuple[bool, Optional[str]]:
+    """
+    Decide whether Chromium should be launched with --no-sandbox.
+
+    Returns:
+      (use_no_sandbox, blocked_reason)
+      - use_no_sandbox=True only when explicit override is enabled.
+      - blocked_reason is set when running as root without explicit override,
+        because Chromium typically requires --no-sandbox in that case and we
+        prefer to fail closed instead of silently reducing security.
+    """
+    no_sandbox_override = os.getenv("ALLOW_CHROMIUM_NO_SANDBOX", "").lower() in {"1", "true", "yes"}
+    is_root = hasattr(os, "geteuid") and os.geteuid() == 0
+
+    if no_sandbox_override:
+        return True, None
+
+    if is_root:
+        return False, "root_requires_explicit_override"
+
+    return False, None
 
 class Player:
     def __init__(self):
@@ -723,9 +746,7 @@ class Player:
                                      uid = os.getuid()
                                      env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path=/run/user/{uid}/bus"
 
-                                is_root = hasattr(os, "geteuid") and os.geteuid() == 0
-                                no_sandbox_override = os.getenv("ALLOW_CHROMIUM_NO_SANDBOX", "").lower() in {"1", "true", "yes"}
-                                use_no_sandbox = is_root or no_sandbox_override
+                                use_no_sandbox, sandbox_block_reason = resolve_chromium_sandbox_policy()
 
                                 user_data_dir = os.path.join(os.path.expanduser('~'), '.config/chromium-signage-temp')
                                 self.prepare_chromium_profile(user_data_dir)
@@ -752,7 +773,16 @@ class Player:
                                     f"--user-data-dir={user_data_dir}"
                                 ]
 
-                                if use_no_sandbox:
+                                if sandbox_block_reason == "root_requires_explicit_override":
+                                    logging.error(
+                                        "[MIXED_PLAYER] Refusing to launch Chromium as root without sandbox. "
+                                        "Run player as non-root, or set ALLOW_CHROMIUM_NO_SANDBOX=1 to override "
+                                        "(reduced security)."
+                                    )
+                                    browser_process = None
+                                    current_browser_url = None
+                                    continue
+                                elif use_no_sandbox:
                                     cmd.extend(["--no-sandbox", "--disable-setuid-sandbox"])
                                     logging.warning("[MIXED_PLAYER] Chromium launched with --no-sandbox (reduced security).")
                                 else:
