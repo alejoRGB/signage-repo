@@ -7,7 +7,7 @@ function generateCspNonce() {
     return crypto.randomUUID().replace(/-/g, "");
 }
 
-function buildProtectedRouteCsp(nonce: string) {
+function buildProtectedRouteCsp(_nonce: string) {
     const isProduction = process.env.NODE_ENV === "production";
     const directives = [
         `default-src 'self'`,
@@ -15,7 +15,10 @@ function buildProtectedRouteCsp(nonce: string) {
         `object-src 'none'`,
         `frame-ancestors 'none'`,
         `form-action 'self'`,
-        `script-src 'self' 'nonce-${nonce}'${isProduction ? "" : " 'unsafe-eval'"}`,
+        // Next App Router injects inline runtime/flight scripts on protected pages.
+        // Nonce propagation is not being applied to those generated inline scripts here,
+        // so we allow inline scripts to preserve hydration and form handlers.
+        `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
         `script-src-attr 'none'`,
         // Next App Router still injects inline styles in multiple flows.
         `style-src 'self' 'unsafe-inline'`,
