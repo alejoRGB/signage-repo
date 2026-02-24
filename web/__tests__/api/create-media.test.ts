@@ -95,6 +95,29 @@ describe("POST /api/media", () => {
         expect(prisma.mediaItem.create).not.toHaveBeenCalled();
     });
 
+    it("returns 400 when file size exceeds 2 GB", async () => {
+        (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
+
+        const req = new Request("http://localhost/api/media", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Huge Video",
+                url: "https://example.com/huge.mp4",
+                type: "video",
+                filename: "huge.mp4",
+                size: 2 * 1024 * 1024 * 1024 + 1,
+            }),
+            headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await POST(req);
+        const body = await res.json();
+
+        expect(res.status).toBe(400);
+        expect(body.error).toMatch(/2 gb/i);
+        expect(prisma.mediaItem.create).not.toHaveBeenCalled();
+    });
+
     it("persists valid web item", async () => {
         (getServerSession as jest.Mock).mockResolvedValue({ user: { id: "user1" } });
         (prisma.mediaItem.create as jest.Mock).mockResolvedValue({

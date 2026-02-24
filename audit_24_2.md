@@ -470,6 +470,16 @@ Cambios necesarios:
 - Registrar metadata/ownership/verificaciÃ³n post-upload.
 - Validar quota y rate limit por usuario.
 
+Estado (24/02): RESUELTO parcialmente
+
+- Se definio limite maximo de subida por token en `web/app/api/media/upload/route.ts` usando `maximumSizeInBytes` = `2 GB` (`2147483648` bytes).
+- Se agrego constante compartida `web/lib/media-upload-policy.ts` para evitar drift entre endpoints.
+- Defensa en profundidad: `web/lib/validations.ts` (`CreateMediaItemSchema`) ahora rechaza metadata con `size` > `2 GB`, aunque el token de upload se bypassée.
+- Tests agregados/actualizados:
+  - `web/__tests__/api/media-upload-route.test.ts` (verifica `maximumSizeInBytes` en token)
+  - `web/__tests__/api/create-media.test.ts` (rechazo de `size` > 2 GB)
+- Pendiente para cierre total del hallazgo original: cuota acumulada por usuario y verificacion/registro post-upload en `onUploadCompleted`.
+
 ### 16) `contact` endpoint: rate limit basado en headers spoofeables y webhook sin timeout
 
 Evidencia:

@@ -6,6 +6,7 @@ import {
     SYNC_SESSION_DEVICE_STATUS,
     SYNC_STOP_REASON,
 } from "@/types/sync";
+import { MAX_MEDIA_UPLOAD_SIZE_BYTES } from "@/lib/media-upload-policy";
 
 // Helper to sanitize strings
 const sanitize = (value: string) => xss(value);
@@ -174,6 +175,14 @@ export const CreateMediaItemSchema = z.object({
             code: z.ZodIssueCode.custom,
             message: "Filename is required for image/video",
             path: ["filename"],
+        });
+    }
+
+    if (typeof data.size === "number" && Number.isFinite(data.size) && data.size > MAX_MEDIA_UPLOAD_SIZE_BYTES) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "File exceeds maximum allowed size (2 GB)",
+            path: ["size"],
         });
     }
 });

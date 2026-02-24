@@ -2,6 +2,7 @@ import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { MAX_MEDIA_UPLOAD_SIZE_BYTES } from "@/lib/media-upload-policy";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = (await request.json()) as HandleUploadBody;
@@ -17,6 +18,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'],
+          maximumSizeInBytes: MAX_MEDIA_UPLOAD_SIZE_BYTES,
           tokenPayload: JSON.stringify({
             userId: session.user.id,
           }),
