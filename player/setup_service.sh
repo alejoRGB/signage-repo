@@ -39,7 +39,7 @@ Type=simple
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=$HOME_DIR/.Xauthority
 Environment=SYNC_CLOCK_MAX_OFFSET_MS=50
-ExecStartPre=/bin/bash -c '/usr/bin/chronyc tracking >/tmp/signage-chrony-startup.log 2>&1 || true'
+ExecStartPre=/bin/bash -c '/usr/bin/chronyc -n tracking >/tmp/signage-chrony-startup.log 2>&1 || true'
 ExecStart=/usr/bin/python3 $DIR/player.py
 WorkingDirectory=$DIR
 Restart=always

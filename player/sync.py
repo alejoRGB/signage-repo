@@ -481,7 +481,7 @@ class SyncManager:
         """
         try:
             result = subprocess.run(
-                ["chronyc", "tracking"],
+                ["chronyc", "-n", "tracking"],
                 capture_output=True,
                 text=True,
                 timeout=3,

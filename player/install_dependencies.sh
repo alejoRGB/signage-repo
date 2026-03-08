@@ -48,7 +48,7 @@ pip3 install -r "$PY_REQS_FILE"
 echo "[INSTALLER] Dependencies installed successfully."
 sudo systemctl enable chrony
 sudo systemctl restart chrony || true
-if chronyc tracking >/dev/null 2>&1; then
+if chronyc -n tracking >/dev/null 2>&1; then
     echo "[INSTALLER] chrony tracking is available."
 else
     echo "[INSTALLER] WARNING: chronyc tracking unavailable. Sync readiness will fail while clock is critical."

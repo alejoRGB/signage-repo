@@ -405,8 +405,8 @@ export function SyncVideowallPanel({ activeDirectiveTab }: SyncVideowallPanelPro
                 correctionTelemetryByDeviceId: active.correctionTelemetryByDeviceId ?? {},
                 prepareCommandPendingByDeviceId: active.prepareCommandPendingByDeviceId ?? {},
             });
-        } catch {
-            setActiveSession(null);
+        } catch (error) {
+            console.error("Sync panel active session polling failed", error);
         }
     };
 

@@ -271,6 +271,113 @@ describe("SyncVideowallPanel - wizard and presets", () => {
         expect(screen.queryByText("Available Devices")).not.toBeInTheDocument();
     });
 
+    it("keeps the active session visible when the immediate post-start refresh fails", async () => {
+        let activeSessionRequestCount = 0;
+        const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        try {
+            vi.stubGlobal(
+                "fetch",
+                vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+                    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+                    if (url.includes("/api/devices")) {
+                        return {
+                            ok: true,
+                            json: async () => [
+                                { id: "device-1", name: "Lobby", connectivityStatus: "online" },
+                                { id: "device-2", name: "Window", connectivityStatus: "online" },
+                            ],
+                        } as Response;
+                    }
+
+                    if (url.includes("/api/media")) {
+                        return {
+                            ok: true,
+                            json: async () => mockMedia,
+                        } as Response;
+                    }
+
+                    if (url.includes("/api/sync/presets") && !init?.method) {
+                        return {
+                            ok: true,
+                            json: async () => [
+                                {
+                                    id: "preset-1",
+                                    name: "Preset 1",
+                                    mode: "COMMON",
+                                    durationMs: 10000,
+                                    presetMediaId: "media-1",
+                                    devices: [
+                                        { deviceId: "device-1", mediaItemId: null },
+                                        { deviceId: "device-2", mediaItemId: null },
+                                    ],
+                                },
+                            ],
+                        } as Response;
+                    }
+
+                    if (url.includes("/api/sync/session/active")) {
+                        activeSessionRequestCount += 1;
+                        if (activeSessionRequestCount === 1) {
+                            return { ok: true, json: async () => ({ session: null }) } as Response;
+                        }
+
+                        throw new Error("temporary active session polling failure");
+                    }
+
+                    if (url.includes("/api/sync/session/start") && init?.method === "POST") {
+                        return {
+                            ok: true,
+                            json: async () => ({
+                                session: {
+                                    id: "session-1",
+                                    status: "STARTING",
+                                    presetId: "preset-1",
+                                    masterDeviceId: "device-1",
+                                    devices: [
+                                        {
+                                            id: "session-device-1",
+                                            deviceId: "device-1",
+                                            status: "ASSIGNED",
+                                            device: { id: "device-1", name: "Lobby", status: "online", lastSeenAt: null },
+                                        },
+                                        {
+                                            id: "session-device-2",
+                                            deviceId: "device-2",
+                                            status: "ASSIGNED",
+                                            device: { id: "device-2", name: "Window", status: "online", lastSeenAt: null },
+                                        },
+                                    ],
+                                },
+                            }),
+                        } as Response;
+                    }
+
+                    return { ok: true, json: async () => ({}) } as Response;
+                }) as unknown as typeof fetch
+            );
+
+            render(<SyncVideowallPanel activeDirectiveTab={DIRECTIVE_TAB.SYNC_VIDEOWALL} />);
+
+            fireEvent.click(await screen.findByTestId("sync-entry-saved-sessions-btn"));
+            fireEvent.click(await screen.findByTestId("sync-saved-preset-preset-1"));
+            fireEvent.click(await screen.findByTestId("sync-start-from-saved-btn"));
+
+            expect(await screen.findByTestId("sync-health-panel")).toBeInTheDocument();
+
+            await waitFor(() => {
+                expect(activeSessionRequestCount).toBeGreaterThanOrEqual(2);
+            });
+
+            expect(screen.getByTestId("sync-health-panel")).toBeInTheDocument();
+            expect(screen.queryByText("Review & Start")).not.toBeInTheDocument();
+            expect(showToast).toHaveBeenCalledWith("Sync session started", "success");
+        } finally {
+            consoleErrorSpy.mockRestore();
+        }
+    });
+
     it("does not flash entry menu when an active session exists", async () => {
         vi.stubGlobal(
             "fetch",

@@ -129,7 +129,7 @@ pip3 install -r "$APP_DIR/requirements-runtime.txt"
 echo "[INSTALLER] Enabling chrony..."
 sudo systemctl enable chrony
 sudo systemctl restart chrony || true
-if chronyc tracking >/dev/null 2>&1; then
+if chronyc -n tracking >/dev/null 2>&1; then
     echo "[INSTALLER] chronyc tracking OK"
 else
     echo "[INSTALLER] WARNING: chronyc tracking failed. Sync mode will not enter READY while clock is critical."
@@ -154,7 +154,7 @@ Wants=network-online.target chrony.service
 [Service]
 User=$(whoami)
 WorkingDirectory=$APP_DIR
-ExecStartPre=/bin/bash -c '/usr/bin/chronyc tracking >/tmp/signage-chrony-startup.log 2>&1 || true'
+ExecStartPre=/bin/bash -c '/usr/bin/chronyc -n tracking >/tmp/signage-chrony-startup.log 2>&1 || true'
 ExecStart=/usr/bin/python3 $APP_DIR/player.py
 Restart=always
 RestartSec=10

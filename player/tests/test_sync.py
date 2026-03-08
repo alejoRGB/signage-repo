@@ -91,6 +91,34 @@ def test_clock_sync_health_parses_leap_status_and_marks_healthy(tmp_path, mocker
     assert health["critical"] is False
 
 
+def test_clock_sync_health_uses_numeric_chronyc_output(tmp_path, mocker):
+    """Use numeric chronyc output to avoid DNS stalls on slower devices."""
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"server_url": "http://test.com"}))
+    manager = SyncManager(config_path=str(config_file))
+
+    chronyc_output = (
+        "Reference ID    : E1FE1EBE (2606:4700:f1::123)\n"
+        "System time     : 0.000470897 seconds fast of NTP time\n"
+        "Last offset     : +0.000334430 seconds\n"
+        "Leap status     : Normal\n"
+    )
+
+    mock_run = mocker.patch(
+        "subprocess.run",
+        side_effect=[
+            Mock(returncode=0, stdout=chronyc_output, stderr=""),
+            Mock(returncode=0, stdout="throttled=0x0\n", stderr=""),
+            Mock(returncode=0, stdout="temp=55.0'C\n", stderr=""),
+        ],
+    )
+
+    manager.get_clock_sync_health(max_offset_ms=50.0)
+
+    first_call = mock_run.call_args_list[0]
+    assert first_call.args[0] == ["chronyc", "-n", "tracking"]
+
+
 def test_get_current_device_id_from_cached_playlist(tmp_path):
     config_file = tmp_path / "config.json"
     config_file.write_text(json.dumps({"server_url": "http://test.com", "device_token": "token"}))
