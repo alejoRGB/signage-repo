@@ -206,6 +206,82 @@ describe("Sync session API", () => {
         );
     });
 
+    it("START uses the expanded default timeout window for warm devices", async () => {
+        const nowSpy = jest.spyOn(Date, "now").mockReturnValue(1_739_650_000_000);
+
+        (getServerSession as jest.Mock).mockResolvedValue({
+            user: { id: "user-1", role: "USER" },
+        });
+        (prisma.syncSession.findFirst as jest.Mock).mockResolvedValue(null);
+        (prisma.syncPreset.findFirst as jest.Mock).mockResolvedValue({
+            id: "preset-1",
+            mode: "COMMON",
+            durationMs: 10000,
+            presetMedia: {
+                id: "media-1",
+                filename: "video.mp4",
+                width: 1920,
+                height: 1080,
+                fps: 30,
+                durationMs: 10000,
+            },
+            devices: [
+                {
+                    deviceId: "device-1",
+                    device: { id: "device-1", name: "Lobby", lastSeenAt: new Date(1_739_649_995_000) },
+                    mediaItem: null,
+                },
+                {
+                    deviceId: "device-2",
+                    device: { id: "device-2", name: "Window", lastSeenAt: new Date(1_739_649_996_000) },
+                    mediaItem: null,
+                },
+            ],
+        });
+        (prisma.syncSessionDevice.findFirst as jest.Mock).mockResolvedValue(null);
+
+        const createMock = jest.fn().mockResolvedValue({ id: "session-1" });
+        (prisma.$transaction as jest.Mock).mockImplementation(async (callback) =>
+            callback({
+                syncSession: {
+                    create: createMock,
+                    findUnique: jest.fn().mockResolvedValue({
+                        id: "session-1",
+                        status: "STARTING",
+                        startAtMs: BigInt(1_739_693_200_000),
+                    }),
+                },
+                syncSessionDevice: {
+                    createMany: jest.fn().mockResolvedValue({ count: 2 }),
+                },
+                syncDeviceCommand: {
+                    createMany: jest.fn().mockResolvedValue({ count: 2 }),
+                },
+            })
+        );
+
+        const request = new Request("http://localhost/api/sync/session/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ presetId: "preset-1" }),
+        });
+
+        const response = await START_SYNC(request);
+        const body = await response.json();
+
+        expect(response.status).toBe(201);
+        expect(createMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    startTimeoutAtMs: BigInt(1_739_650_045_000),
+                }),
+            })
+        );
+        expect(body.startTimeoutMs).toBe(45_000);
+
+        nowSpy.mockRestore();
+    });
+
     it("START rejects when any device is already in active session", async () => {
         (getServerSession as jest.Mock).mockResolvedValue({
             user: { id: "user-1", role: "USER" },

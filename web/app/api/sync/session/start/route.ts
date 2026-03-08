@@ -6,6 +6,7 @@ import { StartSyncSessionSchema } from "@/lib/validations";
 import {
     ACTIVE_SYNC_SESSION_STATUSES,
     computePreparationBufferMs,
+    computeStartTimeoutMs,
     syncSessionInclude,
     toJsonSafe,
 } from "@/lib/sync-session-service";
@@ -216,6 +217,11 @@ export async function POST(request: Request) {
             deviceCount: deviceIds.length,
             hasColdDevice,
         });
+        const startTimeoutMs = computeStartTimeoutMs({
+            requestedTimeoutMs: result.data.startTimeoutMs,
+            deviceCount: deviceIds.length,
+            hasColdDevice,
+        });
         const initialMasterDeviceId = selectInitialMasterDeviceId(
             preset.devices.map((assignment) => ({
                 deviceId: assignment.deviceId,
@@ -223,7 +229,7 @@ export async function POST(request: Request) {
             }))
         );
         const startAtMs = nowMs + INITIAL_START_HOLD_MS;
-        const timeoutAtMs = nowMs + result.data.startTimeoutMs;
+        const timeoutAtMs = nowMs + startTimeoutMs;
         const sessionDurationMs = resolveSessionDurationMs(preset);
 
         const createdSession = await prisma.$transaction(async (tx) => {
@@ -298,7 +304,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
             toJsonSafe({
                 session: createdSession,
-                startTimeoutMs: result.data.startTimeoutMs,
+                startTimeoutMs,
                 timeoutAtMs,
             }),
             { status: 201 }

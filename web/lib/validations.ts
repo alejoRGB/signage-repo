@@ -7,6 +7,10 @@ import {
     SYNC_STOP_REASON,
 } from "@/types/sync";
 import { MAX_MEDIA_UPLOAD_SIZE_BYTES } from "@/lib/media-upload-policy";
+import {
+    MAX_SYNC_START_TIMEOUT_MS,
+    MIN_SYNC_START_TIMEOUT_MS,
+} from "@/lib/sync-session-service";
 
 // Helper to sanitize strings
 const sanitize = (value: string) => xss(value);
@@ -266,7 +270,7 @@ export const UpdateSyncPresetSchema = z.object({
 
 export const StartSyncSessionSchema = z.object({
     presetId: z.string().min(1, "presetId is required").transform(sanitize),
-    startTimeoutMs: z.number().int().min(10000).max(20000).optional().default(15000),
+    startTimeoutMs: z.number().int().min(MIN_SYNC_START_TIMEOUT_MS).max(MAX_SYNC_START_TIMEOUT_MS).optional(),
     preparationBufferMs: z.number().int().min(8000).max(12000).optional(),
 });
 
