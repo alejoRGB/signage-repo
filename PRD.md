@@ -206,7 +206,7 @@ Each device has:
 **Delete Media:**
 - Confirmation modal required
 - Deletes from database and Vercel Blob Storage
-- Cannot delete media currently used in playlists (enforcement TBD)
+- Cannot delete media currently used in playlists (enforced by API)
 
 **Preview:**
 - External link icon opens media in new tab

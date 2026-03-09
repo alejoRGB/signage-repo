@@ -18,5 +18,9 @@ web/node_modules/
 __pycache__/
 *.pyc
 .tmp/
+.tmp_vercel_env_migration/
 web/testsprite_tests/tmp/
 docs/screenshots/prod_*.png
+self-host-migration.md
+web/dashboard@0.1.0
+web/next

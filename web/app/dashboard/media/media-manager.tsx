@@ -26,6 +26,9 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
     const [file, setFile] = useState<File | null>(null);
     const [isAddWebsiteOpen, setIsAddWebsiteOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleteMessage, setDeleteMessage] = useState(
+        "Are you sure you want to permanently delete this file? This action cannot be undone."
+    );
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -210,13 +213,28 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
             });
 
             if (!res.ok) {
-                throw new Error("Failed to delete media");
+                let errorMessage = "Failed to delete media";
+                try {
+                    const payload = await res.json();
+                    if (payload?.error && typeof payload.error === "string") {
+                        errorMessage = payload.error;
+                    }
+                } catch {
+                    // Ignore malformed error payloads and fall back to the generic message.
+                }
+                throw new Error(errorMessage);
             }
             router.refresh();
-        } catch {
-            showToast("Error deleting file", "error");
+        } catch (error) {
+            showToast(
+                error instanceof Error ? error.message : "Error deleting file",
+                "error"
+            );
         } finally {
             setDeleteId(null);
+            setDeleteMessage(
+                "Are you sure you want to permanently delete this file? This action cannot be undone."
+            );
         }
     };
 
@@ -224,10 +242,15 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
         <div className="space-y-6">
             <ConfirmModal
                 isOpen={!!deleteId}
-                onClose={() => setDeleteId(null)}
+                onClose={() => {
+                    setDeleteId(null);
+                    setDeleteMessage(
+                        "Are you sure you want to permanently delete this file? This action cannot be undone."
+                    );
+                }}
                 onConfirm={confirmDelete}
                 title="Delete Media"
-                message="Are you sure you want to permanently delete this file? This action cannot be undone."
+                message={deleteMessage}
                 confirmText="Delete"
                 isDestructive={true}
             />
@@ -342,7 +365,16 @@ export default function MediaManager({ initialMedia }: { initialMedia: MediaItem
                                 <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-1 bg-white rounded-full shadow hover:bg-gray-100 text-gray-600">
                                     <ExternalLink className="h-4 w-4" />
                                 </a>
-                                <button onClick={() => setDeleteId(item.id)} className="p-1 bg-white rounded-full shadow hover:bg-red-50 text-red-600">
+                                <button
+                                    aria-label={`Delete ${item.name}`}
+                                    onClick={() => {
+                                        setDeleteId(item.id);
+                                        setDeleteMessage(
+                                            "Are you sure you want to permanently delete this file? This action cannot be undone."
+                                        );
+                                    }}
+                                    className="p-1 bg-white rounded-full shadow hover:bg-red-50 text-red-600"
+                                >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
                             </div>

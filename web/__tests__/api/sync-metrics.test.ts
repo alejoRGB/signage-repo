@@ -10,6 +10,7 @@ jest.mock("@/lib/prisma", () => ({
     prisma: {
         syncSession: {
             findFirst: jest.fn(),
+            findMany: jest.fn(),
         },
         $transaction: jest.fn(),
     },
@@ -26,6 +27,7 @@ jest.mock("@/lib/auth", () => ({
 describe("SYNC-041 session metrics", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        (prisma.syncSession.findMany as jest.Mock).mockResolvedValue([]);
     });
 
     it("ACTIVE returns computed drift percentiles and max", async () => {

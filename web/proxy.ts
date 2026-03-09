@@ -7,7 +7,7 @@ function generateCspNonce() {
     return crypto.randomUUID().replace(/-/g, "");
 }
 
-function buildProtectedRouteCsp(_nonce: string) {
+function buildProtectedRouteCsp() {
     const isProduction = process.env.NODE_ENV === "production";
     const directives = [
         `default-src 'self'`,
@@ -35,7 +35,7 @@ function buildProtectedRouteCsp(_nonce: string) {
 }
 
 function nextWithProtectedCsp(req: NextRequest, nonce: string) {
-    const csp = buildProtectedRouteCsp(nonce);
+    const csp = buildProtectedRouteCsp();
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-csp-nonce", nonce);
     requestHeaders.set("x-nonce", nonce);
@@ -50,9 +50,9 @@ function nextWithProtectedCsp(req: NextRequest, nonce: string) {
     return response;
 }
 
-function redirectWithProtectedCsp(url: URL, nonce: string) {
+function redirectWithProtectedCsp(url: URL) {
     const response = NextResponse.redirect(url);
-    response.headers.set("Content-Security-Policy", buildProtectedRouteCsp(nonce));
+    response.headers.set("Content-Security-Policy", buildProtectedRouteCsp());
     return response;
 }
 
@@ -75,10 +75,10 @@ export default withAuth(
             }
 
             if (isAdminPath || (isDashboardPath && token?.role === "ADMIN")) {
-                return redirectWithProtectedCsp(new URL("/admin/login", req.url), nonce);
+                return redirectWithProtectedCsp(new URL("/admin/login", req.url));
             }
             if (isDashboardPath) {
-                return redirectWithProtectedCsp(new URL("/login", req.url), nonce);
+                return redirectWithProtectedCsp(new URL("/login", req.url));
             }
             // For other public routes, do nothing (allow access)
             return nextWithProtectedCsp(req, nonce);
@@ -86,24 +86,24 @@ export default withAuth(
 
         // 2. Authenticated But Wrong Role Handling
         if (isAdminPath && token.role !== "ADMIN") {
-            return redirectWithProtectedCsp(new URL("/dashboard", req.url), nonce);
+            return redirectWithProtectedCsp(new URL("/dashboard", req.url));
         }
 
         if (isDashboardPath && token.role === "ADMIN") {
-            return redirectWithProtectedCsp(new URL("/admin", req.url), nonce);
+            return redirectWithProtectedCsp(new URL("/admin", req.url));
         }
 
         // 3. Authenticated Users Accessing Login Pages (Redirect to their respective home)
         if (isLoginPage) {
             // If User, send to dashboard.
             if (token.role !== "ADMIN") {
-                return redirectWithProtectedCsp(new URL("/dashboard", req.url), nonce);
+                return redirectWithProtectedCsp(new URL("/dashboard", req.url));
             }
             // If Admin, ALLOW access to /login so they can switch accounts
             return nextWithProtectedCsp(req, nonce);
         }
         if (isAdminLoginPage && token.role === "ADMIN") {
-            return redirectWithProtectedCsp(new URL("/admin", req.url), nonce);
+            return redirectWithProtectedCsp(new URL("/admin", req.url));
         }
 
         return nextWithProtectedCsp(req, nonce);

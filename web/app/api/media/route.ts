@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
 import { assertUserMediaQuotaAvailable } from "@/lib/media-upload-quota";
 import { linkMediaUploadReceiptToMediaItem } from "@/lib/media-upload-receipts";
+import { Prisma } from "@prisma/client";
 
 
 export async function GET() {
@@ -49,8 +50,7 @@ export async function DELETE(request: Request) {
     }
 
     try {
-        // 1. Find the item to get filename
-        // 1. Find the item to get filename
+        // Find the media item first to enforce ownership and blob cleanup.
         const mediaItem = await prisma.mediaItem.findFirst({
             where: {
                 id: id,
@@ -62,17 +62,34 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: "Media not found" }, { status: 404 });
         }
 
-        // 2. Delete related PlaylistItems (Manual Cascade)
-        await prisma.playlistItem.deleteMany({
-            where: { mediaItemId: id },
+        const blockingPlaylistItem = await prisma.playlistItem.findFirst({
+            where: {
+                mediaItemId: id,
+                playlist: {
+                    userId: session.user.id,
+                },
+            },
+            select: {
+                id: true,
+            },
         });
 
-        // 3. Delete from DB
+        if (blockingPlaylistItem) {
+            return NextResponse.json(
+                {
+                    code: "MEDIA_IN_USE",
+                    error: "Cannot delete media that is currently used in a playlist",
+                },
+                { status: 409 }
+            );
+        }
+
+        // Delete from DB only when the media is no longer referenced by playlists.
         await prisma.mediaItem.delete({
             where: { id: id },
         });
 
-        // 3. Delete from Blob Storage (if URL exists and is a blob URL)
+        // Delete from Blob Storage (if URL exists and is a blob URL)
         try {
             if (mediaItem.url && mediaItem.url.includes("public.blob.vercel-storage.com")) {
                 await del(mediaItem.url);
@@ -84,6 +101,15 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ success: true });
     } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+            return NextResponse.json(
+                {
+                    code: "MEDIA_IN_USE",
+                    error: "Cannot delete media that is currently used in a playlist",
+                },
+                { status: 409 }
+            );
+        }
         console.error("Delete error:", error);
         return NextResponse.json(
             { error: "Failed to delete media" },

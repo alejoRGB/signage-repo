@@ -1,92 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Web Dashboard
 
-## Getting Started
+Next.js dashboard and public marketing site for the Digital Signage system.
 
-First, run the development server:
+## What lives here
+
+- Public marketing pages and SEO landing pages
+- Authenticated dashboard for devices, media, playlists, schedules, and sync/videowall
+- API routes used by the dashboard and Raspberry Pi players
+- Prisma schema and database access layer
+
+## Local setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+2. Create local env vars:
+```bash
+copy .env.example .env
+```
+3. Fill in the values required for your environment.
+4. Start the app:
+```bash
+npm run dev
+```
+
+The app runs on `http://localhost:3000`.
+
+## Required environment variables
+
+These must exist for normal local development:
+
+- `DATABASE_URL`
+- `DATABASE_URL_UNPOOLED`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_APP_URL`
+- `INTERNAL_WORKER_SECRET`
+
+Common optional groups already documented in [.env.example](./.env.example):
+
+- Contact delivery and webhook retry settings
+- Upstash rate limiting
+- Media upload reconciliation
+- Debug API toggles
+- E2E credentials and target URL
+
+## Useful commands
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
+npm run test:api
+npm run test:ui
+npm run test:e2e
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Validation expectations
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Before deploy, this package should pass:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run lint`
+- `npm run build`
+- `npm run test:api`
+- `npm run test:ui`
+- `npm run test:e2e`
 
-## Learn More
+`test:e2e` delegates to the local Playwright smoke suite in `../qa_automation`.
 
-To learn more about Next.js, take a look at the following resources:
+## Test scope
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `test:api`: Jest tests for API routes and server-side helpers
+- `test:ui`: Vitest component tests
+- `test:e2e`: local Playwright smoke against a dev server
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Remote Playwright suites and visual captures stay in `../qa_automation` and require explicit environment variables.
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Contact Form Email Integration
-
-The contact form endpoint (`POST /api/contact`) can deliver leads by SMTP email and/or webhook.
-Default destination inbox is `info.senaldigital@gmail.com`.
-
-### Required SMTP variables
-
-Set these in Vercel Project Settings -> Environment Variables:
-
-- `CONTACT_SMTP_PASS` (Google app password / SMTP password)
-
-With defaults, the endpoint uses:
-- `CONTACT_SMTP_HOST=smtp.gmail.com`
-- `CONTACT_SMTP_PORT=465`
-- `CONTACT_SMTP_USER=info.senaldigital@gmail.com`
-- `CONTACT_TO_EMAIL=info.senaldigital@gmail.com`
-
-### Optional SMTP variables
-
-- `CONTACT_SMTP_HOST`
-- `CONTACT_SMTP_PORT`
-- `CONTACT_SMTP_USER`
-- `CONTACT_TO_EMAIL`
-- `CONTACT_FROM_EMAIL` (default: `CONTACT_SMTP_USER`)
-- `CONTACT_SMTP_SECURE` (`true`/`false`; if omitted, `465` implies secure)
-
-### Optional webhook fallback
-
-- `CONTACT_WEBHOOK_URL`
-
-Behavior:
-
-- If SMTP is configured, leads are sent to email.
-- If webhook is configured, leads are forwarded as JSON.
-- If both are configured, both are attempted.
-- If neither is configured, API returns `202` and logs a warning.
-
-## SEO Measurement Setup (GA4 + Search Console)
-
-### Environment variables
-
-Set these in Vercel Project Settings -> Environment Variables:
-
-- `NEXT_PUBLIC_GA_MEASUREMENT_ID` (example: `G-XXXXXXXXXX`)
-- `GOOGLE_SITE_VERIFICATION` (Search Console verification token)
-- Optional: `NEXT_PUBLIC_WHATSAPP_NUMBER` (digits only, used for WhatsApp CTA)
-
-### Tracked events
-
-- `generate_lead` when quote form is submitted successfully
-- `submit_quote_form` custom event for form conversion
-- `click_cta_principal` for main quote CTAs
-- `click_cta_nav` for quote CTA in navbar
-- `click_cta_secundario` for secondary hero CTA
-- `click_whatsapp` for WhatsApp clicks
+- Media currently used in a playlist cannot be deleted.
+- `DATABASE_URL` should point to the pooled/runtime database URL when available.
+- `DATABASE_URL_UNPOOLED` should point to the direct Prisma migrate/introspection URL.
